@@ -50,11 +50,6 @@ const Navbar = () => {
       isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'
     }`;
 
-  const navLinkIconClass = ({ isActive }) =>
-    `transition-colors duration-300 ${
-      isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'
-    }`;
-
   const navLinks = [
     { to: '/users', text: 'Community', icon: <Users size={24} /> },
     { to: '/map', text: 'Map', icon: <Map size={24} /> },
@@ -82,10 +77,23 @@ const Navbar = () => {
                     <NavLink
                       key={link.to}
                       to={link.to}
-                      className={navLinkIconClass}
+                      className={({ isActive }) =>
+                        `transition-colors duration-300 ${
+                          isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'
+                        }`
+                      }
                       title={link.text} // Tooltip for desktop
                     >
-                      {link.icon}
+                      {({ isActive }) => (
+                        <div className="relative flex flex-col items-center pt-4 pb-4">
+                          {link.icon}
+                          <span
+                            className={`absolute bottom-1 h-1.5 w-3.5 right-0.9 rounded-full bg-green-500 transition-opacity duration-300 ${
+                              isActive ? 'opacity-100' : 'opacity-0'
+                            }`}
+                          ></span>
+                        </div>
+                      )}
                     </NavLink>
                   ))}
               </div>
