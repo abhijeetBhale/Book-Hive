@@ -170,7 +170,6 @@ const MessagesPage = () => {
   const [searchParams] = useSearchParams();
   const { user: currentUser } = useContext(AuthContext);
 
-  // Realtime state
   const socketRef = useRef(null);
   const typingTimerRef = useRef(null);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
@@ -208,25 +207,18 @@ const MessagesPage = () => {
         } else if (data?.length) setActive(data[0]);
       } else if (data?.length) setActive(data[0]);
     })();
-  }, [searchParams]);
+  }, [searchParams, currentUser?._id]);
 
   const other = active?.participants?.find(p => p._id !== currentUser?._id) || active?.participants?.[0];
 
-  // Setup socket connection
   useEffect(() => {
     if (!currentUser?._id) return;
     const token = localStorage.getItem('token');
     const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/?api$/i, '');
-    const socket = io(base, {
-      auth: { token },
-    });
+    const socket = io(base, { auth: { token } });
     socketRef.current = socket;
 
-    socket.on('connect', () => { });
-
-    socket.on('presence:update', (ids) => {
-      setOnlineUsers(new Set(ids));
-    });
+    socket.on('presence:update', (ids) => setOnlineUsers(new Set(ids)));
 
     socket.on('typing', ({ from }) => {
       if (from && from === other?._id) {
@@ -240,47 +232,51 @@ const MessagesPage = () => {
       }
     });
 
-    // --- Listen for real-time messages ---
-    socket.on('message:new', async (message) => {
-      // Only append if the message is for the current conversation
-      if (message.senderId?._id === other?._id || message.recipientId?._id === other?._id) {
-        // If typing animation is active, show message after delay
-        if (isOtherTyping) {
-          setTimeout(() => {
-            setActive(prev => prev ? { ...prev, messages: [...(prev.messages || []), message] } : prev);
-            setIsOtherTyping(false);
-            setTimeout(() => {
-              if (messagesListRef.current) messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
-            }, 0);
-          }, 800); // delay matches typing indicator
-        } else {
-          setActive(prev => prev ? { ...prev, messages: [...(prev.messages || []), message] } : prev);
-          setTimeout(() => {
-            if (messagesListRef.current) messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
-          }, 0);
+    // --- [THE FIX IS HERE] ---
+    // This listener now correctly handles incoming messages based on your requirements.
+    socket.on('message:new', async (newMessage) => {
+      
+      // Use the functional form of setState to get the most recent `active` state
+      setActive(currentActive => {
+        const currentOther = currentActive?.participants?.find(p => p._id !== currentUser?._id);
+        
+        // 1. Check if the new message is from the user in the currently active chat window.
+        if (currentOther && newMessage.senderId?._id === currentOther._id) {
+          setIsOtherTyping(false); // Stop the typing indicator immediately
+          
+          // Check for duplicates to be safe
+          if (currentActive.messages.find(m => m._id === newMessage._id)) {
+            return currentActive; // Don't add if it's already there
+          }
+          
+          // If the chat is open, add the new message to the state for immediate display.
+          return { ...currentActive, messages: [...currentActive.messages, newMessage] };
         }
-      }
-      // Optionally refresh conversations for unread counts
+        
+        // 2. If the message is not for the active chat, return the state unchanged.
+        // The conversation list will be updated below, showing a badge.
+        return currentActive;
+      });
+
+      // 3. ALWAYS refresh the conversation list.
+      // This updates previews and unread counts for all conversations.
       try {
-        const list = await messagesAPI.getConversations();
-        setConversations(list.data);
-      } catch { }
+        const { data } = await messagesAPI.getConversations();
+        setConversations(data);
+      } catch (error) {
+        console.error("Failed to refresh conversations", error);
+      }
     });
 
     return () => {
       socket.disconnect();
-      socketRef.current = null;
     };
-  }, [currentUser?._id, other?._id, isOtherTyping]);
+  }, [currentUser?._id]); // We only need the current user ID to establish the socket connection.
 
-  // const other = active?.participants?.find(p => p._id !== currentUser?._id) || active?.participants?.[0];
-
-  // Reset typing indicator when conversation changes
   useEffect(() => {
     setIsOtherTyping(false);
   }, [other?._id]);
 
-  // Persist last active conversation peer
   useEffect(() => {
     if (other?._id) {
       localStorage.setItem('lastActiveUserId', other._id);
@@ -306,10 +302,9 @@ const MessagesPage = () => {
           }
         }
         setDecryptedTexts(results);
-        // After decrypting, ensure scroll is at bottom
         setTimeout(() => {
           if (messagesListRef.current) messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
-        }, 0);
+        }, 50);
       } catch {
         setDecryptedTexts({});
       }
@@ -321,8 +316,11 @@ const MessagesPage = () => {
     if (!text.trim() || !other?._id) return;
 
     const plain = text.trim();
+    setText('');
 
-    // Optimistically add my message locally
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    if (socketRef.current) socketRef.current.emit('typing:stop', { recipientId: other._id });
+
     const optimistic = {
       _id: `tmp-${Date.now()}`,
       senderId: { _id: currentUser?._id },
@@ -332,11 +330,7 @@ const MessagesPage = () => {
       createdAt: new Date().toISOString(),
     };
     setActive((prev) => prev ? { ...prev, messages: [...(prev.messages || []), optimistic] } : prev);
-    setTimeout(() => {
-      if (messagesListRef.current) messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
-    }, 0);
-
-    // Fetch peer public key (if available) for encryption
+    
     let enc = null;
     try {
       const peer = (await usersAPI.getUserProfile(other._id)).data.user;
@@ -345,31 +339,23 @@ const MessagesPage = () => {
       }
     } catch { }
 
-    // Save message via REST API
     const res = await messagesAPI.sendMessage(other._id, { subject: 'Chat', message: plain, ...(enc || {}) });
     const savedMessage = res.data;
 
-    // Emit real-time message to recipient
     if (socketRef.current) {
-      socketRef.current.emit('message:send', {
-        toUserId: other._id,
-        message: savedMessage,
-      });
+      socketRef.current.emit('message:send', { toUserId: other._id, message: savedMessage });
     }
 
-    // Refresh active conversation
+    setActive(prev => {
+        if (!prev) return null;
+        const newMessages = prev.messages.map(m => m._id === optimistic._id ? savedMessage : m);
+        return {...prev, messages: newMessages};
+    });
+
     try {
-      const { data } = await messagesAPI.getConversationWith(other._id);
-      if (data) {
-        setActive(data);
-        setConversations(prev => prev.map(c => c._id === data._id ? data : c));
-      }
+      const { data } = await messagesAPI.getConversations();
+      setConversations(data);
     } catch { }
-
-    setText('');
-    if (socketRef.current) {
-      socketRef.current.emit('typing:stop', { recipientId: other._id });
-    }
   };
 
   const handleInputChange = (e) => {
@@ -381,7 +367,7 @@ const MessagesPage = () => {
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     typingTimerRef.current = setTimeout(() => {
       socket.emit('typing:stop', { recipientId: other._id });
-    }, 800);
+    }, 1500);
   };
 
   return (
@@ -391,11 +377,9 @@ const MessagesPage = () => {
         <SidebarList>
           {[...conversations]
             .sort((a, b) => {
-              // Sort by unreadCount descending
               if ((b.unreadCount || 0) !== (a.unreadCount || 0)) {
                 return (b.unreadCount || 0) - (a.unreadCount || 0);
               }
-              // If unreadCount is equal, sort by latest message time descending
               const aTime = a.messages?.[0]?.createdAt ? new Date(a.messages[0].createdAt).getTime() : 0;
               const bTime = b.messages?.[0]?.createdAt ? new Date(b.messages[0].createdAt).getTime() : 0;
               return bTime - aTime;
@@ -408,7 +392,6 @@ const MessagesPage = () => {
                   localStorage.setItem('lastActiveUserId', peer._id);
                   const { data } = await messagesAPI.getConversationWith(peer._id);
                   setActive(data || c);
-                  // Refresh conversations to update unread counts
                   try {
                     const list = await messagesAPI.getConversations();
                     setConversations(list.data);
@@ -427,7 +410,7 @@ const MessagesPage = () => {
                         </span>
                       )}
                     </div>
-                    <div className="preview">{last ? (last.subject || 'New message') : 'Start a conversation'}</div>
+                    <div className="preview">{last ? (decryptedTexts[last._id] ?? last.message ?? 'New message') : 'Start a conversation'}</div>
                   </div>
                   <div className="time">{last ? new Date(last.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</div>
                 </ConversationItem>
@@ -454,8 +437,6 @@ const MessagesPage = () => {
               )}
             </div>
           </div>
-          {/* {other?.email && <a href={`mailto:${other.email}`} rel="noopener noreferrer">Email</a>} */}
-          {/* Theme selector button */}
           <BgSelectorButton type="button" onClick={() => setShowBgModal(v => !v)}>
             <Paintbrush size={18} />
           </BgSelectorButton>
@@ -495,5 +476,3 @@ const MessagesPage = () => {
 };
 
 export default MessagesPage;
-
-

@@ -5,24 +5,22 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import cron from 'node-cron';
 import hpp from 'hpp';
-import passport from 'passport'; // --- ADD THIS LINE ---
+import passport from 'passport';
 import jwt from 'jsonwebtoken';
 import { Server as SocketIOServer } from 'socket.io';
 import messageRoutes from './routes/messages.js';
 import errorHandler from './middleware/errorHandler.js';
 import connectDatabase from './config/database.js';
 import './config/cloudinary.js';
-// --- THE CRITICAL FIX ---
-// This line imports and runs your Passport configuration, which teaches
-// your application what the "google" strategy is. This must be imported.
 import './config/passport-setup.js'; 
-
 import authRoutes from './routes/auth.js';
 import bookRoutes from './routes/books.js';
 import borrowRoutes from './routes/borrow.js';
 import userRoutes from './routes/users.js';
 import friendRoutes from './routes/friends.js';
 import { sendOverdueReminders } from './services/reminderService.js';
+import reportRoutes from './routes/reportRoutes.js';
+import testimonialRoutes from './routes/testimonials.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -43,13 +41,13 @@ app.use(
   })
 );
 
-// Rate limiting - More lenient for development
+// Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 1000 requests in dev, 100 in production
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000,
   message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use('/api/', limiter);
 
@@ -57,8 +55,7 @@ app.use('/api/', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// --- ADD THIS LINE ---
-// Initialize Passport to make it available for your routes.
+// Initialize Passport
 app.use(passport.initialize());
 
 // Mount routers
@@ -68,13 +65,7 @@ app.use('/api/borrow', borrowRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/messages', messageRoutes);
-
-// Import and use report routes
-import reportRoutes from './routes/reportRoutes.js';
 app.use('/api/reports', reportRoutes);
-
-// Import and use testimonial routes
-import testimonialRoutes from './routes/testimonials.js';
 app.use('/api/testimonials', testimonialRoutes);
 
 // Error handler
@@ -129,13 +120,9 @@ io.on('connection', (socket) => {
   if (!onlineUsers.has(userId)) onlineUsers.set(userId, new Set());
   onlineUsers.get(userId).add(socket.id);
 
-  // Join personal room
   socket.join(`user:${userId}`);
-
-  // Broadcast presence
   io.emit('presence:update', Array.from(onlineUsers.keys()));
 
-  // Typing indicators
   socket.on('typing', ({ recipientId }) => {
     if (recipientId) {
       io.to(`user:${recipientId}`).emit('typing', { from: userId });
@@ -148,13 +135,10 @@ io.on('connection', (socket) => {
     }
   });
 
-  // --- Real-time message delivery ---
   socket.on('message:send', ({ toUserId, message }) => {
-    // Broadcast to recipient's room
     io.to(`user:${toUserId}`).emit('message:new', message);
   });
 
-  // Cleanup on disconnect
   socket.on('disconnect', () => {
     const set = onlineUsers.get(userId);
     if (set) {
@@ -165,7 +149,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
   console.log(`Error: ${err.message}`);
   server.close(() => process.exit(1));
