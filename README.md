@@ -69,11 +69,11 @@ To get a local copy up and running, follow these simple steps.
 
 1.  **Clone the repository:**
     ```sh
-    git clone [https://github.com/your_username/BookHive-Share-Your-Thoughts.git](https://github.com/your_username/BookHive-Share-Your-Thoughts.git)
+    git clone [https://github.com/your_username/Book-Hive.git](https://github.com/your_username/Book-Hive.git)
     ```
 2.  **Navigate to the client directory:**
     ```sh
-    cd BookHive-Share-Your-Thoughts/client
+    cd Book-Hive/client
     ```
 3.  **Install NPM packages:**
     ```sh
@@ -164,7 +164,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 Abhijeet Bhale - abhijeetbhale7@gmail.com
 
-Project Link: [https://github.com/abhijeetbhale/bookhive-share-your-thoughts](https://github.com/abhijeetbhale/bookhive-share-your-thoughts)
+Project Link: [https://github.com/abhijeetbhale/Book-Hive](https://github.com/abhijeetbhale/Book-Hive)
 
 ## Acknowledgments
 
