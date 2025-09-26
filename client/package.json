@@ -19,6 +19,7 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^0.541.0",
     "react": "^19.1.1",
+    "react-big-calendar": "^1.19.4",
     "react-countup": "^6.5.3",
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.62.0",

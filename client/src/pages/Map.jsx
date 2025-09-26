@@ -1,11 +1,30 @@
-import React, { useState, useEffect, useMemo, useContext } from 'react';
+import { useState, useEffect, useMemo, useContext } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
-import { usersAPI } from '../utils/api';
+import { usersAPI, borrowAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import MapView from '../components/map/MapView';
 import { Loader, MapPin, Search, Calendar, UserCheck, Sliders, ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { Calendar as BigCalendar, dateFnsLocalizer } from 'react-big-calendar';
+import format from 'date-fns/format';
+import parse from 'date-fns/parse';
+import startOfWeek from 'date-fns/startOfWeek';
+import getDay from 'date-fns/getDay';
+import enUS from 'date-fns/locale/en-US';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+
+const locales = {
+  'en-US': enUS,
+};
+
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales,
+});
 
 // Utility function to calculate distance between two coordinates using Haversine formula
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -32,12 +51,12 @@ const Map = () => {
   const [distanceFilter, setDistanceFilter] = useState(10); // Default 10km
   const [ratingFilter, setRatingFilter] = useState(0); // Default 0 (no filter)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [calendarEvents, setCalendarEvents] = useState([]);
 
   useEffect(() => {
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        // Check if current user has location set
         if (!currentUser?.location?.coordinates || currentUser.location.coordinates.length !== 2) {
           toast.error('Please set your location in your profile to use distance filtering.');
           setUsers([]);
@@ -49,10 +68,9 @@ const Map = () => {
         let usersWithCoords = data.users.filter(user =>
           user.location?.coordinates &&
           user.location.coordinates.length === 2 &&
-          user._id !== currentUser?._id // Exclude current user from map
+          user._id !== currentUser?._id
         );
 
-        // Calculate distance for each user from current user
         const currentUserLat = currentUser.location.coordinates[1];
         const currentUserLon = currentUser.location.coordinates[0];
 
@@ -67,25 +85,21 @@ const Map = () => {
           };
         });
 
-        // Apply distance filter
         if (distanceFilter > 0) {
           usersWithCoords = usersWithCoords.filter(user =>
             user.distanceFromCurrentUser <= distanceFilter
           );
         }
 
-        // Apply rating filter
         if (ratingFilter > 0) {
           usersWithCoords = usersWithCoords.filter(user =>
             user.rating?.value >= ratingFilter
           );
         }
 
-        // Sort by distance (closest first)
         usersWithCoords.sort((a, b) => a.distanceFromCurrentUser - b.distanceFromCurrentUser);
 
         setUsers(usersWithCoords);
-        // Initially, select all filtered users
         setSelectedUserIds(usersWithCoords.map(u => u._id));
       } catch (error) {
         console.error('Failed to load user locations:', error);
@@ -101,6 +115,29 @@ const Map = () => {
     }
   }, [distanceFilter, ratingFilter, currentUser]);
 
+  useEffect(() => {
+    const fetchBorrowRequests = async () => {
+      if (activeView === 'calendar') {
+        try {
+          const { data } = await borrowAPI.getAllBorrowRequests();
+          const events = data.map(request => ({
+            title: `${request.book.title} - ${request.status}`,
+            start: new Date(request.requestDate),
+            end: new Date(request.returnDate),
+            allDay: true,
+            resource: request,
+          }));
+          setCalendarEvents(events);
+        } catch (error) {
+          console.error('Failed to load borrow requests:', error);
+          toast.error('Failed to load borrow requests for the calendar.');
+        }
+      }
+    };
+
+    fetchBorrowRequests();
+  }, [activeView]);
+
   const handleUserSelection = (userId) => {
     setSelectedUserIds(prev =>
       prev.includes(userId)
@@ -109,7 +146,6 @@ const Map = () => {
     );
   };
 
-  // This correctly filters the list of users shown in the sidebar
   const sidebarFilteredUsers = useMemo(() =>
     users.filter(user =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -117,26 +153,25 @@ const Map = () => {
     [users, searchTerm]
   );
 
-  // This computes the users to be displayed on the map (no grouping needed for clustering)
   const usersForMap = useMemo(() => {
-    // Filter users who are both selected AND match the search term
     const selectedAndSearchedUsers = users.filter(user =>
       selectedUserIds.includes(user._id) &&
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
       user.location?.coordinates &&
       user.location.coordinates.length === 2
     );
-
-    console.log('Map.jsx - usersForMap:', selectedAndSearchedUsers);
     return selectedAndSearchedUsers;
   }, [users, selectedUserIds, searchTerm]);
 
-
   const CalendarView = () => (
-    <div className="calendar-placeholder">
-      <Calendar size={48} />
-      <h3>Calendar View Coming Soon</h3>
-      <p>This feature will allow you to see borrowing schedules and availability.</p>
+    <div className="calendar-container">
+      <BigCalendar
+        localizer={localizer}
+        events={calendarEvents}
+        startAccessor="start"
+        endAccessor="end"
+        style={{ height: '100%' }}
+      />
     </div>
   );
 
@@ -300,7 +335,6 @@ const Map = () => {
   );
 };
 
-// --- STYLES (NO CHANGES) ---
 const StyledWrapper = styled.div`
   display: flex;
   height: calc(100vh - 80px);
@@ -647,6 +681,13 @@ const StyledWrapper = styled.div`
     h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1rem; color: #1e293b; }
     p { margin-top: 0.25rem; max-width: 400px; }
     svg { color: #cbd5e1; }
+  }
+
+  .calendar-container {
+    height: 100%;
+    background-color: white;
+    padding: 1rem;
+    border-radius: 1rem;
   }
 `;
 
