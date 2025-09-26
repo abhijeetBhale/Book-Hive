@@ -1,0 +1,23 @@
+import express from 'express';
+import { 
+  requestBook, 
+  acceptRequest, 
+  returnBook, 
+  getReceivedRequests, 
+  getMyRequests, 
+  updateRequestStatus,
+  deleteRequest
+} from '../controllers/borrowController.js';
+import { protect } from '../middleware/auth.js';
+
+const router = express.Router();
+
+router.post('/request/:bookId', protect, requestBook);
+router.get('/received-requests', protect, getReceivedRequests);
+router.get('/my-requests', protect, getMyRequests);
+router.put('/:requestId', protect, updateRequestStatus);
+router.delete('/:requestId', protect, deleteRequest);
+router.put('/:requestId/return', protect, returnBook);
+router.put('/accept/:requestId', protect, acceptRequest);
+
+export default router;

@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+/* Global Styles */
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #edf2f7 0%, #e2e8f0 100%);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  color: #2d3748; /* Default text color */
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  /* height: 12px; */
+}
+::-webkit-scrollbar-track {
+  background: #edf2f7;
+}
+::-webkit-scrollbar-thumb {
+  background: #9D54F5;
+  border-radius: 14px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9D54F5;
+  cursor: pointer;
+}
+
+/* Leaflet map container fix */
+.leaflet-container {
+  height: 100%;
+  z-index: 1;
+}
+
+/* Glass effect for Navbar */
+.glass {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(237, 242, 247, 0.8);
+}
+
+/* Button glow effect */
+.btn-glow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25);
+}
+
+/* Card hover effect */
+.card-hover:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+}
+
+/* Custom focus ring */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+  border-color: #4f46e5;
+}
+
+/* Add this to your global stylesheet, e.g., index.css */
+
+.fab-button {
+  /* This ensures the transform and opacity changes are smoothly animated */
+  transition-property: transform, opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 600ms;
+}
+
+.fab-visible {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.fab-hidden {
+  opacity: 0;
+  /* Moves the button 150% of its own width to the right, hiding it off-screen */
+  transform: translateX(150%) scale(0.8);
+}
