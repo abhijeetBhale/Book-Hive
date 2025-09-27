@@ -3,8 +3,9 @@ import styled from 'styled-components';
 import { Loader, Check, X, ArrowRight, Inbox } from 'lucide-react';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import toast from 'react-hot-toast';
-import { borrowAPI } from '../utils/api';
+import { borrowAPI, reviewsAPI } from '../utils/api';
 import { formatDate } from '../utils/dateHelpers';
+import ReviewModal from '../components/ReviewModal';
 
 const BorrowRequests = () => {
   const [receivedRequests, setReceivedRequests] = useState([]);
@@ -12,6 +13,7 @@ const BorrowRequests = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('received');
 
+  const [reviewModal, setReviewModal] = useState({ open: false, borrowRequestId: null, toUserId: null, counterpartName: '' });
 
   const fetchData = async () => {
     setLoading(true);
@@ -124,6 +126,16 @@ const BorrowRequests = () => {
                     </button>
                   </div>
                 )}
+                {req.status === 'returned' && (
+                  <div className="card-actions">
+                    <button
+                      className="btn approve-btn"
+                      onClick={() => setReviewModal({ open: true, borrowRequestId: req._id, toUserId: req.borrower?._id, counterpartName: req.borrower?.name || 'User' })}
+                    >
+                      Leave a Review
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -161,6 +173,16 @@ const BorrowRequests = () => {
                   <p>Requested from {req.owner?.name || 'Unknown User'}.</p>
                 </div>
                 <p className="request-date">Requested on: {formatDate(req.createdAt)}</p>
+                {req.status === 'returned' && (
+                  <div className="card-actions" style={{ marginTop: 8 }}>
+                    <button
+                      className="btn approve-btn"
+                      onClick={() => setReviewModal({ open: true, borrowRequestId: req._id, toUserId: req.owner?._id, counterpartName: req.owner?.name || 'User' })}
+                    >
+                      Leave a Review
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -188,6 +210,21 @@ const BorrowRequests = () => {
       <div className="content-area">
         {renderContent()}
       </div>
+
+      <ReviewModal
+        open={reviewModal.open}
+        counterpartName={reviewModal.counterpartName}
+        onClose={() => setReviewModal({ open: false, borrowRequestId: null, toUserId: null, counterpartName: '' })}
+        onSubmit={async ({ rating, comment }) => {
+          await reviewsAPI.create({
+            borrowRequestId: reviewModal.borrowRequestId,
+            toUserId: reviewModal.toUserId,
+            rating,
+            comment,
+          });
+          setReviewModal({ open: false, borrowRequestId: null, toUserId: null, counterpartName: '' });
+        }}
+      />
     </StyledWrapper>
   );
 };

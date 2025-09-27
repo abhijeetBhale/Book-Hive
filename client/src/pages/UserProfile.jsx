@@ -448,7 +448,7 @@ const UserProfile = () => {
             )}
           </div>
         </div>
-        <div className="actions-section">
+        <div className="actions-section" style={{ display: 'flex', flexDirection: 'row', gap: '0.5rem' }}>
           <button className="message-btn" onClick={() => setMessageModalOpen(true)}>
             <Send size={18} /> Send Message
           </button>

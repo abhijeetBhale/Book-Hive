@@ -49,6 +49,11 @@ const bookSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // Booking fields
+  isBooked: { type: Boolean, default: false },
+  bookedFrom: { type: Date, default: null },
+  bookedUntil: { type: Date, default: null },
+  currentBorrowRequest: { type: mongoose.Schema.Types.ObjectId, ref: 'BorrowRequest', default: null },
 }, {
   timestamps: true
 })

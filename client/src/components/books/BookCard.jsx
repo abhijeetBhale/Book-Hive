@@ -11,6 +11,11 @@ const BookCard = ({ book, onDelete }) => {
     <div className="bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col group">
       <Link to={`/books/${book._id}`} className="block">
         <div className="relative h-64 overflow-hidden bg-gray-100">
+          {book.isBooked && (
+            <span className="absolute top-3 left-3 z-10 bg-red-600 text-white text-xs font-bold py-1 px-2 rounded-full shadow">
+              Booked{book.bookedUntil ? ` · until ${new Date(book.bookedUntil).toLocaleDateString()}` : ''}
+            </span>
+          )}
           {coverImageUrl ? (
             <img
               src={coverImageUrl}

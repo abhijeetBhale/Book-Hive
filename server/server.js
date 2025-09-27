@@ -21,6 +21,7 @@ import friendRoutes from './routes/friends.js';
 import { sendOverdueReminders } from './services/reminderService.js';
 import reportRoutes from './routes/reportRoutes.js';
 import testimonialRoutes from './routes/testimonials.js';
+import reviewRoutes from './routes/reviews.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -67,6 +68,7 @@ app.use('/api/friends', friendRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/testimonials', testimonialRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Error handler
 app.use(errorHandler);

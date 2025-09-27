@@ -82,10 +82,13 @@ export const usersAPI = {
   updatePublicKey: (publicKeyJwk) => api.put('/users/public-key', { publicKeyJwk }),
 };
 
+// Friends
 export const friendsAPI = {
   getAll: () => api.get('/friends'),
-  sendRequest: (userId) => api.post(`/friends/request/${userId}`),
-  respond: (requestId, action) => api.put(`/friends/request/${requestId}`, { action }),
+  respond: (id, response) => api.post(`/friends/respond/${id}`, { response }),
+  remove: (id) => api.delete(`/friends/${id}`),
+  // Change this line
+  cancelRequest: (id) => api.delete(`/friends/${id}`), // <-- FIX: Remove '/request' from the URL
 };
 
 // --- THE NEWLY ADDED API METHODS ---
@@ -111,6 +114,12 @@ export const testimonialAPI = {
   getUserTestimonial: () => api.get('/testimonials/my-testimonial'),
   updateUserTestimonial: (testimonialData) => api.put('/testimonials/my-testimonial', testimonialData),
   deleteUserTestimonial: () => api.delete('/testimonials/my-testimonial'),
+};
+
+export const reviewsAPI = {
+  create: (payload) => api.post('/reviews', payload), // { borrowRequestId, toUserId, rating, comment }
+  listForUser: (userId, params) => api.get(`/reviews/user/${userId}`, { params }),
+  summaryForUser: (userId) => api.get(`/reviews/user/${userId}/summary`),
 };
 
 export const notificationsAPI = {

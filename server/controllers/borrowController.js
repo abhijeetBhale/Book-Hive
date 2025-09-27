@@ -64,7 +64,19 @@ export const acceptRequest = async (req, res) => {
     }
     request.status = 'approved';
     await request.save();
-    res.json({ message: 'Borrow request accepted' });
+
+    // Mark book as booked with a future date (default 14 days from now if dueDate is missing)
+    const defaultUntil = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    await Book.findByIdAndUpdate(request.book, {
+      $set: {
+        isBooked: true,
+        bookedFrom: new Date(),
+        bookedUntil: request.dueDate || defaultUntil,
+        currentBorrowRequest: request._id,
+      }
+    });
+
+    res.json({ message: 'Borrow request accepted and book marked as booked' });
   } catch (error) {
     console.error('Accept request error:', error);
     res.status(500).json({ message: 'Server error accepting request' });
@@ -91,6 +103,38 @@ export const returnBook = async (req, res) => {
     
     borrowRequest.status = 'returned';
     await borrowRequest.save();
+
+    // Clear booking flags on the book
+    await Book.findByIdAndUpdate(borrowRequest.book, {
+      $set: {
+        isAvailable: true,
+        isBooked: false,
+        bookedFrom: null,
+        bookedUntil: null,
+        currentBorrowRequest: null,
+      }
+    });
+
+    // Review prompt notifications for both users
+    try {
+      await Notification.create({
+        user: borrowRequest.owner,
+        type: 'review_prompt',
+        message: 'Your book was returned. Please review the borrower.',
+        fromUser: borrowRequest.borrower,
+        link: `/borrow-requests`
+      });
+      await Notification.create({
+        user: borrowRequest.borrower,
+        type: 'review_prompt',
+        message: 'You returned a book. Please review the lender.',
+        fromUser: borrowRequest.owner,
+        link: `/borrow-requests`
+      });
+    } catch (e) {
+      console.error('Failed to create review prompt notifications:', e.message);
+    }
+
     res.json({ message: 'Book returned successfully' });
   } catch (error) {
     console.error('Return book error:', error);
@@ -148,6 +192,29 @@ export const updateRequestStatus = async (req, res) => {
     
     request.status = status;
     await request.save();
+
+    if (status === 'approved') {
+      const defaultUntil = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+      await Book.findByIdAndUpdate(request.book, {
+        $set: {
+          isBooked: true,
+          bookedFrom: new Date(),
+          bookedUntil: request.dueDate || defaultUntil,
+          currentBorrowRequest: request._id,
+        }
+      });
+    }
+    if (status === 'returned') {
+      await Book.findByIdAndUpdate(request.book, {
+        $set: {
+          isAvailable: true,
+          isBooked: false,
+          bookedFrom: null,
+          bookedUntil: null,
+          currentBorrowRequest: null,
+        }
+      });
+    }
     
     res.json({ message: `Request ${status} successfully`, request });
   } catch (error) {
