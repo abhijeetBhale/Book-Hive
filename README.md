@@ -8,13 +8,18 @@ BookHive is a full-stack web application designed to bring book enthusiasts toge
 
 At its core, BookHive allows users to create a personal library of books they have read, are currently reading, or want to read. But the magic happens when users start sharing their thoughts and reviews. Each book entry becomes a hub for discussion, where users can leave comments, ask questions, and engage in meaningful conversations with fellow readers. This creates a dynamic and ever-growing repository of user-generated content that helps others discover their next great read.
 
-But BookHive is more than just a book review site. We've incorporated a unique book-borrowing feature that allows users to connect with others in their local area to borrow and lend physical copies of books. This not only promotes a culture of sharing and sustainability but also provides an opportunity for users to connect in the real world, building a true community of book lovers.
+BookHive is more than just a book review site. We've incorporated a unique book-borrowing feature that allows users to connect with others in their local area to borrow and lend physical copies of books. This not only promotes a culture of sharing and sustainability but also provides an opportunity for users to connect in the real world, building a true community of book lovers.
 
-To further enhance the user experience, we've included a range of features such as user profiles, follow functionality, and a messaging system, allowing users to connect on a more personal level. We've also implemented a powerful search and filtering system, making it easy to find specific books, authors, or genres. And with our integrated map view, users can visualize the location of available books, making it easier than ever to find their next read.
+To further enhance the user experience, we've included a range of features such as user profiles, follow functionality, and a messaging system, allowing users to connect on a more personal level. We've also implemented a powerful search and filtering system, making it easy to find specific books, authors, or genres. With our integrated map view, users can visualize the location of available books, making it easier than ever to find their next read.
+
+**Recent Updates:**
+- **Chat Background Customization:** Users can now change their chat background in the Messages page. The selected background persists across reloads and login/logout using localStorage.
+- **Static Map Screenshot:** The Home page's map feature now displays a static map screenshot as the background in the map visual container, providing a more realistic and visually appealing map preview.
+- **UI/UX Improvements:** Enhanced carousel, testimonial, and section animations for a smoother experience.
 
 Whether you're a casual reader looking for your next page-turner or a die-hard bibliophile wanting to share your passion with like-minded individuals, BookHive is the perfect platform for you.
 
-### Key Features:
+### Key Features
 
 * **Personalized Bookshelves:** Curate and manage your own virtual library.
 * **Book Reviews and Ratings:** Share your thoughts and discover what others are saying.
@@ -24,6 +29,8 @@ Whether you're a casual reader looking for your next page-turner or a die-hard b
 * **Private Messaging:** Connect with other users one-on-one.
 * **Powerful Search and Filtering:** Easily find books, authors, and genres.
 * **Interactive Map View:** Discover books available for borrowing in your area.
+* **Chat Background Customization:** Personalize your chat experience with persistent backgrounds.
+* **Dynamic Home Map:** See a static map screenshot for a more realistic preview of your local reading community.
 
 ## Built With
 
@@ -69,7 +76,7 @@ To get a local copy up and running, follow these simple steps.
 
 1.  **Clone the repository:**
     ```sh
-    git clone [https://github.com/your_username/Book-Hive.git](https://github.com/your_username/Book-Hive.git)
+    git clone https://github.com/abhijeetbhale/Book-Hive.git
     ```
 2.  **Navigate to the client directory:**
     ```sh
@@ -130,6 +137,8 @@ Once you have the application running, you can:
 * Manage your own borrowing and lending requests.
 * Follow other users to stay updated on their literary activities.
 * Send and receive private messages with other users.
+* **Customize your chat background** for a personalized messaging experience.
+* **See a static map preview** of your local reading community on the Home page.
 
 ## Roadmap
 
