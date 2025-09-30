@@ -425,7 +425,7 @@ const Home = () => {
       <section className="reviews-section">
         <div className="content-container">
           <div className="section-header">
-            <h2 className="section-title">What Our Community Says</h2>
+            <h2 className="section-title">What Our <span className="highlight-text">Community</span> Says</h2>
             <p className="section-subtitle">Real experiences from book lovers who've found their reading community through BookHive.</p>
           </div>
 
@@ -1292,6 +1292,33 @@ const StyledWrapper = styled.div`
       margin-bottom: 3rem;
       text-align: center;
     }
+
+    /* --- Add these styles to match other headings --- */
+    .section-title {
+      font-size: 3rem;
+      font-weight: 900;
+      color: #111827;
+      line-height: 1.2;
+      margin-bottom: 1.5rem;
+      max-width: 48rem;
+      margin-left: auto;
+      margin-right: auto;
+      .highlight-text {
+        background-image: linear-gradient(to right, #4F46E5, #a855f7);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+    }
+    .section-subtitle {
+      font-size: 1.25rem;
+      color: #374151;
+      font-weight: 500;
+      max-width: 58rem;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+  }
     
     .rating-badge {
       display: inline-flex;
