@@ -5,8 +5,7 @@ import { importPrivateKeyFromIndexedDB, encryptMessage, decryptMessage } from '.
 import { useSearchParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { io } from 'socket.io-client';
-import { Paintbrush } from 'lucide-react';
-
+import { Paintbrush, Trash2 } from 'lucide-react';
 
 const CHAT_BACKGROUNDS = [
   { label: 'Default', value: 'plain', src: '' },
@@ -48,9 +47,21 @@ const ConversationItem = styled.button`
   display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 0.75rem;
   &:hover { background: #f8fafc; }
   .avatar { width: 44px; height: 44px; border-radius: 9999px; object-fit: cover; }
-  .name { font-weight: 700; color: #111827; }
-  .preview { color: #6b7280; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .time { color: #9ca3af; font-size: 0.75rem; }
+  
+  /* --- [THE FIX IS HERE] --- */
+  .info-container {
+    overflow: hidden; /* This prevents the container from expanding */
+  }
+
+  .name { 
+    font-weight: 700; color: #111827;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .preview { 
+      color: #6b7280; font-size: 0.875rem; 
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; 
+      }
+      .time { color: #9ca3af; font-size: 0.75rem; margin-top: -22px; }
 `;
 
 const Chat = styled.div`
@@ -58,7 +69,7 @@ const Chat = styled.div`
 `;
 
 const ChatHeader = styled.div`
-  position: relative; /* <-- Add this line */
+  position: relative;
   padding: 0.9rem 1rem; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between;
   .left { display: flex; align-items: center; gap: 0.75rem; position: relative; }
   .avatar { width: 40px; height: 40px; border-radius: 9999px; object-fit: cover; }
@@ -66,6 +77,7 @@ const ChatHeader = styled.div`
   .title { font-weight: 800; color: #111827; }
   .subtitle { font-size: 0.8rem; color: #9ca3af; }
   a { font-size: 0.875rem; color: #6366f1; }
+  .right { display: flex; align-items: center; gap: 0.5rem; }
 `;
 
 const MessagesList = styled.div`
@@ -101,6 +113,16 @@ const Bubble = styled.div`
   padding: 0.5rem 0.75rem; border-radius: 12px; max-width: 70%;
 `;
 
+const SystemMessage = styled.div`
+  align-self: center;
+  background: #e5e7eb;
+  color: #4b5563;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  margin: 0.5rem 0;
+`;
+
 const Composer = styled.form`
   padding: 0.75rem; border-top: 1px solid #f1f5f9; display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; align-items: center;
   input { flex: 1; border: 1px solid #e5e7eb; border-radius: 9999px; padding: 0.75rem 1rem; }
@@ -111,17 +133,13 @@ const BgSelectorButton = styled.button`
   background: #f3f4f6;
   border: none;
   border-radius: 9999px;
-  padding: 0.5rem 0.7rem;
+  padding: 0.5rem;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  justify-content: center;
   font-size: 1rem;
   color: #4F46E5;
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  z-index: 10;
   &:hover { background: #e0e7ff; }
 `;
 
@@ -178,6 +196,11 @@ const MessagesPage = () => {
 
   const [chatBg, setChatBg] = useState(() => localStorage.getItem('chatBg') || 'plain');
   const [showBgModal, setShowBgModal] = useState(false);
+  
+  const activeRef = useRef(active);
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
 
   useEffect(() => {
     localStorage.setItem('chatBg', chatBg);
@@ -221,45 +244,41 @@ const MessagesPage = () => {
     socket.on('presence:update', (ids) => setOnlineUsers(new Set(ids)));
 
     socket.on('typing', ({ from }) => {
-      if (from && from === other?._id) {
+      const currentActive = activeRef.current;
+      const currentOther = currentActive?.participants?.find(p => p._id !== currentUser?._id);
+      if (from && from === currentOther?._id) {
         setIsOtherTyping(true);
       }
     });
 
     socket.on('typing:stop', ({ from }) => {
-      if (from && from === other?._id) {
+      const currentActive = activeRef.current;
+      const currentOther = currentActive?.participants?.find(p => p._id !== currentUser?._id);
+      if (from && from === currentOther?._id) {
         setIsOtherTyping(false);
       }
     });
 
-    // --- [THE FIX IS HERE] ---
-    // This listener now correctly handles incoming messages based on your requirements.
     socket.on('message:new', async (newMessage) => {
+      const currentActive = activeRef.current;
+      const currentOther = currentActive?.participants?.find(p => p._id !== currentUser?._id);
       
-      // Use the functional form of setState to get the most recent `active` state
-      setActive(currentActive => {
-        const currentOther = currentActive?.participants?.find(p => p._id !== currentUser?._id);
-        
-        // 1. Check if the new message is from the user in the currently active chat window.
-        if (currentOther && newMessage.senderId?._id === currentOther._id) {
-          setIsOtherTyping(false); // Stop the typing indicator immediately
-          
-          // Check for duplicates to be safe
-          if (currentActive.messages.find(m => m._id === newMessage._id)) {
-            return currentActive; // Don't add if it's already there
-          }
-          
-          // If the chat is open, add the new message to the state for immediate display.
-          return { ...currentActive, messages: [...currentActive.messages, newMessage] };
-        }
-        
-        // 2. If the message is not for the active chat, return the state unchanged.
-        // The conversation list will be updated below, showing a badge.
-        return currentActive;
-      });
+      const isForActiveChat = currentOther && newMessage.senderId?._id === currentOther._id;
 
-      // 3. ALWAYS refresh the conversation list.
-      // This updates previews and unread counts for all conversations.
+      if (isForActiveChat) {
+        setIsOtherTyping(false);
+        setActive(prev => {
+          if (!prev || prev.messages.find(m => m._id === newMessage._id)) return prev;
+          return { ...prev, messages: [...prev.messages, newMessage] };
+        });
+
+        try {
+          await messagesAPI.getConversationWith(currentOther._id);
+        } catch (error) {
+          console.error("Failed to mark conversation as read", error);
+        }
+      }
+
       try {
         const { data } = await messagesAPI.getConversations();
         setConversations(data);
@@ -268,10 +287,20 @@ const MessagesPage = () => {
       }
     });
 
+    socket.on('conversation:cleared', async ({ conversationId }) => {
+      const currentActive = activeRef.current;
+      if (currentActive?._id === conversationId) {
+        const { data: updatedConv } = await messagesAPI.getConversationWith(other._id);
+        setActive(updatedConv);
+      }
+      const { data } = await messagesAPI.getConversations();
+      setConversations(data);
+    });
+
     return () => {
       socket.disconnect();
     };
-  }, [currentUser?._id]); // We only need the current user ID to establish the socket connection.
+  }, [currentUser?._id]);
 
   useEffect(() => {
     setIsOtherTyping(false);
@@ -342,10 +371,6 @@ const MessagesPage = () => {
     const res = await messagesAPI.sendMessage(other._id, { subject: 'Chat', message: plain, ...(enc || {}) });
     const savedMessage = res.data;
 
-    if (socketRef.current) {
-      socketRef.current.emit('message:send', { toUserId: other._id, message: savedMessage });
-    }
-
     setActive(prev => {
         if (!prev) return null;
         const newMessages = prev.messages.map(m => m._id === optimistic._id ? savedMessage : m);
@@ -369,6 +394,21 @@ const MessagesPage = () => {
       socket.emit('typing:stop', { recipientId: other._id });
     }, 1500);
   };
+
+  const handleClearConversation = async () => {
+    if (!active || !active._id || active._id.startsWith('new-')) return;
+    
+    if (window.confirm('Are you sure you want to permanently delete this conversation history? This cannot be undone.')) {
+      try {
+        await messagesAPI.clearConversation(active._id);
+        // The websocket event 'conversation:cleared' will handle updating the UI for all participants
+      } catch (error) {
+        console.error("Failed to clear conversation", error);
+        alert('An error occurred while clearing the conversation.');
+      }
+    }
+  };
+
 
   return (
     <Wrapper>
@@ -401,14 +441,17 @@ const MessagesPage = () => {
                     <img className="avatar" src={peer?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(peer?.name || 'User')}&background=EEF2FF&color=111827`} alt={peer?.name} />
                     {onlineUsers.has(peer?._id) && <span style={{ position: 'absolute', left: 28, top: 28, width: 10, height: 10, borderRadius: '50%', background: '#22c55e', border: '2px solid white' }} />}
                   </div>
-                  <div>
-                    <div className="name" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span>{peer?.name || 'User'}</span>
-                      {c.unreadCount > 0 && (
-                        <span style={{ background: '#ef4444', color: 'white', borderRadius: 9999, padding: '2px 8px', fontSize: 12, fontWeight: 700 }}>
-                          {c.unreadCount}
-                        </span>
-                      )}
+                  {/* --- [THE FIX IS HERE] --- */}
+                  <div className="info-container">
+                    <div className="name">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span>{peer?.name || 'User'}</span>
+                        {c.unreadCount > 0 && (
+                          <span style={{ background: '#ef4444', color: 'white', borderRadius: 9999, padding: '2px 8px', fontSize: 12, fontWeight: 700 }}>
+                            {c.unreadCount}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="preview">{last ? (decryptedTexts[last._id] ?? last.message ?? 'New message') : 'Start a conversation'}</div>
                   </div>
@@ -437,9 +480,16 @@ const MessagesPage = () => {
               )}
             </div>
           </div>
-          <BgSelectorButton type="button" onClick={() => setShowBgModal(v => !v)}>
-            <Paintbrush size={18} />
-          </BgSelectorButton>
+          <div className="right">
+            {other?._id && (
+              <BgSelectorButton type="button" onClick={handleClearConversation} title="Clear conversation history">
+                <Trash2 size={18} color="#ef4444" />
+              </BgSelectorButton>
+            )}
+            <BgSelectorButton type="button" onClick={() => setShowBgModal(v => !v)} title="Change background">
+              <Paintbrush size={18} />
+            </BgSelectorButton>
+          </div>
           {showBgModal && (
             <BgOptionsModal>
               {CHAT_BACKGROUNDS.map(bg => (
@@ -457,11 +507,15 @@ const MessagesPage = () => {
           )}
         </ChatHeader>
         <MessagesList ref={messagesListRef} $bg={chatBg}>
-          {(active?.messages || []).map((m) => (
-            <Bubble key={m._id} $me={m.senderId?._id === (currentUser?._id || '')}>
-              {decryptedTexts[m._id] ?? (m.message || '')}
-            </Bubble>
-          ))}
+          {(active?.messages || []).map((m) =>
+            m.messageType === 'system' ? (
+              <SystemMessage key={m._id}>{m.message}</SystemMessage>
+            ) : (
+              <Bubble key={m._id} $me={m.senderId?._id === (currentUser?._id || '')}>
+                {decryptedTexts[m._id] ?? (m.message || '')}
+              </Bubble>
+            )
+          )}
           {isOtherTyping && <TypingIndicator>typing…</TypingIndicator>}
         </MessagesList>
         {other?._id && (

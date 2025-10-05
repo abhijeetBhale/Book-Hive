@@ -100,13 +100,10 @@ export const friendsAPI = {
 
 // --- THE NEWLY ADDED API METHODS ---
 export const messagesAPI = {
-  // THE FIX: Ensure the entire messageData object (including subject) is sent
-  sendMessage: (recipientId, messageData) =>
-    api.post(`/messages/send/${recipientId}`, messageData),
-  getConversations: () => api.get("/messages/conversations"),
+  sendMessage: (recipientId, data) => api.post(`/messages/send/${recipientId}`, data),
+  getConversations: () => api.get('/messages/conversations'),
   getConversationWith: (userId) => api.get(`/messages/with/${userId}`),
-  getReceivedMessages: () => api.get("/messages/received"),
-  deleteMessage: (messageId) => api.delete(`/messages/${messageId}`),
+  clearConversation: (conversationId) => api.delete(`/messages/conversation/${conversationId}`),
 };
 
 // --- REPORT API METHODS ---

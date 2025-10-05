@@ -137,9 +137,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('message:send', ({ toUserId, message }) => {
-    io.to(`user:${toUserId}`).emit('message:new', message);
-  });
+  // The 'message:send' listener is now removed to prevent duplicate events.
+  // The API controller handles emitting 'message:new'.
 
   socket.on('disconnect', () => {
     const set = onlineUsers.get(userId);

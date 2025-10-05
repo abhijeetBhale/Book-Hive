@@ -1,6 +1,9 @@
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import Notification from '../models/Notification.js';
+import User from '../models/User.js';
+
+// ... (keep all the existing controller functions like sendMessage, getConversations, etc.)
 
 // @desc    Send a message to a user
 // @route   POST /api/messages/send/:recipientId
@@ -38,25 +41,18 @@ export const sendMessage = async (req, res) => {
     
     await Promise.all([conversation.save(), newMessage.save()]);
 
+    const populatedMessage = await Message.findById(newMessage._id)
+      .populate('senderId', 'name email avatar')
+      .populate('recipientId', 'name email avatar')
+      .lean();
+
+
     // Emit realtime event to sender and recipient rooms
     try {
       const io = req.app.get('io');
       if (io) {
-        const payload = {
-          conversationId: conversation._id.toString(),
-          messageId: newMessage._id.toString(),
-          from: senderId,
-          recipientId,
-          createdAt: newMessage.createdAt,
-          subject: newMessage.subject,
-          message: newMessage.message,
-          ciphertext: newMessage.ciphertext,
-          iv: newMessage.iv,
-          salt: newMessage.salt,
-          alg: newMessage.alg,
-        };
-        io.to(`user:${recipientId}`).emit('message:new', payload);
-        io.to(`user:${senderId}`).emit('message:new', payload);
+        io.to(`user:${recipientId}`).emit('message:new', populatedMessage);
+        io.to(`user:${senderId}`).emit('message:new', populatedMessage);
       }
     } catch (e) {
       console.error('Failed to emit message:new event:', e.message);
@@ -75,7 +71,7 @@ export const sendMessage = async (req, res) => {
       console.error('Failed to create new_message notification:', e.message);
     }
 
-    res.status(201).json(newMessage);
+    res.status(201).json(populatedMessage);
   } catch (error) {
     console.error('Error in sendMessage controller: ', error.message);
     res.status(500).json({ message: 'Server error sending message' });
@@ -215,4 +211,55 @@ export const deleteMessage = async (req, res) => {
         console.error('Error in deleteMessage controller: ', error.message);
         res.status(500).json({ message: 'Server error deleting message' });
     }
+};
+
+
+// @desc    Clear a conversation
+// @route   DELETE /api/messages/conversation/:conversationId
+export const clearConversation = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const userId = req.user.id;
+
+    const conversation = await Conversation.findById(conversationId);
+
+    if (!conversation) {
+      return res.status(404).json({ message: 'Conversation not found' });
+    }
+
+    // Check if the user is a participant
+    if (!conversation.participants.map(p => p.toString()).includes(userId)) {
+      return res.status(403).json({ message: 'Not authorized to clear this conversation' });
+    }
+
+    // Delete all messages associated with the conversation
+    await Message.deleteMany({ _id: { $in: conversation.messages } });
+
+    // Create a new system message to indicate the chat was cleared
+    const systemMessage = new Message({
+      senderId: userId,
+      recipientId: conversation.participants.find(p => p.toString() !== userId),
+      message: `Conversation cleared by ${req.user.name}`,
+      messageType: 'system',
+    });
+    
+    await systemMessage.save();
+
+    // Update conversation to only contain the new system message
+    conversation.messages = [systemMessage._id];
+    await conversation.save();
+
+    // Notify all participants that the conversation was cleared
+    const io = req.app.get('io');
+    if (io) {
+      conversation.participants.forEach(participantId => {
+        io.to(`user:${participantId.toString()}`).emit('conversation:cleared', { conversationId });
+      });
+    }
+
+    res.status(200).json({ message: 'Conversation cleared successfully' });
+  } catch (error) {
+    console.error('Error in clearConversation controller: ', error.message);
+    res.status(500).json({ message: 'Server error clearing conversation' });
+  }
 };

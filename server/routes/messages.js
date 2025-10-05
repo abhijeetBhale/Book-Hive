@@ -1,5 +1,12 @@
 import express from 'express';
-import { sendMessage, getConversations, getConversationWithUser, getReceivedMessages, deleteMessage } from '../controllers/messageController.js';
+import {
+  sendMessage,
+  getConversations,
+  getConversationWithUser,
+  getReceivedMessages,
+  deleteMessage,
+  clearConversation,
+} from '../controllers/messageController.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -16,5 +23,8 @@ router.post('/send/:recipientId', protect, sendMessage);
 
 // This route deletes a message
 router.delete('/:messageId', protect, deleteMessage);
+
+// This route clears an entire conversation
+router.delete('/conversation/:conversationId', protect, clearConversation);
 
 export default router;
