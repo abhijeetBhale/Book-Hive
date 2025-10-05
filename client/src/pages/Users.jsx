@@ -370,7 +370,7 @@ const UserCard = ({ user, distance, priority }) => {
   const rating = typeof user.rating?.value === 'number' ? user.rating.value : 4.0;
 
   return (
-    <Link to={`/profile/${user._id}`} className="user-card-link">
+    <Link to={`/users/${user._id}`} className="user-card-link">
       <div className={`user-card ${priority <= 3 ? 'priority-high' : priority <= 10 ? 'priority-medium' : 'priority-low'}`}>
         {priority <= 3 && (
           <div className="priority-badge">

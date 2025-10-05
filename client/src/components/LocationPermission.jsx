@@ -13,8 +13,11 @@ const LocationPermission = ({ onClose }) => {
   const handleAllowLocation = async () => {
     setLoading(true);
     try {
+      // Get real-time location from browser
       const location = await getCurrentLocation();
+      // Send location to backend
       await authAPI.updateLocation(location);
+      // Refresh user profile in context
       await fetchProfile();
       toast.success("Location updated successfully!");
       onClose();
@@ -49,7 +52,7 @@ const LocationPermission = ({ onClose }) => {
               onClick={handleAllowLocation}
               disabled={loading}
             >
-              {loading ? 'Getting Location...' : 'Allow Location Access'}
+              {loading ? "Fetching location..." : "Allow Location"}
             </button>
             <button className="skip-btn" onClick={onClose}>
               Skip for Now

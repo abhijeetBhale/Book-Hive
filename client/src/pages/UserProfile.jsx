@@ -323,7 +323,7 @@ const MessageModal = ({ user, onClose }) => {
 
 // --- MAIN USER PROFILE COMPONENT ---
 const UserProfile = () => {
-  const { userId } = useParams();
+  const { id } = useParams();
   const { user: currentUser } = useContext(AuthContext);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -346,11 +346,11 @@ const UserProfile = () => {
     const fetchUserProfile = async () => {
       setLoading(true);
       try {
-        const userResponse = await usersAPI.getUserProfile(userId);
+        const userResponse = await usersAPI.getUserProfile(id);
         if (!userResponse.data || !userResponse.data.user) throw new Error('User not found');
         const userData = userResponse.data.user;
         
-        const booksResponse = await booksAPI.getUserBooks(userId);
+        const booksResponse = await booksAPI.getUserBooks(id);
         userData.booksOwned = booksResponse.data.books || [];
         
         setUser(userData);
@@ -362,8 +362,8 @@ const UserProfile = () => {
         setLoading(false);
       }
     };
-    if (userId) fetchUserProfile();
-  }, [userId]);
+    if (id) fetchUserProfile();
+  }, [id]);
 
   const handleOpenDetailsModal = (book) => setViewingBook(book);
   const handleCloseDetailsModal = () => setViewingBook(null);
