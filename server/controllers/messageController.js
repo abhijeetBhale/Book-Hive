@@ -51,7 +51,26 @@ export const sendMessage = async (req, res) => {
     try {
       const io = req.app.get('io');
       if (io) {
+        // Emit to recipient
         io.to(`user:${recipientId}`).emit('message:new', populatedMessage);
+        
+        // Check if recipient is online and mark as delivered
+        const recipientSocket = io.sockets.adapter.rooms.get(`user:${recipientId}`);
+        if (recipientSocket && recipientSocket.size > 0) {
+          // Recipient is online, mark as delivered
+          await Message.findByIdAndUpdate(newMessage._id, { 
+            status: 'delivered', 
+            deliveredAt: new Date() 
+          });
+          
+          // Emit delivery confirmation to sender
+          io.to(`user:${senderId}`).emit('message:delivered', { 
+            messageId: newMessage._id,
+            deliveredAt: new Date()
+          });
+        }
+        
+        // Also emit to sender for real-time updates
         io.to(`user:${senderId}`).emit('message:new', populatedMessage);
       }
     } catch (e) {
@@ -125,10 +144,57 @@ export const getConversationWithUser = async (req, res) => {
 
     // Mark recipient's unread messages as read (treat missing read as unread)
     try {
-      await Message.updateMany(
-        { _id: { $in: conversation.messages.map((m) => m._id) }, recipientId: loggedInUserId, read: { $ne: true } },
-        { $set: { read: true } }
-      );
+      const unreadMessages = await Message.find({
+        _id: { $in: conversation.messages.map((m) => m._id) }, 
+        recipientId: loggedInUserId, 
+        read: { $ne: true }
+      });
+
+      if (unreadMessages.length > 0) {
+        await Message.updateMany(
+          { _id: { $in: unreadMessages.map(m => m._id) } },
+          { 
+            $set: { 
+              read: true, 
+              status: 'read',
+              readAt: new Date()
+            } 
+          }
+        );
+
+        // Emit read receipts to senders
+        try {
+          const io = req.app.get('io');
+          if (io) {
+            const readReceipts = unreadMessages.map(msg => ({
+              messageId: msg._id,
+              readAt: new Date(),
+              readBy: loggedInUserId
+            }));
+
+            // Group by sender and emit read receipts
+            const senderGroups = {};
+            unreadMessages.forEach(msg => {
+              const senderId = msg.senderId.toString();
+              if (!senderGroups[senderId]) {
+                senderGroups[senderId] = [];
+              }
+              senderGroups[senderId].push({
+                messageId: msg._id,
+                readAt: new Date()
+              });
+            });
+
+            // Emit to each sender
+            Object.keys(senderGroups).forEach(senderId => {
+              io.to(`user:${senderId}`).emit('messages:read', senderGroups[senderId]);
+            });
+          }
+        } catch (e) {
+          console.error('Failed to emit read receipts:', e.message);
+        }
+      }
+
       // Re-fetch with updated read flags
       conversation = await Conversation.findById(conversation._id)
         .populate({ path: 'participants', select: 'name avatar email publicKeyJwk' })

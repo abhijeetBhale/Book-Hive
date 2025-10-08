@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useContext, useRef } from 'react';
+import React, { useEffect, useState, useContext, useRef, Fragment } from 'react';
 import styled from 'styled-components';
 import { messagesAPI, usersAPI } from '../utils/api';
 import { importPrivateKeyFromIndexedDB, encryptMessage, decryptMessage } from '../utils/crypto';
 import { useSearchParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { io } from 'socket.io-client';
-import { Paintbrush, Trash2 } from 'lucide-react';
+import { Paintbrush, Trash2, Check, CheckCheck } from 'lucide-react';
 
 const CHAT_BACKGROUNDS = [
   { label: 'Default', value: 'plain', src: '' },
@@ -86,7 +86,7 @@ const MessagesList = styled.div`
   padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.25rem;
   background: ${({ $bg }) =>
     $bg === 'plain' ? '#fff'
       : $bg && CHAT_BACKGROUNDS.find(bg => bg.value === $bg)?.src
@@ -106,11 +106,67 @@ const TypingIndicator = styled.div`
   padding: 0.25rem 0.5rem;
 `;
 
-const Bubble = styled.div`
+const MessageContainer = styled.div`
   align-self: ${props => props.$me ? 'flex-end' : 'flex-start'};
+  display: flex;
+  flex-direction: column;
+  max-width: 70%;
+  margin-bottom: 0.5rem;
+`;
+
+const Bubble = styled.div`
   background: ${props => props.$me ? '#4F46E5' : '#f3f4f6'};
   color: ${props => props.$me ? '#fff' : '#111827'};
-  padding: 0.5rem 0.75rem; border-radius: 12px; max-width: 70%;
+  padding: 0.5rem 0.75rem; 
+  border-radius: 12px;
+  word-wrap: break-word;
+  position: relative;
+`;
+
+const MessageText = styled.div`
+  margin-bottom: ${props => props.$hasInfo ? '0.5rem' : '0'};
+  line-height: 1.4;
+`;
+
+const MessageInfo = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: ${props => props.$me ? 'rgba(255, 255, 255, 0.8)' : '#6b7280'};
+  margin-top: 0.25rem;
+`;
+
+const StatusIndicator = styled.span`
+  display: flex;
+  align-items: center;
+  margin-left: 0.25rem;
+  
+  svg {
+    color: ${props => {
+    if (props.$me) {
+      switch (props.$status) {
+        case 'sent': return 'rgba(255, 255, 255, 0.7)';
+        case 'delivered': return 'rgba(255, 255, 255, 0.9)';
+        case 'read': return '#00d4aa'; // WhatsApp blue-green for read
+        default: return 'rgba(255, 255, 255, 0.7)';
+      }
+    } else {
+      switch (props.$status) {
+        case 'sent': return '#9ca3af';
+        case 'delivered': return '#60a5fa';
+        case 'read': return '#00d4aa';
+        default: return '#9ca3af';
+      }
+    }
+  }};
+  }
+`;
+
+const TimeStamp = styled.span`
+  font-size: 0.65rem;
+  color: ${props => props.$me ? 'rgba(255, 255, 255, 0.8)' : '#9ca3af'};
 `;
 
 const SystemMessage = styled.div`
@@ -121,6 +177,18 @@ const SystemMessage = styled.div`
   border-radius: 9999px;
   font-size: 0.75rem;
   margin: 0.5rem 0;
+`;
+
+const DateSeparator = styled.div`
+  align-self: center;
+  background: rgba(0, 0, 0, 0.05);
+  color: #6b7280;
+  padding: 0.375rem 0.875rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin: 1rem 0;
+  backdrop-filter: blur(10px);
 `;
 
 const Composer = styled.form`
@@ -179,6 +247,53 @@ const BgOption = styled.button`
   }
 `;
 
+const formatMessageTime = (timestamp) => {
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+};
+
+const formatDateSeparator = (timestamp) => {
+  const date = new Date(timestamp);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) {
+    return 'Today';
+  } else if (date.toDateString() === yesterday.toDateString()) {
+    return 'Yesterday';
+  } else {
+    return date.toLocaleDateString([], {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+};
+
+const getStatusIcon = (status) => {
+  switch (status) {
+    case 'sent': return <Check size={14} />;
+    case 'delivered': return <CheckCheck size={14} />;
+    case 'read': return <CheckCheck size={14} />;
+    default: return <Check size={14} />;
+  }
+};
+
+const shouldShowDateSeparator = (currentMessage, previousMessage) => {
+  if (!previousMessage) return true;
+
+  const currentDate = new Date(currentMessage.createdAt).toDateString();
+  const previousDate = new Date(previousMessage.createdAt).toDateString();
+
+  return currentDate !== previousDate;
+};
+
 const MessagesPage = () => {
   const [conversations, setConversations] = useState([]);
   const [active, setActive] = useState(null);
@@ -193,6 +308,7 @@ const MessagesPage = () => {
   const [isOtherTyping, setIsOtherTyping] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [socketConnected, setSocketConnected] = useState(false);
+  const [messageStatuses, setMessageStatuses] = useState({});
   const messagesListRef = useRef(null);
 
   const [chatBg, setChatBg] = useState(() => localStorage.getItem('chatBg') || 'plain');
@@ -319,6 +435,21 @@ const MessagesPage = () => {
       }
     });
 
+    socket.on('message:delivered', ({ messageId, deliveredAt }) => {
+      setMessageStatuses(prev => ({
+        ...prev,
+        [messageId]: { status: 'delivered', deliveredAt }
+      }));
+    });
+
+    socket.on('messages:read', (readReceipts) => {
+      const updates = {};
+      readReceipts.forEach(({ messageId, readAt }) => {
+        updates[messageId] = { status: 'read', readAt };
+      });
+      setMessageStatuses(prev => ({ ...prev, ...updates }));
+    });
+
     socket.on('conversation:cleared', async ({ conversationId }) => {
       const currentActive = activeRef.current;
       if (currentActive?._id === conversationId) {
@@ -368,6 +499,18 @@ const MessagesPage = () => {
           }
         }
         setDecryptedTexts(results);
+
+        // Initialize message statuses
+        const statuses = {};
+        (active.messages || []).forEach(m => {
+          statuses[m._id] = {
+            status: m.status || 'sent',
+            deliveredAt: m.deliveredAt,
+            readAt: m.readAt
+          };
+        });
+        setMessageStatuses(statuses);
+
         setTimeout(() => {
           if (messagesListRef.current) messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
         }, 50);
@@ -393,6 +536,7 @@ const MessagesPage = () => {
       recipientId: { _id: other._id },
       subject: 'Chat',
       message: plain,
+      status: 'sent',
       createdAt: new Date().toISOString(),
     };
 
@@ -424,6 +568,12 @@ const MessagesPage = () => {
         const newMessages = prev.messages.map(m => m._id === optimistic._id ? savedMessage : m);
         return { ...prev, messages: newMessages };
       });
+
+      // Initialize status for the new message
+      setMessageStatuses(prev => ({
+        ...prev,
+        [savedMessage._id]: { status: savedMessage.status || 'sent' }
+      }));
 
       // Refresh conversations list
       try {
@@ -569,15 +719,44 @@ const MessagesPage = () => {
           )}
         </ChatHeader>
         <MessagesList ref={messagesListRef} $bg={chatBg}>
-          {(active?.messages || []).map((m) =>
-            m.messageType === 'system' ? (
-              <SystemMessage key={m._id}>{m.message}</SystemMessage>
-            ) : (
-              <Bubble key={m._id} $me={m.senderId?._id === (currentUser?._id || '')}>
-                {decryptedTexts[m._id] ?? (m.message || '')}
-              </Bubble>
-            )
-          )}
+          {(active?.messages || []).map((m, index) => {
+            const isMe = m.senderId?._id === (currentUser?._id || '');
+            const messageStatus = messageStatuses[m._id] || { status: m.status || 'sent' };
+            const messageText = decryptedTexts[m._id] ?? (m.message || '');
+            const previousMessage = index > 0 ? active.messages[index - 1] : null;
+            const showDateSeparator = shouldShowDateSeparator(m, previousMessage);
+
+            return (
+              <Fragment key={m._id}>
+                {showDateSeparator && (
+                  <DateSeparator>
+                    {formatDateSeparator(m.createdAt)}
+                  </DateSeparator>
+                )}
+                {m.messageType === 'system' ? (
+                  <SystemMessage>{m.message}</SystemMessage>
+                ) : (
+                  <MessageContainer $me={isMe}>
+                    <Bubble $me={isMe}>
+                      <MessageText $hasInfo={true}>
+                        {messageText}
+                      </MessageText>
+                      <MessageInfo $me={isMe}>
+                        <TimeStamp $me={isMe}>
+                          {formatMessageTime(m.createdAt)}
+                        </TimeStamp>
+                        {isMe && (
+                          <StatusIndicator $status={messageStatus.status} $me={isMe}>
+                            {getStatusIcon(messageStatus.status)}
+                          </StatusIndicator>
+                        )}
+                      </MessageInfo>
+                    </Bubble>
+                  </MessageContainer>
+                )}
+              </Fragment>
+            );
+          })}
           {isOtherTyping && <TypingIndicator>typing…</TypingIndicator>}
         </MessagesList>
         {other?._id && (

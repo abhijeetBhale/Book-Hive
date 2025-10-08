@@ -16,6 +16,14 @@ const messageSchema = new mongoose.Schema(
       enum: ['user', 'system'],
       default: 'user',
     },
+    // Message status tracking
+    status: {
+      type: String,
+      enum: ['sent', 'delivered', 'read'],
+      default: 'sent'
+    },
+    deliveredAt: { type: Date },
+    readAt: { type: Date },
     // Soft-delete per user
     deletedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', default: [] }],
   },
