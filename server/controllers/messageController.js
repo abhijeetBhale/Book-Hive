@@ -58,18 +58,8 @@ export const sendMessage = async (req, res) => {
       console.error('Failed to emit message:new event:', e.message);
     }
 
-    // Fire a notification for the recipient
-    try {
-      await Notification.create({
-        user: recipientId,
-        type: 'new_message',
-        message: `${req.user.name} sent you a message${subject ? `: ${subject}` : ''}`,
-        fromUser: senderId,
-        link: `/messages`
-      });
-    } catch (e) {
-      console.error('Failed to create new_message notification:', e.message);
-    }
+    // Don't create notifications for regular chat messages
+    // Notifications are only for book inquiries sent from user profiles
 
     res.status(201).json(populatedMessage);
   } catch (error) {
@@ -97,9 +87,10 @@ export const getConversations = async (req, res) => {
             ]
           });
 
-        // Attach unread counts (treat missing read as unread for legacy docs)
         const withCounts = conversations.map((c) => {
           const obj = c.toObject();
+          // Filter out messages soft-deleted by this user
+          obj.messages = (obj.messages || []).filter((m) => !(m.deletedBy || []).some(id => id?.toString() === loggedInUserId.toString()));
           obj.unreadCount = (obj.messages || []).filter((m) => {
             return m && m.recipientId && m.recipientId._id?.toString() === loggedInUserId.toString() && m.read !== true;
           }).length;
@@ -153,7 +144,11 @@ export const getConversationWithUser = async (req, res) => {
       console.error('Failed to mark messages as read:', e.message);
     }
 
-    res.status(200).json(conversation);
+    // Filter out messages soft-deleted by current user before sending
+    const convObj = conversation.toObject();
+    convObj.messages = (convObj.messages || []).filter((m) => !(m.deletedBy || []).some(id => id?.toString() === loggedInUserId.toString()));
+
+    res.status(200).json(convObj);
   } catch (error) {
     console.error('Error in getConversationWithUser: ', error.message);
     res.status(500).json({ message: 'Server error getting conversation' });
@@ -197,16 +192,10 @@ export const deleteMessage = async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to delete this message' });
         }
 
-        // Remove message from conversation
-        await Conversation.updateMany(
-            { messages: messageId },
-            { $pull: { messages: messageId } }
-        );
+        // Soft-delete for current user only
+        await Message.findByIdAndUpdate(messageId, { $addToSet: { deletedBy: userId } });
 
-        // Delete the message
-        await Message.findByIdAndDelete(messageId);
-
-        res.status(200).json({ message: 'Message deleted successfully' });
+        res.status(200).json({ message: 'Message hidden for current user' });
     } catch (error) {
         console.error('Error in deleteMessage controller: ', error.message);
         res.status(500).json({ message: 'Server error deleting message' });
@@ -214,7 +203,7 @@ export const deleteMessage = async (req, res) => {
 };
 
 
-// @desc    Clear a conversation
+// @desc    Clear a conversation (user-specific, not global)
 // @route   DELETE /api/messages/conversation/:conversationId
 export const clearConversation = async (req, res) => {
   try {
@@ -232,32 +221,19 @@ export const clearConversation = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to clear this conversation' });
     }
 
-    // Delete all messages associated with the conversation
-    await Message.deleteMany({ _id: { $in: conversation.messages } });
+    // Soft-delete all messages for this user only (not global deletion)
+    await Message.updateMany(
+      { _id: { $in: conversation.messages } },
+      { $addToSet: { deletedBy: userId } }
+    );
 
-    // Create a new system message to indicate the chat was cleared
-    const systemMessage = new Message({
-      senderId: userId,
-      recipientId: conversation.participants.find(p => p.toString() !== userId),
-      message: `Conversation cleared by ${req.user.name}`,
-      messageType: 'system',
-    });
-    
-    await systemMessage.save();
-
-    // Update conversation to only contain the new system message
-    conversation.messages = [systemMessage._id];
-    await conversation.save();
-
-    // Notify all participants that the conversation was cleared
+    // Only notify the current user that their conversation was cleared
     const io = req.app.get('io');
     if (io) {
-      conversation.participants.forEach(participantId => {
-        io.to(`user:${participantId.toString()}`).emit('conversation:cleared', { conversationId });
-      });
+      io.to(`user:${userId}`).emit('conversation:cleared', { conversationId });
     }
 
-    res.status(200).json({ message: 'Conversation cleared successfully' });
+    res.status(200).json({ message: 'Conversation cleared for your account only' });
   } catch (error) {
     console.error('Error in clearConversation controller: ', error.message);
     res.status(500).json({ message: 'Server error clearing conversation' });

@@ -137,18 +137,18 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
   const [showResults, setShowResults] = useState(false);
   const coverImageFile = watch('coverImage');
   const titleValue = watch('title');
-  
+
   useEffect(() => {
     if (initialData) {
-        reset(initialData);
-        if (initialData.coverImage) {
-            setImagePreview(getFullImageUrl(initialData.coverImage));
-        } else {
-            setImagePreview(null);
-        }
-    } else {
-        reset({ isCurrentlyAvailable: true, condition: 'Good' });
+      reset(initialData);
+      if (initialData.coverImage) {
+        setImagePreview(getFullImageUrl(initialData.coverImage));
+      } else {
         setImagePreview(null);
+      }
+    } else {
+      reset({ isCurrentlyAvailable: true, condition: 'Good' });
+      setImagePreview(null);
     }
   }, [initialData, reset]);
 
@@ -166,13 +166,13 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
     if (!query || query.length < 3) return;
     setIsSearching(true);
     try {
-        const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=5`);
-        const data = await response.json();
-        if (data.items) {
-            const books = data.items.map(item => ({ id: item.id, title: item.volumeInfo.title || '', author: item.volumeInfo.authors ? item.volumeInfo.authors.join(', ') : '', publishedDate: item.volumeInfo.publishedDate || '', categories: item.volumeInfo.categories || [], description: item.volumeInfo.description || '', isbn: item.volumeInfo.industryIdentifiers ? item.volumeInfo.industryIdentifiers.find(id => id.type === 'ISBN_13')?.identifier || item.volumeInfo.industryIdentifiers.find(id => id.type === 'ISBN_10')?.identifier || '' : '', coverImage: item.volumeInfo.imageLinks?.thumbnail || item.volumeInfo.imageLinks?.smallThumbnail || '', pageCount: item.volumeInfo.pageCount || '' }));
-            setSearchResults(books);
-            setShowResults(true);
-        }
+      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=5`);
+      const data = await response.json();
+      if (data.items) {
+        const books = data.items.map(item => ({ id: item.id, title: item.volumeInfo.title || '', author: item.volumeInfo.authors ? item.volumeInfo.authors.join(', ') : '', publishedDate: item.volumeInfo.publishedDate || '', categories: item.volumeInfo.categories || [], description: item.volumeInfo.description || '', isbn: item.volumeInfo.industryIdentifiers ? item.volumeInfo.industryIdentifiers.find(id => id.type === 'ISBN_13')?.identifier || item.volumeInfo.industryIdentifiers.find(id => id.type === 'ISBN_10')?.identifier || '' : '', coverImage: item.volumeInfo.imageLinks?.thumbnail || item.volumeInfo.imageLinks?.smallThumbnail || '', pageCount: item.volumeInfo.pageCount || '' }));
+        setSearchResults(books);
+        setShowResults(true);
+      }
     } catch (error) { console.error('Error searching Google Books:', error); toast.error('Failed to search books. Please try again.'); }
     finally { setIsSearching(false); }
   };
@@ -192,24 +192,24 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
   const selectBookFromResults = (book) => {
     setSelectedGoogleBook(book);
     setShowResults(false);
-    
+
     // Auto-fill form fields
     setValue('title', book.title);
     setValue('author', book.author);
     setValue('description', book.description);
-    
+
     // ✨ REMOVED: The following line has been removed to stop auto-filling the ISBN
     // setValue('isbn', book.isbn);
-    
+
     if (book.publishedDate) {
-        const year = new Date(book.publishedDate).getFullYear();
-        if (!isNaN(year)) { setValue('publicationYear', year); }
+      const year = new Date(book.publishedDate).getFullYear();
+      if (!isNaN(year)) { setValue('publicationYear', year); }
     }
     if (book.categories && book.categories.length > 0) {
-        const category = book.categories[0];
-        const categoryMap = { 'Fiction': 'Fiction', 'Science Fiction': 'Science Fiction', 'Fantasy': 'Fantasy', 'Mystery': 'Mystery', 'Biography': 'Non-Fiction', 'History': 'Non-Fiction', 'Science': 'Non-Fiction', 'Technology': 'Non-Fiction' };
-        const mappedCategory = categoryMap[category] || 'Fiction';
-        setValue('category', mappedCategory);
+      const category = book.categories[0];
+      const categoryMap = { 'Fiction': 'Fiction', 'Science Fiction': 'Science Fiction', 'Fantasy': 'Fantasy', 'Mystery': 'Mystery', 'Biography': 'Non-Fiction', 'History': 'Non-Fiction', 'Science': 'Non-Fiction', 'Technology': 'Non-Fiction' };
+      const mappedCategory = categoryMap[category] || 'Fiction';
+      setValue('category', mappedCategory);
     }
     if (book.coverImage) { setImagePreview(book.coverImage); }
     toast.success('Book details auto-filled from Google Books!');
@@ -220,48 +220,48 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
     setImagePreview(null);
     reset({ isCurrentlyAvailable: true, condition: 'Good' });
   };
-  
+
   const submitButtonText = isSubmitting ? (initialData ? 'Saving Changes...' : 'Saving...') : (initialData ? 'Save Changes' : 'Add Book');
 
   return (
     <StyledBookForm onSubmit={handleSubmit(onSubmit)}>
-        <div className="form-grid">
-            <div className="form-group">
-                <label htmlFor="title">Title <span className="required-star">*</span></label>
-                <div className="search-container">
-                    <input id="title" placeholder="Enter book title (auto-search enabled)" {...register('title', { required: true })} disabled={!!initialData} />
-                    {isSearching && <div className="search-indicator">Searching...</div>}
-                    {selectedGoogleBook && (
-                        <div className="selected-book-indicator">
-                            <span>✓ Auto-filled from Google Books</span>
-                            <button type="button" onClick={clearSelection} className="clear-btn">Clear</button>
-                        </div>
-                    )}
+      <div className="form-grid">
+        <div className="form-group">
+          <label htmlFor="title">Title <span className="required-star">*</span></label>
+          <div className="search-container">
+            <input id="title" placeholder="Enter book title (auto-search enabled)" {...register('title', { required: true })} disabled={!!initialData} />
+            {isSearching && <div className="search-indicator">Searching...</div>}
+            {selectedGoogleBook && (
+              <div className="selected-book-indicator">
+                <span>✓ Auto-filled from Google Books</span>
+                <button type="button" onClick={clearSelection} className="clear-btn">Clear</button>
+              </div>
+            )}
+          </div>
+          {showResults && searchResults.length > 0 && (
+            <div className="search-results">
+              <div className="results-header">Found books:</div>
+              {searchResults.map((book) => (<div key={book.id} className="result-item" onClick={() => selectBookFromResults(book)}>
+                <div className="result-image">{book.coverImage ? (<img src={book.coverImage} alt={book.title} />) : (<div className="no-image"><BookOpen size={20} /></div>)}</div>
+                <div className="result-info">
+                  <div className="result-title">{book.title}</div>
+                  <div className="result-author">by {book.author}</div>
+                  <div className="result-year">{book.publishedDate ? new Date(book.publishedDate).getFullYear() : 'Unknown year'}</div>
                 </div>
-                {showResults && searchResults.length > 0 && (
-                    <div className="search-results">
-                        <div className="results-header">Found books:</div>
-                        {searchResults.map((book) => (<div key={book.id} className="result-item" onClick={() => selectBookFromResults(book)}>
-                            <div className="result-image">{book.coverImage ? (<img src={book.coverImage} alt={book.title} />) : (<div className="no-image"><BookOpen size={20} /></div>)}</div>
-                            <div className="result-info">
-                                <div className="result-title">{book.title}</div>
-                                <div className="result-author">by {book.author}</div>
-                                <div className="result-year">{book.publishedDate ? new Date(book.publishedDate).getFullYear() : 'Unknown year'}</div>
-                            </div>
-                        </div>))}
-                    </div>
-                )}
+              </div>))}
             </div>
-            <div className="form-group"><label htmlFor="author">Author <span className="required-star">*</span></label><input id="author" placeholder="Enter author name" {...register('author', { required: true })} /></div>
-            <div className="form-group"><label htmlFor="category">Category <span className="required-star">*</span></label><select id="category" {...register('category', { required: true })}><option value="">Select a category</option><option value="Fiction">Fiction</option><option value="Non-Fiction">Non-Fiction</option><option value="Science Fiction">Science Fiction</option><option value="Fantasy">Fantasy</option><option value="Mystery">Mystery</option></select></div>
-            <div className="form-group"><label htmlFor="publicationYear">Publication Year</label><input id="publicationYear" placeholder="e.g., 2020" type="number" {...register('publicationYear')} /></div>
-            <div className="form-group"><label htmlFor="isbn">ISBN (optional)</label><input id="isbn" placeholder="Enter ISBN" {...register('isbn')} /></div>
-            <div className="form-group"><label htmlFor="condition">Book Condition</label><select id="condition" {...register('condition')}><option value="New">New</option><option value="Like New">Like New</option><option value="Very Good">Very Good</option><option value="Good">Good</option><option value="Fair">Fair</option><option value="Poor">Poor</option></select></div>
-            <div className="form-group full-width"><label htmlFor="description">Description <span className="required-star">*</span></label><textarea id="description" placeholder="Provide a brief description of the book..." {...register('description', { required: true })}></textarea></div>
-            <div className="form-group full-width"><label>Cover Image</label><div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}><div className="image-preview-container">{imagePreview ? (<img src={imagePreview} alt="Preview" className="image-preview" />) : (<div className="upload-placeholder"><BookOpen size={32} /></div>)}</div><div>{selectedGoogleBook && selectedGoogleBook.coverImage ? (<div className="auto-cover-info"><p style={{ fontSize: '0.9rem', color: '#16a34a', fontWeight: '500' }}>✓ Cover image from Google Books</p><p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>Or upload your own:</p></div>) : null}<label htmlFor="coverImage" className="file-input-label">{selectedGoogleBook && selectedGoogleBook.coverImage ? 'Upload Different Image' : 'Choose File'}</label><input type="file" id="coverImage" accept="image/*" {...register('coverImage')} style={{ display: 'none' }} /><p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>{watch('coverImage')?.[0]?.name || (selectedGoogleBook && selectedGoogleBook.coverImage ? 'Using Google Books cover' : 'No file chosen')}</p></div></div></div>
-            <div className="checkbox-group"><label className="checkbox-item"><input type="checkbox" {...register('isAvailableForBorrowing')} />Available for borrowing</label><label className="checkbox-item"><input type="checkbox" {...register('isCurrentlyAvailable')} defaultChecked />Currently available</label></div>
-            <button type="submit" disabled={isSubmitting} className="submit-btn">{submitButtonText}</button>
+          )}
         </div>
+        <div className="form-group"><label htmlFor="author">Author <span className="required-star">*</span></label><input id="author" placeholder="Enter author name" {...register('author', { required: true })} /></div>
+        <div className="form-group"><label htmlFor="category">Category <span className="required-star">*</span></label><select id="category" {...register('category', { required: true })}><option value="">Select a category</option><option value="Fiction">Fiction</option><option value="Non-Fiction">Non-Fiction</option><option value="Science Fiction">Science Fiction</option><option value="Fantasy">Fantasy</option><option value="Mystery">Mystery</option></select></div>
+        <div className="form-group"><label htmlFor="publicationYear">Publication Year</label><input id="publicationYear" placeholder="e.g., 2020" type="number" {...register('publicationYear')} /></div>
+        <div className="form-group"><label htmlFor="isbn">ISBN (optional)</label><input id="isbn" placeholder="Enter ISBN" {...register('isbn')} /></div>
+        <div className="form-group"><label htmlFor="condition">Book Condition</label><select id="condition" {...register('condition')}><option value="New">New</option><option value="Like New">Like New</option><option value="Very Good">Very Good</option><option value="Good">Good</option><option value="Fair">Fair</option><option value="Poor">Poor</option></select></div>
+        <div className="form-group full-width"><label htmlFor="description">Description <span className="required-star">*</span></label><textarea id="description" placeholder="Provide a brief description of the book..." {...register('description', { required: true })}></textarea></div>
+        <div className="form-group full-width"><label>Cover Image</label><div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}><div className="image-preview-container">{imagePreview ? (<img src={imagePreview} alt="Preview" className="image-preview" />) : (<div className="upload-placeholder"><BookOpen size={32} /></div>)}</div><div>{selectedGoogleBook && selectedGoogleBook.coverImage ? (<div className="auto-cover-info"><p style={{ fontSize: '0.9rem', color: '#16a34a', fontWeight: '500' }}>✓ Cover image from Google Books</p><p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>Or upload your own:</p></div>) : null}<label htmlFor="coverImage" className="file-input-label">{selectedGoogleBook && selectedGoogleBook.coverImage ? 'Upload Different Image' : 'Choose File'}</label><input type="file" id="coverImage" accept="image/*" {...register('coverImage')} style={{ display: 'none' }} /><p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>{watch('coverImage')?.[0]?.name || (selectedGoogleBook && selectedGoogleBook.coverImage ? 'Using Google Books cover' : 'No file chosen')}</p></div></div></div>
+        <div className="checkbox-group"><label className="checkbox-item"><input type="checkbox" {...register('isAvailableForBorrowing')} />Available for borrowing</label><label className="checkbox-item"><input type="checkbox" {...register('isCurrentlyAvailable')} defaultChecked />Currently available</label></div>
+        <button type="submit" disabled={isSubmitting} className="submit-btn">{submitButtonText}</button>
+      </div>
     </StyledBookForm>
   );
 };
@@ -328,7 +328,7 @@ const MyBooks = () => {
   useEffect(() => {
     fetchMyBooks(true);
   }, [fetchMyBooks]);
-  
+
   const handleOpenAddModal = () => {
     setEditingBook(null);
     setSelectedGoogleBook(null);
@@ -344,7 +344,7 @@ const MyBooks = () => {
   const handleOpenDeleteModal = (bookId) => {
     setBookToDelete(bookId);
   };
-  
+
   const handleCloseFormModal = () => {
     setIsFormModalOpen(false);
     setEditingBook(null);
@@ -357,8 +357,8 @@ const MyBooks = () => {
 
   const handleFormSubmit = async (formData) => {
     if (!userId) {
-        toast.error("You must be logged in.");
-        return;
+      toast.error("You must be logged in.");
+      return;
     }
     setIsSubmitting(true);
     const data = new FormData();
@@ -375,7 +375,7 @@ const MyBooks = () => {
         data.append(key, formData[key]);
       }
     }
-    
+
     try {
       if (editingBook) {
         await booksAPI.update(editingBook._id, data);
@@ -392,7 +392,7 @@ const MyBooks = () => {
       setIsSubmitting(false);
     }
   };
-  
+
   const handleConfirmDelete = async () => {
     if (!userId || !bookToDelete) return;
 
@@ -406,14 +406,14 @@ const MyBooks = () => {
       handleCloseDeleteModal();
     }
   };
-  
+
   const EmptyState = () => (
     <div className="empty-state">
       <div className="empty-icon-wrapper"> <BookOpen size={48} /> </div>
       <h3 className="empty-title">Your Bookshelf is Empty</h3>
       <p className="empty-message">You haven't added any books yet. Click the button to add your first book and share it with the community!</p>
-        <button className="add-book-btn empty" onClick={handleOpenAddModal}>
-          <PlusCircle size={20} /> Add Your First Book
+      <button className="add-book-btn empty" onClick={handleOpenAddModal}>
+        <PlusCircle size={20} /> Add Your First Book
       </button>
     </div>
   );
@@ -421,65 +421,65 @@ const MyBooks = () => {
   if (!user) {
     return (
       <StyledWrapper>
-          <div className="empty-state">
-              <div className="empty-icon-wrapper"> <BookOpen size={48} /> </div>
-              <h3 className="empty-title">Please Log In</h3>
-              <p className="empty-message">You need to be logged in to manage your bookshelf.</p>
-          </div>
+        <div className="empty-state">
+          <div className="empty-icon-wrapper"> <BookOpen size={48} /> </div>
+          <h3 className="empty-title">Please Log In</h3>
+          <p className="empty-message">You need to be logged in to manage your bookshelf.</p>
+        </div>
       </StyledWrapper>
     )
   }
 
   return (
     <StyledWrapper>
-        <Toaster position="top-right" />
-        <div className="page-header">
-            <div>
-                <h1 className="main-title">My Bookshelf</h1>
-                <p className="subtitle">Manage your personal book collection and see their status.</p>
-            </div>
-            <button className="add-book-btn" onClick={handleOpenAddModal}>
-                <PlusCircle size={20} /> Add New Book
-            </button>
+      <Toaster position="top-right" />
+      <div className="page-header">
+        <div>
+          <h1 className="main-title">My Bookshelf</h1>
+          <p className="subtitle">Manage your personal book collection and see their status.</p>
         </div>
-        <div className="content-area">
-         {loading ? (
-            <div className="loading-state"><Loader className="animate-spin" /></div>
-          ) : myBooks.length > 0 ? (
-            <div className="books-grid">
-              {myBooks.map((book) => (
-                 <BookCard 
-                    key={book._id} 
-                    book={book} 
-                    onEdit={handleOpenEditModal}
-                    onDelete={handleOpenDeleteModal} 
-                 />
-              ))}
-            </div>
-          ) : (
-            <EmptyState />
-          )}
-        </div>
-        <Modal 
-            isOpen={isFormModalOpen} 
-            onClose={handleCloseFormModal} 
-            title={editingBook ? 'Edit Book Details' : 'Add a New Book'}
-        >
-            <BookForm 
-              onSubmit={handleFormSubmit} 
-              isSubmitting={isSubmitting}
-              initialData={editingBook}
-              selectedGoogleBook={selectedGoogleBook}
-              setSelectedGoogleBook={setSelectedGoogleBook}
-            />
-        </Modal>
-        <ConfirmationModal 
-          isOpen={!!bookToDelete}
-          onClose={handleCloseDeleteModal}
-          onConfirm={handleConfirmDelete}
-          title="Delete Book"
-          message="Are you sure you want to permanently delete this book from your bookshelf? This action cannot be undone."
+        <button className="add-book-btn" onClick={handleOpenAddModal}>
+          <PlusCircle size={20} /> Add New Book
+        </button>
+      </div>
+      <div className="content-area">
+        {loading ? (
+          <div className="loading-state"><Loader className="animate-spin" /></div>
+        ) : myBooks.length > 0 ? (
+          <div className="books-grid">
+            {myBooks.map((book) => (
+              <BookCard
+                key={book._id}
+                book={book}
+                onEdit={handleOpenEditModal}
+                onDelete={handleOpenDeleteModal}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState />
+        )}
+      </div>
+      <Modal
+        isOpen={isFormModalOpen}
+        onClose={handleCloseFormModal}
+        title={editingBook ? 'Edit Book Details' : 'Add a New Book'}
+      >
+        <BookForm
+          onSubmit={handleFormSubmit}
+          isSubmitting={isSubmitting}
+          initialData={editingBook}
+          selectedGoogleBook={selectedGoogleBook}
+          setSelectedGoogleBook={setSelectedGoogleBook}
         />
+      </Modal>
+      <ConfirmationModal
+        isOpen={!!bookToDelete}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
+        title="Delete Book"
+        message="Are you sure you want to permanently delete this book from your bookshelf? This action cannot be undone."
+      />
     </StyledWrapper>
   );
 };

@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
-import { usersAPI, booksAPI, borrowAPI, messagesAPI, friendsAPI } from '../utils/api';
-import { importPrivateKeyFromIndexedDB, encryptMessage } from '../utils/crypto';
+import { usersAPI, booksAPI, borrowAPI, notificationsAPI, friendsAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Loader, MapPin, BookOpen, Send, X, User as UserIcon } from 'lucide-react';
@@ -255,25 +254,22 @@ const MessageModal = ({ user, onClose }) => {
   const [message, setMessage] = useState('');
   const [subject, setSubject] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [privateKey, setPrivateKey] = useState(null);
-
-  useEffect(() => {
-    (async () => { try { setPrivateKey(await importPrivateKeyFromIndexedDB()); } catch {} })();
-  }, []);
 
   const handleSend = async () => {
     if (!message.trim()) return;
     setIsSending(true);
     try {
-      const enc = await encryptMessage(message, privateKey, user.publicKeyJwk || (await usersAPI.getUserProfile(user._id)).data.user.publicKeyJwk);
-      await messagesAPI.sendMessage(user._id, {
+      // Send as book inquiry notification (not chat message)
+      await notificationsAPI.createBookInquiry({
+        toUserId: user._id,
         subject: subject || 'Book Inquiry',
-        ...enc
+        body: message,
       });
-      toast.success(`Message sent to ${user.name}!`);
+      toast.success(`Book inquiry sent to ${user.name}! They will see it in their notifications.`);
       onClose();
     } catch (error) {
-      toast.error("Failed to send message.");
+      console.error('Failed to send book inquiry:', error);
+      toast.error("Failed to send book inquiry. Please try again.");
     } finally {
       setIsSending(false);
     }
@@ -283,7 +279,7 @@ const MessageModal = ({ user, onClose }) => {
     <ModalOverlay onClick={onClose}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>New message</h3>
+          <h3>Send Book Inquiry</h3>
           <button onClick={onClose} className="close-btn"><X size={20} /></button>
         </div>
         <div className="modal-body">
@@ -305,14 +301,14 @@ const MessageModal = ({ user, onClose }) => {
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder={`Write your message to ${user.name}...`}
+            placeholder={`Ask ${user.name} about their books, availability, or arrange a meetup...`}
           />
         </div>
         <div className="modal-footer">
           <button className="cancel-btn" onClick={onClose}>Discard</button>
           <button className="send-btn" onClick={handleSend} disabled={isSending}>
             {isSending ? <Loader className="animate-spin" size={20} /> : <Send size={18} />}
-            <span>{isSending ? 'Sending...' : 'Send'}</span>
+            <span>{isSending ? 'Sending Inquiry...' : 'Send Inquiry'}</span>
           </button>
         </div>
       </ModalContent>
@@ -330,6 +326,9 @@ const UserProfile = () => {
   const [borrowing, setBorrowing] = useState(null);
   const [isMessageModalOpen, setMessageModalOpen] = useState(false);
   const [viewingBook, setViewingBook] = useState(null);
+  const [friendshipStatus, setFriendshipStatus] = useState(null); // null, 'pending', 'sent', 'friends'
+  const [friendshipId, setFriendshipId] = useState(null);
+  const [sendingFriendRequest, setSendingFriendRequest] = useState(false);
 
   // ✨ ADDED: Effect to lock body scroll when a modal is open
   useEffect(() => {
@@ -354,6 +353,46 @@ const UserProfile = () => {
         userData.booksOwned = booksResponse.data.books || [];
         
         setUser(userData);
+
+        // Check friendship status
+        if (currentUser && id !== currentUser._id) {
+          try {
+            const friendsResponse = await friendsAPI.getAll();
+            const { pending, sent, friends } = friendsResponse.data;
+            
+            // Check if there's a pending request from this user to current user
+            const pendingRequest = pending.find(req => req.requester._id === id);
+            if (pendingRequest) {
+              setFriendshipStatus('pending');
+              setFriendshipId(pendingRequest._id);
+              return;
+            }
+            
+            // Check if current user sent a request to this user
+            const sentRequest = sent.find(req => req.recipient._id === id);
+            if (sentRequest) {
+              setFriendshipStatus('sent');
+              setFriendshipId(sentRequest._id);
+              return;
+            }
+            
+            // Check if they are already friends
+            const friendship = friends.find(f => 
+              (f.requester._id === id) || (f.recipient._id === id)
+            );
+            if (friendship) {
+              setFriendshipStatus('friends');
+              setFriendshipId(friendship._id);
+              return;
+            }
+            
+            // No relationship exists
+            setFriendshipStatus(null);
+            setFriendshipId(null);
+          } catch (error) {
+            console.error('Error checking friendship status:', error);
+          }
+        }
       } catch (error) {
         console.error('Error fetching user profile:', error);
         toast.error("Could not fetch user profile.");
@@ -363,7 +402,7 @@ const UserProfile = () => {
       }
     };
     if (id) fetchUserProfile();
-  }, [id]);
+  }, [id, currentUser]);
 
   const handleOpenDetailsModal = (book) => setViewingBook(book);
   const handleCloseDetailsModal = () => setViewingBook(null);
@@ -384,6 +423,75 @@ const UserProfile = () => {
       toast.error(`❌ ${errorMessage}`, { duration: 4000 });
     } finally {
       setBorrowing(null);
+    }
+  };
+
+  const handleSendFriendRequest = async () => {
+    if (!currentUser || !user) return;
+    
+    setSendingFriendRequest(true);
+    try {
+      await friendsAPI.sendRequest(user._id);
+      setFriendshipStatus('sent');
+      toast.success(`Friend request sent to ${user.name}!`);
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Failed to send friend request';
+      toast.error(errorMessage);
+    } finally {
+      setSendingFriendRequest(false);
+    }
+  };
+
+  const handleAcceptFriendRequest = async () => {
+    if (!friendshipId) return;
+    
+    try {
+      await friendsAPI.respond(friendshipId, 'accept');
+      setFriendshipStatus('friends');
+      toast.success(`You are now friends with ${user.name}!`);
+    } catch (error) {
+      toast.error('Failed to accept friend request');
+    }
+  };
+
+  const handleRejectFriendRequest = async () => {
+    if (!friendshipId) return;
+    
+    try {
+      await friendsAPI.respond(friendshipId, 'reject');
+      setFriendshipStatus(null);
+      setFriendshipId(null);
+      toast.success('Friend request rejected');
+    } catch (error) {
+      toast.error('Failed to reject friend request');
+    }
+  };
+
+  const handleCancelFriendRequest = async () => {
+    if (!friendshipId) return;
+    
+    try {
+      await friendsAPI.cancelRequest(friendshipId);
+      setFriendshipStatus(null);
+      setFriendshipId(null);
+      toast.success('Friend request cancelled');
+    } catch (error) {
+      toast.error('Failed to cancel friend request');
+    }
+  };
+
+  const handleRemoveFriend = async () => {
+    if (!friendshipId) return;
+    
+    if (window.confirm(`Are you sure you want to remove ${user.name} from your friends?`)) {
+      try {
+        await friendsAPI.remove(friendshipId);
+        setFriendshipStatus(null);
+        setFriendshipId(null);
+        toast.success(`Removed ${user.name} from friends`);
+      } catch (error) {
+        toast.error('Failed to remove friend');
+      }
     }
   };
 
@@ -450,23 +558,62 @@ const UserProfile = () => {
         </div>
         <div className="actions-section" style={{ display: 'flex', flexDirection: 'row', gap: '0.5rem' }}>
           <button className="message-btn" onClick={() => setMessageModalOpen(true)}>
-            <Send size={18} /> Send Message
+            <Send size={18} /> Send Book Inquiry
           </button>
-          <button
-            className="message-btn"
-            style={{ backgroundColor: '#10B981', marginLeft: '0.5rem' }}
-            onClick={async () => {
-              try {
-                await friendsAPI.sendRequest(user._id);
-                toast.success('Friend request sent');
-              } catch (e) {
-                const msg = e.response?.data?.message || 'Failed to send friend request';
-                toast.error(msg);
-              }
-            }}
-          >
-            Add Friend
-          </button>
+          
+          {currentUser && user && currentUser._id !== user._id && (
+            <>
+              {friendshipStatus === null && (
+                <button
+                  className="message-btn"
+                  style={{ backgroundColor: '#10B981' }}
+                  onClick={handleSendFriendRequest}
+                  disabled={sendingFriendRequest}
+                >
+                  {sendingFriendRequest ? 'Sending...' : 'Add Friend'}
+                </button>
+              )}
+              
+              {friendshipStatus === 'pending' && (
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    className="message-btn"
+                    style={{ backgroundColor: '#10B981' }}
+                    onClick={handleAcceptFriendRequest}
+                  >
+                    Accept Request
+                  </button>
+                  <button
+                    className="message-btn"
+                    style={{ backgroundColor: '#EF4444' }}
+                    onClick={handleRejectFriendRequest}
+                  >
+                    Reject
+                  </button>
+                </div>
+              )}
+              
+              {friendshipStatus === 'sent' && (
+                <button
+                  className="message-btn"
+                  style={{ backgroundColor: '#6B7280' }}
+                  onClick={handleCancelFriendRequest}
+                >
+                  Cancel Request
+                </button>
+              )}
+              
+              {friendshipStatus === 'friends' && (
+                <button
+                  className="message-btn"
+                  style={{ backgroundColor: '#EF4444' }}
+                  onClick={handleRemoveFriend}
+                >
+                  Remove Friend
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
 

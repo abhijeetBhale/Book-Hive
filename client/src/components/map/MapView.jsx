@@ -154,9 +154,9 @@ const MapView = ({ userGroups }) => {
     const allUsers = userGroups.flat();
 
     // Debug logging
-    console.log('MapView - userGroups:', userGroups);
-    console.log('MapView - allUsers:', allUsers);
-    console.log('MapView - allUsers length:', allUsers.length);
+    // console.log('MapView - userGroups:', userGroups);
+    // console.log('MapView - allUsers:', allUsers);
+    // console.log('MapView - allUsers length:', allUsers.length);
 
     // Use only real user data
     const usersToDisplay = allUsers;
@@ -285,7 +285,7 @@ const MapView = ({ userGroups }) => {
                             const position = [user.location.coordinates[1], user.location.coordinates[0]];
                             const key = `user-${user._id}`;
 
-                            console.log('Creating marker for user:', user.name, 'at position:', position);
+                            // console.log('Creating marker for user:', user.name, 'at position:', position);
 
                             return (
                                 <Marker

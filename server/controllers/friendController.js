@@ -39,6 +39,7 @@ export const respondToFriendRequest = async (req, res) => {
     if (action === 'accept') {
       friendship.status = 'accepted';
       await friendship.save();
+      
       // Ensure a conversation exists
       const requesterId = friendship.requester;
       const recipientId = friendship.recipient;
@@ -46,22 +47,39 @@ export const respondToFriendRequest = async (req, res) => {
       if (!conversation) {
         conversation = await Conversation.create({ participants: [requesterId, recipientId] });
       }
+      
       // Add a system message announcing friendship
       const sys = await Message.create({
         senderId: requesterId,
         recipientId: recipientId,
         subject: 'Friendship confirmed',
         message: 'You are now friends. Start chatting!',
-        type: 'system'
+        messageType: 'system'
       });
       conversation.messages.push(sys._id);
       await conversation.save();
+      
+      // Create notification for the requester
+      try {
+        await Notification.create({
+          user: requesterId,
+          type: 'friend_accepted',
+          message: `${req.user.name} accepted your friend request`,
+          fromUser: userId,
+          link: '/friends'
+        });
+      } catch (notifError) {
+        console.error('Failed to create friend accepted notification:', notifError);
+      }
+      
       return res.json(friendship);
     }
+    
     if (action === 'reject') {
       await friendship.deleteOne();
       return res.json({ message: 'Request rejected' });
     }
+    
     return res.status(400).json({ message: 'Invalid action' });
   } catch (err) {
     console.error('respondToFriendRequest error:', err.message);
@@ -83,6 +101,48 @@ export const getFriendsAndRequests = async (req, res) => {
   } catch (err) {
     console.error('getFriendsAndRequests error:', err.message);
     res.status(500).json({ message: 'Server error fetching friends' });
+  }
+};
+
+export const removeFriend = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { friendshipId } = req.params;
+
+    const friendship = await Friendship.findById(friendshipId);
+    if (!friendship) return res.status(404).json({ message: 'Friendship not found' });
+
+    // Check if user is part of this friendship
+    if (friendship.requester.toString() !== userId && friendship.recipient.toString() !== userId) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    await friendship.deleteOne();
+    res.json({ message: 'Friend removed successfully' });
+  } catch (err) {
+    console.error('removeFriend error:', err.message);
+    res.status(500).json({ message: 'Server error removing friend' });
+  }
+};
+
+export const cancelFriendRequest = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { requestId } = req.params;
+
+    const friendship = await Friendship.findById(requestId);
+    if (!friendship) return res.status(404).json({ message: 'Request not found' });
+
+    // Only the requester can cancel their own request
+    if (friendship.requester.toString() !== userId) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    await friendship.deleteOne();
+    res.json({ message: 'Friend request cancelled' });
+  } catch (err) {
+    console.error('cancelFriendRequest error:', err.message);
+    res.status(500).json({ message: 'Server error cancelling request' });
   }
 };
 

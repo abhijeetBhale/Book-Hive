@@ -335,8 +335,22 @@ const FriendsPage = () => {
                   </UserDetails>
                 </UserInfo>
                 <Actions>
-                  <PrimaryButton onClick={async () => { await friendsAPI.respond(req._id, 'accept'); refresh(); }}>Accept</PrimaryButton>
-                  <SecondaryButton onClick={async () => { await friendsAPI.respond(req._id, 'reject'); refresh(); }}>Reject</SecondaryButton>
+                  <PrimaryButton onClick={async () => { 
+                    try {
+                      await friendsAPI.respond(req._id, 'accept'); 
+                      refresh(); 
+                    } catch (error) {
+                      console.error('Failed to accept friend request:', error);
+                    }
+                  }}>Accept</PrimaryButton>
+                  <SecondaryButton onClick={async () => { 
+                    try {
+                      await friendsAPI.respond(req._id, 'reject'); 
+                      refresh(); 
+                    } catch (error) {
+                      console.error('Failed to reject friend request:', error);
+                    }
+                  }}>Reject</SecondaryButton>
                 </Actions>
               </Item>
             ))}

@@ -192,11 +192,12 @@ const MessagesPage = () => {
   const typingTimerRef = useRef(null);
   const [isOtherTyping, setIsOtherTyping] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [socketConnected, setSocketConnected] = useState(false);
   const messagesListRef = useRef(null);
 
   const [chatBg, setChatBg] = useState(() => localStorage.getItem('chatBg') || 'plain');
   const [showBgModal, setShowBgModal] = useState(false);
-  
+
   const activeRef = useRef(active);
   useEffect(() => {
     activeRef.current = active;
@@ -238,8 +239,26 @@ const MessagesPage = () => {
     if (!currentUser?._id) return;
     const token = localStorage.getItem('token');
     const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/?api$/i, '');
-    const socket = io(base, { auth: { token } });
+    const socket = io(base, {
+      auth: { token },
+      transports: ['websocket', 'polling'] // Ensure fallback transport
+    });
     socketRef.current = socket;
+
+    socket.on('connect', () => {
+      console.log('Socket connected');
+      setSocketConnected(true);
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Socket disconnected');
+      setSocketConnected(false);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      setSocketConnected(false);
+    });
 
     socket.on('presence:update', (ids) => setOnlineUsers(new Set(ids)));
 
@@ -262,15 +281,27 @@ const MessagesPage = () => {
     socket.on('message:new', async (newMessage) => {
       const currentActive = activeRef.current;
       const currentOther = currentActive?.participants?.find(p => p._id !== currentUser?._id);
-      
+
       const isForActiveChat = currentOther && newMessage.senderId?._id === currentOther._id;
 
       if (isForActiveChat) {
         setIsOtherTyping(false);
         setActive(prev => {
-          if (!prev || prev.messages.find(m => m._id === newMessage._id)) return prev;
-          return { ...prev, messages: [...prev.messages, newMessage] };
+          if (!prev) return prev;
+          // Check if message already exists to avoid duplicates
+          const messageExists = prev.messages.find(m => m._id === newMessage._id);
+          if (messageExists) return prev;
+
+          const updatedMessages = [...prev.messages, newMessage];
+          return { ...prev, messages: updatedMessages };
         });
+
+        // Auto-scroll to bottom when new message arrives
+        setTimeout(() => {
+          if (messagesListRef.current) {
+            messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
+          }
+        }, 100);
 
         try {
           await messagesAPI.getConversationWith(currentOther._id);
@@ -279,6 +310,7 @@ const MessagesPage = () => {
         }
       }
 
+      // Always refresh conversations list to update unread counts and last messages
       try {
         const { data } = await messagesAPI.getConversations();
         setConversations(data);
@@ -290,11 +322,16 @@ const MessagesPage = () => {
     socket.on('conversation:cleared', async ({ conversationId }) => {
       const currentActive = activeRef.current;
       if (currentActive?._id === conversationId) {
-        const { data: updatedConv } = await messagesAPI.getConversationWith(other._id);
-        setActive(updatedConv);
+        // Clear the active conversation for this user only
+        setActive(prev => prev ? { ...prev, messages: [] } : null);
       }
-      const { data } = await messagesAPI.getConversations();
-      setConversations(data);
+      // Refresh conversations list to reflect the cleared state
+      try {
+        const { data } = await messagesAPI.getConversations();
+        setConversations(data);
+      } catch (error) {
+        console.error('Failed to refresh conversations after clear:', error);
+      }
     });
 
     return () => {
@@ -358,29 +395,53 @@ const MessagesPage = () => {
       message: plain,
       createdAt: new Date().toISOString(),
     };
+
+    // Add optimistic message immediately
     setActive((prev) => prev ? { ...prev, messages: [...(prev.messages || []), optimistic] } : prev);
-    
-    let enc = null;
-    try {
-      const peer = (await usersAPI.getUserProfile(other._id)).data.user;
-      if (privateKey && peer?.publicKeyJwk) {
-        enc = await encryptMessage(plain, privateKey, peer.publicKeyJwk);
+
+    // Auto-scroll to bottom for sent message
+    setTimeout(() => {
+      if (messagesListRef.current) {
+        messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
       }
-    } catch { }
+    }, 50);
 
-    const res = await messagesAPI.sendMessage(other._id, { subject: 'Chat', message: plain, ...(enc || {}) });
-    const savedMessage = res.data;
+    try {
+      let enc = null;
+      try {
+        const peer = (await usersAPI.getUserProfile(other._id)).data.user;
+        if (privateKey && peer?.publicKeyJwk) {
+          enc = await encryptMessage(plain, privateKey, peer.publicKeyJwk);
+        }
+      } catch { }
 
-    setActive(prev => {
+      const res = await messagesAPI.sendMessage(other._id, { subject: 'Chat', message: plain, ...(enc || {}) });
+      const savedMessage = res.data;
+
+      // Replace optimistic message with real message
+      setActive(prev => {
         if (!prev) return null;
         const newMessages = prev.messages.map(m => m._id === optimistic._id ? savedMessage : m);
-        return {...prev, messages: newMessages};
-    });
+        return { ...prev, messages: newMessages };
+      });
 
-    try {
-      const { data } = await messagesAPI.getConversations();
-      setConversations(data);
-    } catch { }
+      // Refresh conversations list
+      try {
+        const { data } = await messagesAPI.getConversations();
+        setConversations(data);
+      } catch { }
+
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      // Remove optimistic message on error
+      setActive(prev => {
+        if (!prev) return null;
+        const newMessages = prev.messages.filter(m => m._id !== optimistic._id);
+        return { ...prev, messages: newMessages };
+      });
+      // Show error to user
+      alert('Failed to send message. Please try again.');
+    }
   };
 
   const handleInputChange = (e) => {
@@ -397,7 +458,7 @@ const MessagesPage = () => {
 
   const handleClearConversation = async () => {
     if (!active || !active._id || active._id.startsWith('new-')) return;
-    
+
     if (window.confirm('Are you sure you want to permanently delete this conversation history? This cannot be undone.')) {
       try {
         await messagesAPI.clearConversation(active._id);
@@ -476,6 +537,7 @@ const MessagesPage = () => {
                 <div className="subtitle">
                   {other.email}
                   {isOtherTyping ? ' • typing…' : onlineUsers.has(other?._id) ? ' • online' : ' • offline'}
+                  {!socketConnected && ' • connection lost'}
                 </div>
               )}
             </div>

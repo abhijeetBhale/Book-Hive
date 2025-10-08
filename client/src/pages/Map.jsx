@@ -48,7 +48,7 @@ const Map = () => {
   const [selectedUserIds, setSelectedUserIds] = useState([]);
   const [activeView, setActiveView] = useState('map');
   const [showFilters, setShowFilters] = useState(false);
-  const [distanceFilter, setDistanceFilter] = useState(10); // Default 10km
+  const [distanceFilter, setDistanceFilter] = useState(0); // Default 10km
   const [ratingFilter, setRatingFilter] = useState(0); // Default 0 (no filter)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState([]);

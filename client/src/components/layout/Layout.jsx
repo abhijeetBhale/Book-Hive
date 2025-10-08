@@ -2,16 +2,20 @@ import React, { useContext, useState, useEffect, useRef } from 'react';
 import Navbar from './Navbar';
 import { AuthContext } from '../../context/AuthContext';
 import { PlusCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 const Layout = ({ children }) => {
   const { user } = useContext(AuthContext);
+  const location = useLocation();
 
   // 1. State to manage the Floating Action Button's visibility
   const [isFabVisible, setIsFabVisible] = useState(true);
   
   // Ref to hold the timeout ID, preventing re-renders on change
   const scrollTimeoutRef = useRef(null);
+
+  // Define pages where the Add New Book button should be visible
+  const allowedPages = ['/', '/map'];
 
   // 2. Effect to handle the scroll event
   useEffect(() => {
@@ -49,8 +53,8 @@ const Layout = ({ children }) => {
         {children}
       </main>
       
-      {/* Floating Action Button for Adding Books */}
-      {user && (
+      {/* Floating Action Button for Adding Books - Only show on Home and Map pages */}
+      {user && allowedPages.includes(location.pathname) && (
         <Link
           to="/my-books"
           // 3. Conditionally apply classes for the animation

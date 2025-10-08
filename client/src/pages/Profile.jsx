@@ -51,9 +51,9 @@ const Profile = () => {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const [receivedRequests, receivedMessages] = await Promise.all([
+        const [receivedRequests, inquiryNotes] = await Promise.all([
           borrowAPI.getReceivedRequests(),
-          messagesAPI.getReceivedMessages()
+          (await import('../utils/api')).notificationsAPI.listBookInquiries({ limit: 20 })
         ]);
 
         const pendingList = receivedRequests.data.requests.filter(r => r.status === 'pending');
@@ -61,11 +61,11 @@ const Profile = () => {
         const pendingCount = pendingList.length;
         const approvedCount = approvedList.length;
 
-        const messages = (receivedMessages.data.messages || []).map(msg => ({
-          id: msg._id,
-          from: msg.senderId.name,
-          text: `${msg.subject}: ${msg.message.substring(0, 100)}${msg.message.length > 100 ? '...' : ''}`,
-          avatar: msg.senderId.avatar || `https://ui-avatars.com/api/?name=${msg.senderId.name}&background=818cf8&color=fff`
+        const messages = (inquiryNotes.data.notifications || []).map(n => ({
+          id: n._id,
+          from: n.fromUser?.name || 'User',
+          text: n.message,
+          avatar: n.fromUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(n.fromUser?.name || 'User')}&background=818cf8&color=fff`
         }));
 
         setNotifications({
@@ -185,8 +185,9 @@ const Profile = () => {
       messages: prev.messages.filter(msg => msg.id !== messageId)
     }));
     try {
-      await messagesAPI.deleteMessage(messageId);
-      toast.success("Message notification removed.");
+      const { notificationsAPI } = await import('../utils/api');
+      await notificationsAPI.delete(messageId);
+      toast.success("Notification removed.");
     } catch (error) {
       toast.error("Could not remove notification. Please try again.");
       setNotifications(prev => ({
@@ -400,19 +401,21 @@ const Profile = () => {
                   </button>
                 </div>
               ))}
-              <h4 className="mt-8">Messages</h4>
+              <h4 className="mt-8">Book Inquiries</h4>
+              <div className="messages-scroll">
               {notifications.messages.length > 0 ? notifications.messages.map(msg => (
                 <div className="notification-item" key={msg.id}>
                   <img src={msg.avatar} alt={msg.from} className="item-avatar" />
                   <div className="item-content">
-                    <strong>New message from {msg.from}</strong>
+                    <strong>Book inquiry from {msg.from}</strong>
                     <p>"{msg.text}"</p>
                   </div>
-                  <button onClick={() => handleDeleteMessage(msg.id)} className="delete-notification-btn" aria-label={`Delete message from ${msg.from}`}>
+                  <button onClick={() => handleDeleteMessage(msg.id)} className="delete-notification-btn" aria-label={`Delete inquiry from ${msg.from}`}>
                     <Trash2 size={18} />
                   </button>
                 </div>
-              )) : <p className="text-gray-500">No new messages.</p>}
+              )) : <p className="text-gray-500">No book inquiries yet.</p>}
+              </div>
             </div>
           </div>
         );
@@ -926,6 +929,7 @@ const StyledWrapper = styled.div`
     
     .notification-list {
         display: flex; flex-direction: column; gap: 1.5rem;
+        .messages-scroll { max-height: 260px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 0 0.25rem; }
         h4 {
             font-size: 1rem; font-weight: 700; color: #111827;
             padding-bottom: 0.5rem; border-bottom: 1px solid #e5e7eb;

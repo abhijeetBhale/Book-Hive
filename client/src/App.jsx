@@ -38,13 +38,10 @@ function App() {
             <Route path="/my-books" element={<ProtectedRoute><MyBooks /></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
             <Route path="/users/:id" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+            <Route path="/profile/:id" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
-            
-            {/* ========== FIX IS HERE ========== */}
             <Route path="/borrow-requests" element={<ProtectedRoute><BorrowRequests /></ProtectedRoute>} />
-            {/* =============================== */}
-            
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/map" element={<ProtectedRoute><Map /></ProtectedRoute>} />
           </Routes>

@@ -16,6 +16,8 @@ const messageSchema = new mongoose.Schema(
       enum: ['user', 'system'],
       default: 'user',
     },
+    // Soft-delete per user
+    deletedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', default: [] }],
   },
   { timestamps: true }
 );

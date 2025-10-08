@@ -22,6 +22,8 @@ const notificationSchema = new mongoose.Schema(
         'user_report',       // For admin/moderation purposes
         'security_alert',    // e.g., password changed, new login detected
         'profile_update',    // e.g., a system notification confirming a profile change
+        'review_prompt',      // ask users to review each other after return
+        'book_inquiry',       // message sent from profile "Send message" modal
       ],
     },
 
