@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useContext, useRef } from 'react';
 import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import toast, { Toaster } from 'react-hot-toast';
-import { Loader, PlusCircle, BookOpen, Trash2, Edit, X, AlertTriangle } from 'lucide-react';
+import { Loader, PlusCircle, BookOpen, Trash2, Edit, X, AlertTriangle, Camera } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import { booksAPI } from '../utils/api';
@@ -116,6 +116,8 @@ const StyledBookForm = styled.form`
   .image-preview { width: 100%; height: 100%; object-fit: cover; }
   .upload-placeholder { text-align: center; color: #6b7280; }
   .file-input-label { cursor: pointer; padding: 0.6rem 1.2rem; border-radius: 0.5rem; background-color: white; color: #374151; font-weight: 600; border: 1px solid #d1d5db; &:hover { background-color: #f9fafb; } }
+  .camera-options { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .camera-btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background: white; color: #374151; font-weight: 500; cursor: pointer; transition: all 0.2s; &:hover { background-color: #f9fafb; } }
   .checkbox-group { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.75rem; }
   .checkbox-item { display: flex; align-items: center; background-color: #f9fafb; padding: 1rem; border-radius: 0.5rem; border: 1px solid #f3f4f6; }
   .checkbox-item input { width: auto; margin-right: 0.75rem; accent-color: #4F46E5;}
@@ -135,8 +137,11 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const coverImageFile = watch('coverImage');
   const titleValue = watch('title');
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     if (initialData) {
@@ -221,6 +226,64 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
     reset({ isCurrentlyAvailable: true, condition: 'Good' });
   };
 
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' } // Use back camera if available
+      });
+      setShowCamera(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      toast.error('Could not access camera. Please check permissions.');
+    }
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      const context = canvas.getContext('2d');
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0);
+
+      canvas.toBlob((blob) => {
+        const file = new File([blob], 'book-photo.jpg', { type: 'image/jpeg' });
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+
+        // Set the file to the form
+        const fileInput = document.getElementById('coverImage');
+        if (fileInput) {
+          fileInput.files = dataTransfer.files;
+          // Trigger change event
+          const event = new Event('change', { bubbles: true });
+          fileInput.dispatchEvent(event);
+        }
+
+        // Create preview
+        const previewUrl = URL.createObjectURL(blob);
+        setImagePreview(previewUrl);
+
+        stopCamera();
+        toast.success('Photo captured successfully!');
+      }, 'image/jpeg', 0.8);
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const tracks = videoRef.current.srcObject.getTracks();
+      tracks.forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setShowCamera(false);
+  };
+
   const submitButtonText = isSubmitting ? (initialData ? 'Saving Changes...' : 'Saving...') : (initialData ? 'Save Changes' : 'Add Book');
 
   return (
@@ -258,7 +321,77 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
         <div className="form-group"><label htmlFor="isbn">ISBN (optional)</label><input id="isbn" placeholder="Enter ISBN" {...register('isbn')} /></div>
         <div className="form-group"><label htmlFor="condition">Book Condition</label><select id="condition" {...register('condition')}><option value="New">New</option><option value="Like New">Like New</option><option value="Very Good">Very Good</option><option value="Good">Good</option><option value="Fair">Fair</option><option value="Poor">Poor</option></select></div>
         <div className="form-group full-width"><label htmlFor="description">Description <span className="required-star">*</span></label><textarea id="description" placeholder="Provide a brief description of the book..." {...register('description', { required: true })}></textarea></div>
-        <div className="form-group full-width"><label>Cover Image</label><div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}><div className="image-preview-container">{imagePreview ? (<img src={imagePreview} alt="Preview" className="image-preview" />) : (<div className="upload-placeholder"><BookOpen size={32} /></div>)}</div><div>{selectedGoogleBook && selectedGoogleBook.coverImage ? (<div className="auto-cover-info"><p style={{ fontSize: '0.9rem', color: '#16a34a', fontWeight: '500' }}>✓ Cover image from Google Books</p><p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>Or upload your own:</p></div>) : null}<label htmlFor="coverImage" className="file-input-label">{selectedGoogleBook && selectedGoogleBook.coverImage ? 'Upload Different Image' : 'Choose File'}</label><input type="file" id="coverImage" accept="image/*" {...register('coverImage')} style={{ display: 'none' }} /><p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>{watch('coverImage')?.[0]?.name || (selectedGoogleBook && selectedGoogleBook.coverImage ? 'Using Google Books cover' : 'No file chosen')}</p></div></div></div>
+        <div className="form-group full-width">
+          <label>Cover Image</label>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+            <div className="image-preview-container">
+              {imagePreview ? (
+                <img src={imagePreview} alt="Preview" className="image-preview" />
+              ) : (
+                <div className="upload-placeholder"><BookOpen size={32} /></div>
+              )}
+            </div>
+            <div>
+              {selectedGoogleBook && selectedGoogleBook.coverImage ? (
+                <div className="auto-cover-info">
+                  <p style={{ fontSize: '0.9rem', color: '#16a34a', fontWeight: '500' }}>
+                    ✓ Cover image from Google Books
+                  </p>
+                  <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    Or add your own photo:
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="camera-options">
+                <button
+                  type="button"
+                  onClick={startCamera}
+                  className="camera-btn"
+                >
+                  <Camera size={16} />
+                  Take Photo
+                </button>
+                <label htmlFor="coverImage" className="file-input-label">
+                  Choose File
+                </label>
+              </div>
+
+              <input
+                type="file"
+                id="coverImage"
+                accept="image/*"
+                {...register('coverImage')}
+                style={{ display: 'none' }}
+              />
+
+              <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                {watch('coverImage')?.[0]?.name ||
+                  (selectedGoogleBook && selectedGoogleBook.coverImage ? 'Using Google Books cover' : 'No file chosen')}
+              </p>
+            </div>
+          </div>
+
+          {showCamera && (
+            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                style={{ width: '100%', maxWidth: '400px', borderRadius: '0.5rem' }}
+              />
+              <canvas ref={canvasRef} style={{ display: 'none' }} />
+              <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                <button type="button" onClick={capturePhoto} className="camera-btn">
+                  Capture Photo
+                </button>
+                <button type="button" onClick={stopCamera} className="camera-btn">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
         <div className="checkbox-group"><label className="checkbox-item"><input type="checkbox" {...register('isAvailableForBorrowing')} />Available for borrowing</label><label className="checkbox-item"><input type="checkbox" {...register('isCurrentlyAvailable')} defaultChecked />Currently available</label></div>
         <button type="submit" disabled={isSubmitting} className="submit-btn">{submitButtonText}</button>
       </div>

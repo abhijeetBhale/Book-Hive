@@ -274,11 +274,11 @@ const Books = () => {
         let result = [...books];
 
         if (filterAvailable) {
-            result = result.filter(book => book.isAvailable);
+            result = result.filter(book => book.isCurrentlyAvailable);
         }
 
         if (selectedGenre !== 'All') {
-            result = result.filter(book => book.genre === selectedGenre);
+            result = result.filter(book => book.category === selectedGenre);
         }
         
         if (selectedLanguage !== 'All') {

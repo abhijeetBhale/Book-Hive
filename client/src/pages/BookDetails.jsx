@@ -105,6 +105,19 @@ const Avatar = styled.img`
   object-fit: cover;
 `;
 
+const AvatarPlaceholder = styled.div`
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 1.25rem;
+`;
+
 const OwnerName = styled.p`
   font-size: 1.125rem;
   font-weight: 600;
@@ -195,26 +208,39 @@ const BookDetails = () => {
   return (
     <PageWrapper>
       <ContentWrapper>
-        <BookCoverImage src={getFullImageUrl(book.coverImageUrl)} alt={`Cover of ${book.title}`} />
+        <BookCoverImage src={getFullImageUrl(book.coverImage)} alt={`Cover of ${book.title}`} />
         <DetailsContainer>
           <Title>{book.title}</Title>
           <Author>by {book.author}</Author>
           <Description>{book.description || 'No description available.'}</Description>
           <div>
-            <InfoTag>Genre: {book.genre}</InfoTag>
+            <InfoTag>Category: {book.category}</InfoTag>
             <InfoTag>Condition: {book.condition}</InfoTag>
-            <InfoTag>Availability: {book.isAvailable ? 'Available' : 'Not Available'}</InfoTag>
+            <InfoTag>Publication Year: {book.publicationYear || 'Unknown'}</InfoTag>
+            <InfoTag>Availability: {book.isCurrentlyAvailable ? 'Available' : 'Not Available'}</InfoTag>
           </div>
 
           <OwnerSection>
             <OwnerTitle>Listed By</OwnerTitle>
             <OwnerCard to={`/users/${book.owner._id}`}>
-              <Avatar src={getFullImageUrl(book.owner.avatar)} alt={book.owner.name} />
+              {book.owner.avatar ? (
+                <Avatar 
+                  src={getFullImageUrl(book.owner.avatar)} 
+                  alt={book.owner.name}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <AvatarPlaceholder style={{ display: book.owner.avatar ? 'none' : 'flex' }}>
+                {book.owner.name ? book.owner.name.charAt(0).toUpperCase() : 'U'}
+              </AvatarPlaceholder>
               <OwnerName>{book.owner.name}</OwnerName>
             </OwnerCard>
           </OwnerSection>
 
-          {!isOwner && book.isAvailable && (
+          {!isOwner && book.isCurrentlyAvailable && (
             <ActionButton onClick={handleBorrowRequest}>
               Request to Borrow
             </ActionButton>
