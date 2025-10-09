@@ -65,7 +65,6 @@ export const getUnreadCount = async (req, res) => {
   try {
     const count = await Notification.countDocuments({
       user: req.user._id,
-      type: 'book_inquiry', // Only count book inquiries
       read: { $ne: true }
     });
     
@@ -80,19 +79,56 @@ export const getUnreadCount = async (req, res) => {
 // @route   PUT /api/notifications/mark-read
 export const markRead = async (req, res) => {
   try {
-    await Notification.updateMany(
-      { 
-        user: req.user._id, 
-        type: 'book_inquiry', // Only mark book inquiries as read
-        read: { $ne: true } 
-      },
-      { $set: { read: true } }
-    );
+    const { notificationIds } = req.body;
+    
+    if (notificationIds && Array.isArray(notificationIds)) {
+      // Mark specific notifications as read
+      await Notification.updateMany(
+        { 
+          _id: { $in: notificationIds },
+          user: req.user._id
+        },
+        { $set: { read: true } }
+      );
+    } else {
+      // Mark all notifications as read
+      await Notification.updateMany(
+        { 
+          user: req.user._id, 
+          read: { $ne: true } 
+        },
+        { $set: { read: true } }
+      );
+    }
     
     return res.json({ message: 'Notifications marked as read' });
   } catch (err) {
     console.error('mark read error:', err);
     return res.status(500).json({ message: 'Server error marking notifications as read' });
+  }
+};
+
+// @desc    Get all notifications for current user
+// @route   GET /api/notifications
+export const getAllNotifications = async (req, res) => {
+  try {
+    const { limit = 20, page = 1 } = req.query;
+    const l = Math.min(Number(limit) || 20, 50);
+    const p = Math.max(Number(page) || 1, 1);
+
+    const [items, total] = await Promise.all([
+      Notification.find({ user: req.user._id })
+        .populate('fromUser', 'name email avatar')
+        .sort({ createdAt: -1 })
+        .skip((p - 1) * l)
+        .limit(l),
+      Notification.countDocuments({ user: req.user._id }),
+    ]);
+
+    return res.json({ notifications: items, total, page: p, limit: l });
+  } catch (err) {
+    console.error('get all notifications error:', err);
+    return res.status(500).json({ message: 'Server error getting notifications' });
   }
 };
 

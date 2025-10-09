@@ -3,6 +3,7 @@ import { protect } from '../middleware/auth.js';
 import {
   createBookInquiry,
   listBookInquiries,
+  getAllNotifications,
   getUnreadCount,
   markRead,
   deleteNotification
@@ -15,6 +16,9 @@ router.post('/book-inquiry', protect, createBookInquiry);
 
 // List book inquiry notifications for current user
 router.get('/book-inquiry', protect, listBookInquiries);
+
+// Get all notifications for current user
+router.get('/', protect, getAllNotifications);
 
 // Get unread notification count
 router.get('/count', protect, getUnreadCount);

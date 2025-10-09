@@ -33,13 +33,45 @@ export const requestBook = async (req, res) => {
     await borrowRequest.save();
     // Create a notification for the book owner
     try {
-      await Notification.create({
+      const notification = await Notification.create({
         user: book.owner,
         type: 'borrow_request',
         message: `${req.user.name} wants to borrow "${book.title}" from you`,
         fromUser: req.user._id,
         link: `/borrow-requests`
       });
+
+      // Emit real-time notification via WebSocket
+      try {
+        const io = req.app.get('io');
+        if (io) {
+          const notificationData = {
+            id: notification._id,
+            type: 'borrow_request',
+            message: `You have a new borrow request from ${req.user.name}!`,
+            fromUser: {
+              _id: req.user._id,
+              name: req.user.name,
+              avatar: req.user.avatar
+            },
+            book: {
+              _id: book._id,
+              title: book.title,
+              coverImage: book.coverImage
+            },
+            link: '/borrow-requests',
+            createdAt: notification.createdAt,
+            read: false
+          };
+
+          console.log(`Emitting notification to user:${book.owner}`, notificationData);
+          io.to(`user:${book.owner}`).emit('new_notification', notificationData);
+        } else {
+          console.warn('Socket.IO instance not available');
+        }
+      } catch (socketError) {
+        console.error('Failed to emit new_notification event:', socketError.message);
+      }
     } catch (e) {
       // Log and continue; do not fail the main action due to notification issues
       console.error('Failed to create borrow_request notification:', e.message);
@@ -91,16 +123,16 @@ export const returnBook = async (req, res) => {
     if (!borrowRequest) {
       return res.status(404).json({ message: 'Borrow request not found' });
     }
-    
+
     // Check if the current user is the borrower
     if (borrowRequest.borrower.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: 'Not authorized to return this book' });
     }
-    
+
     if (borrowRequest.status !== 'borrowed') {
       return res.status(400).json({ message: 'Book is not currently borrowed' });
     }
-    
+
     borrowRequest.status = 'returned';
     await borrowRequest.save();
 
@@ -150,7 +182,7 @@ export const getReceivedRequests = async (req, res) => {
       .populate('book', 'title coverImage')
       .populate('borrower', 'name email avatar')
       .sort({ createdAt: -1 });
-      
+
     res.json({ requests });
   } catch (error) {
     console.error('Get received requests error:', error);
@@ -166,7 +198,7 @@ export const getMyRequests = async (req, res) => {
       .populate('book', 'title coverImage')
       .populate('owner', 'name email avatar')
       .sort({ createdAt: -1 });
-      
+
     res.json({ requests });
   } catch (error) {
     console.error('Get my requests error:', error);
@@ -180,18 +212,24 @@ export const updateRequestStatus = async (req, res) => {
   try {
     const { status } = req.body;
     const request = await BorrowRequest.findById(req.params.requestId);
-    
+
     if (!request) {
       return res.status(404).json({ message: 'Request not found' });
     }
-    
+
     // Only the owner can approve/deny requests
     if (request.owner.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: 'Not authorized' });
     }
-    
+
     request.status = status;
     await request.save();
+
+    // Populate request data for notifications
+    const populatedRequest = await BorrowRequest.findById(request._id)
+      .populate('book', 'title coverImage')
+      .populate('borrower', 'name avatar')
+      .populate('owner', 'name avatar');
 
     if (status === 'approved') {
       const defaultUntil = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
@@ -203,7 +241,86 @@ export const updateRequestStatus = async (req, res) => {
           currentBorrowRequest: request._id,
         }
       });
+
+      // Notify borrower that their request was approved
+      try {
+        const notification = await Notification.create({
+          user: populatedRequest.borrower._id,
+          type: 'request_approved',
+          message: `Your request to borrow "${populatedRequest.book.title}" was approved!`,
+          fromUser: req.user._id,
+          link: '/borrow-requests'
+        });
+
+        const io = req.app.get('io');
+        if (io) {
+          const notificationData = {
+            id: notification._id,
+            type: 'request_approved',
+            message: `Great news! Your request to borrow "${populatedRequest.book.title}" was approved!`,
+            fromUser: {
+              _id: req.user._id,
+              name: req.user.name,
+              avatar: req.user.avatar
+            },
+            book: {
+              _id: populatedRequest.book._id,
+              title: populatedRequest.book.title,
+              coverImage: populatedRequest.book.coverImage
+            },
+            link: '/borrow-requests',
+            createdAt: notification.createdAt,
+            read: false
+          };
+
+          console.log(`Emitting approval notification to user:${populatedRequest.borrower._id}`);
+          io.to(`user:${populatedRequest.borrower._id}`).emit('new_notification', notificationData);
+        }
+      } catch (e) {
+        console.error('Failed to create/emit approval notification:', e.message);
+      }
     }
+
+    if (status === 'denied') {
+      // Notify borrower that their request was denied
+      try {
+        const notification = await Notification.create({
+          user: populatedRequest.borrower._id,
+          type: 'request_denied',
+          message: `Your request to borrow "${populatedRequest.book.title}" was declined`,
+          fromUser: req.user._id,
+          link: '/borrow-requests'
+        });
+
+        const io = req.app.get('io');
+        if (io) {
+          const notificationData = {
+            id: notification._id,
+            type: 'request_denied',
+            message: `Your request to borrow "${populatedRequest.book.title}" was declined`,
+            fromUser: {
+              _id: req.user._id,
+              name: req.user.name,
+              avatar: req.user.avatar
+            },
+            book: {
+              _id: populatedRequest.book._id,
+              title: populatedRequest.book.title,
+              coverImage: populatedRequest.book.coverImage
+            },
+            link: '/borrow-requests',
+            createdAt: notification.createdAt,
+            read: false
+          };
+
+          console.log(`Emitting denial notification to user:${populatedRequest.borrower._id}`);
+          io.to(`user:${populatedRequest.borrower._id}`).emit('new_notification', notificationData);
+        }
+      } catch (e) {
+        console.error('Failed to create/emit denial notification:', e.message);
+      }
+    }
+
     if (status === 'returned') {
       await Book.findByIdAndUpdate(request.book, {
         $set: {
@@ -215,7 +332,7 @@ export const updateRequestStatus = async (req, res) => {
         }
       });
     }
-    
+
     res.json({ message: `Request ${status} successfully`, request });
   } catch (error) {
     console.error('Update request status error:', error);

@@ -266,8 +266,10 @@ export const reviewsAPI = {
 };
 
 export const notificationsAPI = {
-  getUnreadCount: () => api.get('/users/notifications/unread-count').then(res => res.data),
-  markRead: () => api.put('/users/notifications/mark-read').then(res => res.data),
+  getUnreadCount: () => api.get('/notifications/count').then(res => res.data),
+  getAll: (params) => api.get('/notifications', { params }).then(res => res.data),
+  markRead: () => api.put('/notifications/mark-read').then(res => res.data),
+  markAsRead: (notificationIds) => api.put('/notifications/mark-read', { notificationIds }).then(res => res.data),
   createBookInquiry: ({ toUserId, subject, body }) => api.post('/notifications/book-inquiry', { toUserId, subject, body }),
   listBookInquiries: (params) => api.get('/notifications/book-inquiry', { params }),
   delete: (id) => api.delete(`/notifications/${id}`),

@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import {
   Menu,
@@ -9,6 +9,7 @@ import {
   ArrowLeftRight,
   MessageSquare,
   Heart,
+  Bell,
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import Button from '../ui/Button';
@@ -16,11 +17,85 @@ import beeIcon from '../../assets/icons8-bee-100.png';
 import LoginButton from '../LoginButton';
 import SignButton from '../SignButton';
 import { notificationsAPI } from '../../utils/api';
+import { io } from 'socket.io-client';
+import toast from 'react-hot-toast';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout } = useContext(AuthContext);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [realtimeNotifications, setRealtimeNotifications] = useState([]);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const socketRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  // WebSocket connection for real-time notifications
+  useEffect(() => {
+    if (!user?._id) return;
+
+    const token = localStorage.getItem('token');
+    const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/?api$/i, '');
+    
+    const socket = io(base, { 
+      auth: { token },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      timeout: 20000
+    });
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      console.log('Navbar socket connected for notifications');
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Navbar socket connection error:', error);
+    });
+
+    socket.on('new_notification', (notification) => {
+      console.log('New notification received:', notification);
+      
+      // Add to realtime notifications list (keep only 5 recent)
+      setRealtimeNotifications(prev => [notification, ...prev.slice(0, 4)]);
+      
+      // Update unread count
+      setUnreadCount(prev => prev + 1);
+      
+      // Show toast notification with better styling
+      toast.success(notification.message, {
+        duration: 4000,
+        icon: '📚',
+        style: {
+          background: '#f0f9ff',
+          color: '#1e40af',
+          border: '1px solid #93c5fd',
+          borderRadius: '8px',
+          fontSize: '14px'
+        },
+        position: 'top-right'
+      });
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Navbar socket disconnected:', reason);
+    });
+
+    socket.on('reconnect', (attemptNumber) => {
+      console.log('Navbar socket reconnected after', attemptNumber, 'attempts');
+    });
+
+    socket.on('reconnect_error', (error) => {
+      console.error('Navbar socket reconnection error:', error);
+    });
+
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    };
+  }, [user?._id]);
 
   useEffect(() => {
     const fetchUnread = async () => {
@@ -44,6 +119,43 @@ const Navbar = () => {
       window.removeEventListener('notifications-read', onRead);
     };
   }, [user]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowNotificationDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleNotificationClick = async (notification) => {
+    try {
+      // Mark this notification as read
+      await notificationsAPI.markAsRead([notification.id]);
+      
+      // Update local state
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      setRealtimeNotifications(prev => 
+        prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
+      );
+      
+      // Close dropdown
+      setShowNotificationDropdown(false);
+      
+      // Navigate to the notification link if available
+      if (notification.link) {
+        window.location.href = notification.link;
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
 
   const navLinkClass = ({ isActive }) =>
     `transition-colors duration-300 text-lg ${
@@ -101,6 +213,82 @@ const Navbar = () => {
             <div className="hidden md:block">
               {user ? (
                 <div className="flex items-center gap-4">
+                  {/* Real-time Notification Bell */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                      className="relative p-2 text-gray-600 hover:text-primary transition-colors duration-300"
+                    >
+                      <Bell size={24} />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
+                    
+                    {/* Notification Dropdown */}
+                    {showNotificationDropdown && (
+                      <div ref={dropdownRef} className="absolute right-0 top-12 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                        <div className="p-3 border-b border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-gray-900">Notifications</h3>
+                            <Link 
+                              to="/profile#notifications" 
+                              className="text-sm text-blue-600 hover:text-blue-800"
+                              onClick={() => setShowNotificationDropdown(false)}
+                            >
+                              View All
+                            </Link>
+                          </div>
+                        </div>
+                        <div className="max-h-96 overflow-y-auto">
+                          {realtimeNotifications.length > 0 ? (
+                            realtimeNotifications.map((notification) => (
+                              <div 
+                                key={notification.id} 
+                                className={`p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors ${
+                                  notification.read ? 'opacity-75' : ''
+                                }`}
+                                onClick={() => handleNotificationClick(notification)}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <img 
+                                    src={notification.fromUser?.avatar || `https://ui-avatars.com/api/?name=${notification.fromUser?.name}&background=4F46E5&color=fff`}
+                                    alt={notification.fromUser?.name}
+                                    className="w-8 h-8 rounded-full object-cover"
+                                  />
+                                  <div className="flex-1">
+                                    <div className="flex items-start justify-between">
+                                      <p className="text-sm font-medium text-gray-900 pr-2">
+                                        {notification.message}
+                                      </p>
+                                      {!notification.read && (
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {new Date(notification.createdAt).toLocaleTimeString([], { 
+                                        hour: 'numeric', 
+                                        minute: '2-digit', 
+                                        hour12: true 
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-4 text-center text-gray-500">
+                              <Bell size={32} className="mx-auto mb-2 opacity-50" />
+                              <p>No recent notifications</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <Link to="/profile" className="relative">
                     <img
                       key={user.avatar}
