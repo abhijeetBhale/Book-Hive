@@ -85,7 +85,60 @@ const PopupCard = styled.div`
   .card-body {
     text-align: center;
     h2 { font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0; }
-    p { font-size: 0.875rem; color: #6b7280; margin: 0.25rem 0 1.5rem 0; }
+    
+    .member-status {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0.25rem 0 1.5rem 0;
+      
+      > span {
+        font-size: 0.875rem;
+        color: #6b7280;
+      }
+      
+      .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        
+        &.online {
+          background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+          color: #065f46;
+          border: 1px solid rgba(34, 197, 94, 0.2);
+          box-shadow: 0 2px 4px rgba(34, 197, 94, 0.1);
+          
+          .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            box-shadow: 
+              0 0 0 2px rgba(34, 197, 94, 0.3),
+              0 1px 3px rgba(34, 197, 94, 0.4);
+            animation: pulse-dot-simple 2s infinite;
+          }
+        }
+        
+        &.offline {
+          background-color: #f3f4f6;
+          color: #6b7280;
+          border: 1px solid #e5e7eb;
+          
+          .status-dot {
+            width: 8px;
+            height: 8px;
+            background: linear-gradient(135deg, #9ca3af, #6b7280);
+            border-radius: 50%;
+          }
+        }
+      }
+    }
   }
 
   .stats {
@@ -163,24 +216,80 @@ const MapView = ({ userGroups }) => {
 
     const createUserIcon = (user) => {
         const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&color=fff`;
+        const onlineClass = user.isOnline ? 'online' : 'offline';
 
         return L.divIcon({
-            html: `<div class="custom-marker-wrapper"><img src="${avatarUrl}" alt="${user.name}" class="custom-marker-image" /></div>`,
+            html: `
+                <div class="custom-marker-wrapper ${onlineClass}">
+                    <img src="${avatarUrl}" alt="${user.name}" class="custom-marker-image" />
+                </div>
+            `,
             className: '',
-            iconSize: [46, 46],
-            iconAnchor: [23, 46],
-            popupAnchor: [0, -48]
+            iconSize: [50, 50],
+            iconAnchor: [25, 50],
+            popupAnchor: [0, -52]
         });
     };
 
     const customMarkerStyles = `
         .custom-marker-wrapper {
-            position: relative; border-radius: 50%; padding: 3px;
-            background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            position: relative;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: transform 0.2s ease;
         }
+        
+        .custom-marker-wrapper.online {
+            background: #22c55e;
+            padding: 4px;
+            box-shadow: 
+              0 0 0 2px rgba(34, 197, 94, 0.3),
+              0 4px 12px rgba(34, 197, 94, 0.4);
+            animation: pulse-ring-online 2s infinite;
+        }
+        
+        .custom-marker-wrapper.offline {
+            background: #6b7280;
+            padding: 3px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        @keyframes pulse-ring-online {
+            0%, 100% {
+                box-shadow: 
+                  0 0 0 2px rgba(34, 197, 94, 0.3),
+                  0 4px 12px rgba(34, 197, 94, 0.4);
+            }
+            50% {
+                box-shadow: 
+                  0 0 0 6px rgba(34, 197, 94, 0.5),
+                  0 6px 16px rgba(34, 197, 94, 0.6);
+            }
+        }
+        
+
+        
         .leaflet-marker-icon:hover .custom-marker-wrapper { transform: scale(1.1); }
-        .custom-marker-image { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .custom-marker-image { 
+            width: 100%; 
+            height: 100%; 
+            border-radius: 50%; 
+            object-fit: cover;
+            border: 2px solid white;
+        }
+        
+        @keyframes pulse-dot-simple {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
+            }
+        }
         
         /* Custom cluster styles */
         .marker-cluster-small {
@@ -317,7 +426,13 @@ const MapView = ({ userGroups }) => {
                                 </div>
                                 <div className="card-body">
                                     <h2>{selectedPin.name}</h2>
-                                    <p>Community Member</p>
+                                    <div className="member-status">
+                                        <span>Community Member</span>
+                                        <div className={`status-indicator ${selectedPin.isOnline ? 'online' : 'offline'}`}>
+                                            <div className="status-dot"></div>
+                                            <span>{selectedPin.isOnline ? 'Online' : 'Offline'}</span>
+                                        </div>
+                                    </div>
                                     <div className="stats">
                                         <div className="stat-item">
                                             <BookOpen size={18} />

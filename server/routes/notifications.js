@@ -6,6 +6,7 @@ import {
   getAllNotifications,
   getUnreadCount,
   markRead,
+  createTestNotification,
   deleteNotification
 } from '../controllers/notificationController.js';
 
@@ -25,6 +26,9 @@ router.get('/count', protect, getUnreadCount);
 
 // Mark notifications as read
 router.put('/mark-read', protect, markRead);
+
+// Create test notification (for development)
+router.post('/test', protect, createTestNotification);
 
 // Delete a notification (only owner)
 router.delete('/:id', protect, deleteNotification);

@@ -359,13 +359,14 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { usersAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
+import { useOnlineStatus } from '../context/OnlineStatusContext';
 import { Loader, MapPin, User, Search, BookOpen, LayoutGrid, Star, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
 
 // --- UserCard Component ---
-const UserCard = ({ user, distance, priority }) => {
+const UserCard = ({ user, distance, priority, isOnline }) => {
   const booksOwnedCount = (user.booksOwned || []).length;
   const rating = typeof user.rating?.value === 'number' ? user.rating.value : 4.0;
 
@@ -377,8 +378,13 @@ const UserCard = ({ user, distance, priority }) => {
             <Award color='black' size={20} />
           </div>
         )}
-        <img src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}&background=818cf8&color=fff`} alt={user.name} className="avatar" />
-        <h3 className="user-name">{user.name}</h3>
+        <div className={`avatar-container ${isOnline ? 'online' : 'offline'}`}>
+          <img src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}&background=818cf8&color=fff`} alt={user.name} className="avatar" />
+        </div>
+        <h3 className="user-name">
+          {user.name}
+          {isOnline && <span className="online-badge">Online</span>}
+        </h3>
         <p className="user-tagline">Community Member</p>
 
         <div className="stats-grid">
@@ -409,6 +415,7 @@ const Users = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBy, setFilterBy] = useState('all');
   const { user: userFromAuth } = useContext(AuthContext);
+  const { isUserOnline } = useOnlineStatus();
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -549,7 +556,7 @@ const Users = () => {
         ) : filteredUsers.length > 0 ? (
           <div className="users-grid">
             {filteredUsers.map((user) => {
-              return <UserCard key={user._id} user={user} distance={user.distance} priority={user.priority} />
+              return <UserCard key={user._id} user={user} distance={user.distance} priority={user.priority} isOnline={isUserOnline(user._id)} />
             })}
           </div>
         ) : (
@@ -675,15 +682,69 @@ const StyledWrapper = styled.div`
       width: 2rem;
   }
 // ...existing code...
-  .avatar {
-      width: 80px; height: 80px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin: 0 auto 1rem;
-      border: 4px solid #fff;
+  .avatar-container {
+    position: relative;
+    margin: 0 auto 1rem;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    
+    &.online {
+      background: #22c55e;
+      padding: 4px;
+      box-shadow: 
+        0 0 0 3px rgba(34, 197, 94, 0.3),
+        0 5px 15px rgba(34, 197, 94, 0.4);
+      animation: pulse-glow-users 2s infinite;
+    }
+    
+    &.offline {
+      background: #6b7280;
+      padding: 4px;
       box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+    }
+    
+    .avatar {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid white;
+    }
+    
+    .online-indicator {
+      display: none;
+    }
   }
-  .user-name { font-size: 1.25rem; font-weight: 700; color: #1f2937; }
+  
+  .user-name { 
+    font-size: 1.25rem; 
+    font-weight: 700; 
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    
+    .online-badge {
+      font-size: 0.65rem;
+      background: #22c55e;
+      color: white;
+      padding: 0.2rem 0.5rem;
+      border-radius: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 
+        0 2px 4px rgba(34, 197, 94, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+  }
   .user-tagline { font-size: 0.9rem; color: #6b7280; margin-bottom: 1.5rem; flex-grow: 1;}
   
   .stats-grid {
@@ -731,6 +792,19 @@ const StyledWrapper = styled.div`
   .empty-message {
     font-size: 1rem; color: #6b7280; max-width: 500px;
     margin-top: 0.5rem;
+  }
+  
+  @keyframes pulse-glow-users {
+    0%, 100% {
+      box-shadow: 
+        0 0 0 3px rgba(34, 197, 94, 0.3),
+        0 5px 15px rgba(34, 197, 94, 0.4);
+    }
+    50% {
+      box-shadow: 
+        0 0 0 6px rgba(34, 197, 94, 0.5),
+        0 8px 20px rgba(34, 197, 94, 0.6);
+    }
   }
 `;
 

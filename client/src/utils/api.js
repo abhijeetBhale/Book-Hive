@@ -250,12 +250,12 @@ export const reportAPI = {
 
 export const testimonialAPI = {
   createTestimonial: (testimonialData) =>
-    api.post("/testimonials", testimonialData),
-  getPublishedTestimonials: () => api.get("/testimonials"),
-  getUserTestimonial: () => api.get("/testimonials/my-testimonial"),
+    api.post("/testimonials", testimonialData).then(res => res.data),
+  getPublishedTestimonials: () => api.get("/testimonials").then(res => res.data),
+  getUserTestimonial: () => api.get("/testimonials/my-testimonial").then(res => res.data),
   updateUserTestimonial: (testimonialData) =>
-    api.put("/testimonials/my-testimonial", testimonialData),
-  deleteUserTestimonial: () => api.delete("/testimonials/my-testimonial"),
+    api.put("/testimonials/my-testimonial", testimonialData).then(res => res.data),
+  deleteUserTestimonial: () => api.delete("/testimonials/my-testimonial").then(res => res.data),
 };
 
 export const reviewsAPI = {

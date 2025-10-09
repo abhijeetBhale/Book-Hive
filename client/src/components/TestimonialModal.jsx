@@ -44,10 +44,13 @@ const TestimonialModal = ({ onClose, onSubmit }) => {
     setLoading(true);
     try {
       await onSubmit(formData);
-      toast.success('Thank you for your testimonial! It will be reviewed and added soon.');
+      toast.success('Thank you for your testimonial! It has been published and will appear on the site shortly.', {
+        duration: 4000
+      });
       onClose();
     } catch (error) {
-      toast.error('Failed to submit testimonial. Please try again.');
+      const errorMessage = error.response?.data?.message || 'Failed to submit testimonial. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

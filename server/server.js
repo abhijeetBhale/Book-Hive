@@ -95,10 +95,14 @@ const io = new SocketIOServer(server, {
   cors: {
     origin: [
       process.env.CLIENT_URL || 'http://localhost:3000',
+      'http://localhost:3000',
       'http://localhost:5173',
+      'http://localhost:5174', // Add Vite dev server port
     ],
     credentials: true,
+    methods: ['GET', 'POST']
   },
+  transports: ['websocket', 'polling']
 });
 
 // Expose io to routes/controllers
@@ -110,17 +114,31 @@ const onlineUsers = new Map();
 io.use((socket, next) => {
   try {
     const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(' ')[1];
-    if (!token) return next(new Error('Not authorized, no token'));
+    console.log('WebSocket auth attempt:', { 
+      hasToken: !!token, 
+      authHeader: socket.handshake.auth,
+      headers: socket.handshake.headers?.authorization 
+    });
+    
+    if (!token) {
+      console.log('WebSocket connection rejected: no token');
+      return next(new Error('Not authorized, no token'));
+    }
+    
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     socket.data.userId = decoded.userId;
+    console.log('WebSocket connection authorized for user:', decoded.userId);
     return next();
   } catch (err) {
+    console.error('WebSocket auth error:', err.message);
     return next(err);
   }
 });
 
 io.on('connection', (socket) => {
   const userId = socket.data.userId;
+  console.log(`WebSocket user connected: ${userId} (socket: ${socket.id})`);
+  
   if (!onlineUsers.has(userId)) onlineUsers.set(userId, new Set());
   onlineUsers.get(userId).add(socket.id);
 

@@ -66,7 +66,7 @@ const Home = () => {
     const loadTestimonials = async () => {
       try {
         const response = await testimonialAPI.getPublishedTestimonials();
-        setTestimonials(response.data);
+        setTestimonials(response);
         setTestimonialsLoaded(true);
       } catch (error) {
         console.error('Failed to load testimonials:', error);
@@ -80,10 +80,30 @@ const Home = () => {
   }, [testimonialsLoaded]);
 
   const handleTestimonialSubmit = async (testimonialData) => {
-    await testimonialAPI.createTestimonial(testimonialData);
-    // Optionally reload testimonials after submission
-    // const response = await testimonialAPI.getPublishedTestimonials();
-    // setTestimonials(response.data);
+    try {
+      console.log('Submitting testimonial data:', testimonialData);
+      const response = await testimonialAPI.createTestimonial(testimonialData);
+      console.log('Testimonial submission response:', response);
+
+      // Reload testimonials to show the new one
+      try {
+        const testimonialsResponse = await testimonialAPI.getPublishedTestimonials();
+        setTestimonials(testimonialsResponse);
+        console.log('Testimonials reloaded:', testimonialsResponse);
+      } catch (loadError) {
+        console.error('Failed to reload testimonials:', loadError);
+      }
+
+      console.log('Testimonial submitted successfully');
+    } catch (error) {
+      console.error('Failed to submit testimonial:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      throw error; // Re-throw to let the modal handle the error
+    }
   };
 
   const recentlyAddedBooks = [
@@ -449,18 +469,29 @@ const Home = () => {
             </div>
           </div>
 
-          {/* Add Testimonial Button */}
-          <div className="testimonial-cta">
-            <button
-              className="add-testimonial-btn"
-              onClick={() => setShowTestimonialModal(true)}
-            >
-              Add Your Testimonial
-            </button>
-            <p className="testimonial-cta-text">
-              Share your BookHive experience and help others discover our community!
-            </p>
-          </div>
+          {/* Add Testimonial Button - Only show if user is logged in */}
+          {user ? (
+            <div className="testimonial-cta">
+              <button
+                className="add-testimonial-btn"
+                onClick={() => setShowTestimonialModal(true)}
+              >
+                Add Your Testimonial
+              </button>
+              <p className="testimonial-cta-text">
+                Share your BookHive experience and help others discover our community!
+              </p>
+            </div>
+          ) : (
+            <div className="testimonial-cta">
+              <Link to="/login" className="add-testimonial-btn">
+                Login to Add Your Testimonial
+              </Link>
+              <p className="testimonial-cta-text">
+                Join BookHive to share your experience with our community!
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -493,8 +524,8 @@ const Home = () => {
         <LocationPermission onClose={() => setShowLocationModal(false)} />
       )}
 
-      {/* Testimonial Modal */}
-      {showTestimonialModal && (
+      {/* Testimonial Modal - Only show if user is logged in */}
+      {showTestimonialModal && user && (
         <TestimonialModal
           onClose={() => setShowTestimonialModal(false)}
           onSubmit={handleTestimonialSubmit}

@@ -63,11 +63,14 @@ export const listBookInquiries = async (req, res) => {
 // @route   GET /api/notifications/count
 export const getUnreadCount = async (req, res) => {
   try {
+    console.log('Getting unread count for user:', req.user._id);
+    
     const count = await Notification.countDocuments({
       user: req.user._id,
       read: { $ne: true }
     });
     
+    console.log('Unread notification count:', count);
     return res.json({ count });
   } catch (err) {
     console.error('notification count error:', err);
@@ -79,32 +82,48 @@ export const getUnreadCount = async (req, res) => {
 // @route   PUT /api/notifications/mark-read
 export const markRead = async (req, res) => {
   try {
+    console.log('Mark read request:', { body: req.body, user: req.user._id });
+    
     const { notificationIds } = req.body;
     
-    if (notificationIds && Array.isArray(notificationIds)) {
+    let result;
+    if (notificationIds && Array.isArray(notificationIds) && notificationIds.length > 0) {
       // Mark specific notifications as read
-      await Notification.updateMany(
+      result = await Notification.updateMany(
         { 
           _id: { $in: notificationIds },
           user: req.user._id
         },
         { $set: { read: true } }
       );
+      console.log(`Marked ${result.modifiedCount} specific notifications as read`);
     } else {
       // Mark all notifications as read
-      await Notification.updateMany(
+      result = await Notification.updateMany(
         { 
           user: req.user._id, 
           read: { $ne: true } 
         },
         { $set: { read: true } }
       );
+      console.log(`Marked ${result.modifiedCount} notifications as read for user ${req.user._id}`);
     }
     
-    return res.json({ message: 'Notifications marked as read' });
+    // Get updated count
+    const unreadCount = await Notification.countDocuments({
+      user: req.user._id,
+      read: { $ne: true }
+    });
+    
+    return res.json({ 
+      message: 'Notifications marked as read',
+      modifiedCount: result.modifiedCount,
+      unreadCount
+    });
   } catch (err) {
     console.error('mark read error:', err);
-    return res.status(500).json({ message: 'Server error marking notifications as read' });
+    console.error('Error stack:', err.stack);
+    return res.status(500).json({ message: 'Server error marking notifications as read', error: err.message });
   }
 };
 
@@ -129,6 +148,46 @@ export const getAllNotifications = async (req, res) => {
   } catch (err) {
     console.error('get all notifications error:', err);
     return res.status(500).json({ message: 'Server error getting notifications' });
+  }
+};
+
+// @desc    Create a test notification (for development)
+// @route   POST /api/notifications/test
+export const createTestNotification = async (req, res) => {
+  try {
+    const notification = await Notification.create({
+      user: req.user._id,
+      type: 'test',
+      message: 'This is a test notification to verify the system is working!',
+      fromUser: req.user._id,
+      link: '/profile'
+    });
+
+    // Emit real-time notification
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user:${req.user._id}`).emit('new_notification', {
+        id: notification._id,
+        type: 'test',
+        message: 'Test notification created successfully!',
+        fromUser: {
+          _id: req.user._id,
+          name: req.user.name,
+          avatar: req.user.avatar
+        },
+        link: '/profile',
+        createdAt: notification.createdAt,
+        read: false
+      });
+    }
+
+    return res.status(201).json({ 
+      message: 'Test notification created successfully!',
+      notification 
+    });
+  } catch (err) {
+    console.error('create test notification error:', err);
+    return res.status(500).json({ message: 'Server error creating test notification' });
   }
 };
 

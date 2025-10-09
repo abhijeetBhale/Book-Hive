@@ -16,6 +16,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import AuthCallback from './pages/AuthCallback';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import { OnlineStatusProvider } from './context/OnlineStatusContext';
 import Books from './pages/Books';
 import BookDetails from './pages/BookDetails';
 
@@ -23,7 +24,8 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <Layout>
+        <OnlineStatusProvider>
+          <Layout>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
@@ -45,7 +47,8 @@ function App() {
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/map" element={<ProtectedRoute><Map /></ProtectedRoute>} />
           </Routes>
-        </Layout>
+          </Layout>
+        </OnlineStatusProvider>
       </AuthProvider>
     </Router>
   );

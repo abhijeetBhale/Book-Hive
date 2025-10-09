@@ -78,9 +78,13 @@ const Profile = () => {
         // Mark relevant notifications as read and notify navbar to refresh count
         try {
           const { notificationsAPI } = await import('../utils/api');
-          await notificationsAPI.markRead();
+          console.log('Profile: Marking all notifications as read');
+          const response = await notificationsAPI.markRead();
+          console.log('Profile: Mark read response:', response);
           window.dispatchEvent(new Event('notifications-read'));
-        } catch {}
+        } catch (error) {
+          console.error('Profile: Error marking notifications as read:', error);
+        }
       } catch (error) {
         console.error("Failed to fetch notifications:", error);
         setNotifications({

@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { usersAPI, borrowAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
+import { useOnlineStatus } from '../context/OnlineStatusContext';
 import toast from 'react-hot-toast';
 import MapView from '../components/map/MapView';
 import { Loader, MapPin, Search, Calendar, UserCheck, Sliders, ChevronLeft, ChevronRight, Star } from 'lucide-react';
@@ -42,6 +43,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
 const Map = () => {
   const { user: currentUser } = useContext(AuthContext);
+  const { isUserOnline, onlineCount } = useOnlineStatus();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,7 +83,8 @@ const Map = () => {
 
           return {
             ...user,
-            distanceFromCurrentUser: distance
+            distanceFromCurrentUser: distance,
+            isOnline: isUserOnline(user._id)
           };
         });
 
@@ -260,10 +263,15 @@ const Map = () => {
                       {selectedUserIds.includes(user._id) && <UserCheck size={14} />}
                     </div>
                     <Link to={`/profile/${user._id}`} className="user-link">
-                      <img src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}&background=random`} alt={user.name} />
+                      <div className={`avatar-container ${user.isOnline ? 'online' : 'offline'}`}>
+                        <img src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}&background=random`} alt={user.name} />
+                      </div>
                       <div className="user-info">
                         <div className="user-main-info">
-                          <span className="user-name">{user.name}</span>
+                          <span className="user-name">
+                            {user.name}
+                            {user.isOnline && <span className="online-badge">Online</span>}
+                          </span>
                           <div className="user-stats">
                             <span className="book-count">{(user.booksOwned || []).length} Books</span>
                             {user.rating?.value && (
@@ -293,7 +301,13 @@ const Map = () => {
       </div>
       <div className={`main-content ${sidebarCollapsed ? 'expanded' : ''}`}>
         <div className="map-header">
-          <h2>Community Activity</h2>
+          <div className="header-content">
+            <h2>Community Activity</h2>
+            <div className="online-status">
+              <div className="online-indicator-header online"></div>
+              <span>{onlineCount} online</span>
+            </div>
+          </div>
           <div className="controls">
             <button
               className={`control-btn ${activeView === 'calendar' ? 'active' : ''}`}
@@ -542,12 +556,43 @@ const StyledWrapper = styled.div`
       text-decoration: none;
       color: inherit;
       
-      img {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
+      .avatar-container {
+        position: relative;
         margin-right: 0.75rem;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        
+        &.online {
+          background: #22c55e;
+          padding: 3px;
+          box-shadow: 
+            0 0 0 2px rgba(34, 197, 94, 0.3),
+            0 2px 8px rgba(34, 197, 94, 0.4);
+          animation: pulse-glow 2s infinite;
+        }
+        
+        &.offline {
+          background: #6b7280;
+          padding: 2px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        
+        img {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 2px solid white;
+        }
+        
+        .online-indicator {
+          display: none;
+        }
       }
 
       .user-info {
@@ -566,6 +611,24 @@ const StyledWrapper = styled.div`
         font-weight: 600;
         color: #334155;
         font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        
+        .online-badge {
+          font-size: 0.65rem;
+          background: #22c55e;
+          color: white;
+          padding: 0.2rem 0.5rem;
+          border-radius: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          box-shadow: 
+            0 2px 4px rgba(34, 197, 94, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
       }
 
       .user-stats {
@@ -622,10 +685,61 @@ const StyledWrapper = styled.div`
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
-    h2 {
-      font-size: 1.75rem;
-      font-weight: 800;
-      color: #0f172a;
+    
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      
+      h2 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+      }
+      
+      .online-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background-color: #f0fdf4;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+        border: 1px solid #bbf7d0;
+        
+        .online-indicator-header {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          
+          &.online {
+            background: #22c55e;
+            box-shadow: 
+              0 0 0 2px rgba(34, 197, 94, 0.3),
+              0 1px 3px rgba(34, 197, 94, 0.4);
+            animation: pulse-glow 2s infinite;
+          }
+        }
+        
+        span {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #065f46;
+        }
+      }
+    }
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 
+        0 0 0 2px rgba(34, 197, 94, 0.3),
+        0 2px 8px rgba(34, 197, 94, 0.4);
+    }
+    50% {
+      box-shadow: 
+        0 0 0 4px rgba(34, 197, 94, 0.5),
+        0 4px 12px rgba(34, 197, 94, 0.6);
     }
   }
 

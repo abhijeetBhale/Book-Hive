@@ -34,7 +34,13 @@ const Navbar = () => {
     if (!user?._id) return;
 
     const token = localStorage.getItem('token');
-    const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/?api$/i, '');
+    if (!token) {
+      console.warn('No token available for WebSocket connection');
+      return;
+    }
+    
+    const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+    console.log('Connecting to WebSocket at:', base);
     
     const socket = io(base, { 
       auth: { token },
@@ -52,6 +58,12 @@ const Navbar = () => {
 
     socket.on('connect_error', (error) => {
       console.error('Navbar socket connection error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        description: error.description,
+        context: error.context,
+        type: error.type
+      });
     });
 
     socket.on('new_notification', (notification) => {
@@ -101,9 +113,12 @@ const Navbar = () => {
     const fetchUnread = async () => {
       if (user) {
         try {
+          console.log('Fetching unread count for user:', user._id);
           const result = await notificationsAPI.getUnreadCount();
+          console.log('Unread count result:', result);
           setUnreadCount(result.count || 0);
-        } catch {
+        } catch (error) {
+          console.error('Error fetching unread count:', error);
           setUnreadCount(0);
         }
       } else {
@@ -112,7 +127,10 @@ const Navbar = () => {
     };
     fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
-    const onRead = () => fetchUnread();
+    const onRead = () => {
+      console.log('Notifications read event triggered, refetching count');
+      fetchUnread();
+    };
     window.addEventListener('notifications-read', onRead);
     return () => {
       clearInterval(interval);
@@ -136,14 +154,20 @@ const Navbar = () => {
 
   const handleNotificationClick = async (notification) => {
     try {
+      console.log('Marking notification as read:', notification.id);
+      
       // Mark this notification as read
-      await notificationsAPI.markAsRead([notification.id]);
+      const response = await notificationsAPI.markAsRead([notification.id]);
+      console.log('Mark as read response:', response);
       
       // Update local state
       setUnreadCount(prev => Math.max(0, prev - 1));
       setRealtimeNotifications(prev => 
         prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
       );
+      
+      // Dispatch event to update other components
+      window.dispatchEvent(new Event('notifications-read'));
       
       // Close dropdown
       setShowNotificationDropdown(false);
@@ -154,6 +178,11 @@ const Navbar = () => {
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
     }
   };
 
@@ -236,7 +265,17 @@ const Navbar = () => {
                             <Link 
                               to="/profile#notifications" 
                               className="text-sm text-blue-600 hover:text-blue-800"
-                              onClick={() => setShowNotificationDropdown(false)}
+                              onClick={async () => {
+                                setShowNotificationDropdown(false);
+                                // Mark all notifications as read when viewing all
+                                try {
+                                  await notificationsAPI.markRead();
+                                  setUnreadCount(0);
+                                  window.dispatchEvent(new Event('notifications-read'));
+                                } catch (error) {
+                                  console.error('Error marking all notifications as read:', error);
+                                }
+                              }}
                             >
                               View All
                             </Link>

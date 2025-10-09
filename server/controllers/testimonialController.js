@@ -7,8 +7,23 @@ export const createTestimonial = async (req, res) => {
   try {
     const { name, title, review, rating } = req.body;
 
+    // Validate required fields
+    if (!name || !title || !review || !rating) {
+      return res.status(400).json({ 
+        message: 'All fields (name, title, review, rating) are required' 
+      });
+    }
+
+    // Validate rating
+    const ratingNum = parseInt(rating);
+    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+      return res.status(400).json({ 
+        message: 'Rating must be a number between 1 and 5' 
+      });
+    }
+
     // Check if user already has a testimonial
-    const existingTestimonial = await Testimonial.findOne({ user: req.user.id });
+    const existingTestimonial = await Testimonial.findOne({ user: req.user._id });
     if (existingTestimonial) {
       return res.status(400).json({ 
         message: 'You have already submitted a testimonial. You can update it from your profile.' 
@@ -16,21 +31,32 @@ export const createTestimonial = async (req, res) => {
     }
 
     const testimonial = new Testimonial({
-      user: req.user.id,
+      user: req.user._id,
       name: name.trim(),
       title: title.trim(),
       review: review.trim(),
-      rating: parseInt(rating)
+      rating: ratingNum,
+      // For development: auto-approve testimonials
+      // In production, you might want to set these to false and have an admin approval process
+      isApproved: true,
+      isPublished: true
     });
 
     await testimonial.save();
 
     res.status(201).json({
-      message: 'Testimonial submitted successfully! It will be reviewed before publishing.',
+      message: 'Testimonial submitted and published successfully!',
       testimonial
     });
   } catch (error) {
     console.error('Create testimonial error:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ message: messages.join(', ') });
+    }
+    
     res.status(500).json({ message: 'Server error creating testimonial' });
   }
 };
@@ -68,7 +94,7 @@ export const getPublishedTestimonials = async (req, res) => {
 // @route   GET /api/testimonials/my-testimonial
 export const getUserTestimonial = async (req, res) => {
   try {
-    const testimonial = await Testimonial.findOne({ user: req.user.id });
+    const testimonial = await Testimonial.findOne({ user: req.user._id });
     
     if (!testimonial) {
       return res.status(404).json({ message: 'No testimonial found' });
@@ -87,7 +113,7 @@ export const updateUserTestimonial = async (req, res) => {
   try {
     const { name, title, review, rating } = req.body;
 
-    const testimonial = await Testimonial.findOne({ user: req.user.id });
+    const testimonial = await Testimonial.findOne({ user: req.user._id });
     
     if (!testimonial) {
       return res.status(404).json({ message: 'No testimonial found to update' });
@@ -117,7 +143,7 @@ export const updateUserTestimonial = async (req, res) => {
 // @route   DELETE /api/testimonials/my-testimonial
 export const deleteUserTestimonial = async (req, res) => {
   try {
-    const testimonial = await Testimonial.findOneAndDelete({ user: req.user.id });
+    const testimonial = await Testimonial.findOneAndDelete({ user: req.user._id });
     
     if (!testimonial) {
       return res.status(404).json({ message: 'No testimonial found to delete' });
