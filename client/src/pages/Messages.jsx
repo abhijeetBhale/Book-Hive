@@ -768,6 +768,7 @@ const MessagesPage = () => {
       </Chat>
     </Wrapper>
   );
+  
 };
 
 export default MessagesPage;
