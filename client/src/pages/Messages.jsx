@@ -5,245 +5,745 @@ import { importPrivateKeyFromIndexedDB, encryptMessage, decryptMessage } from '.
 import { useSearchParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { io } from 'socket.io-client';
-import { Paintbrush, Trash2, Check, CheckCheck } from 'lucide-react';
+import { Search, Phone, Video, MoreHorizontal, Send, Paperclip, Smile, Check, CheckCheck, Trash2, Palette, X } from 'lucide-react';
 
-const CHAT_BACKGROUNDS = [
-  { label: 'Default', value: 'plain', src: '' },
-  { label: 'Landscape 1', value: 'bee', src: '/src/assets/chat-background-bookhive1.avif' },
-  { label: 'Landscape 2', value: 'books', src: '/src/assets/chat-background-bookhive5.avif' },
-  { label: 'Landscape 3', value: 'honey', src: '/src/assets/chat-background-bookhive3.avif' },
-  { label: 'Landscape 4', value: 'map', src: '/src/assets/chat-background-bookhive4.avif' },
-];
-
+// Modern Messages Page Design
 const Wrapper = styled.div`
-  padding: 1rem 1.5rem;
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 1rem;
-  height: calc(100vh - 140px);
+  display: flex;
+  height: calc(100vh - 80px);
+  background: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 `;
 
 const Sidebar = styled.div`
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  overflow: hidden;
+  width: 320px;
+  background: white;
+  border-right: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 `;
 
 const SidebarHeader = styled.div`
-  padding: 0.9rem 1rem; font-weight: 800; border-bottom: 1px solid #f1f5f9; font-size: 1.125rem; color: #111827;
+  padding: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  
+  .user-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a202c;
+  }
+  
+  .search-container {
+    position: relative;
+  }
+  
+  .search-input {
+    width: 100%;
+    padding: 10px 12px 10px 40px;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    background: #f7fafc;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s;
+    
+    &:focus {
+      border-color: #4299e1;
+      background: white;
+    }
+    
+    &::placeholder {
+      color: #a0aec0;
+    }
+  }
+  
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a0aec0;
+  }
 `;
 
-const SidebarList = styled.div`
+const ChatTabs = styled.div`
+  display: flex;
+  padding: 0 20px;
+  border-bottom: 1px solid #e2e8f0;
+  
+  .tab {
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #718096;
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    
+    &.active {
+      color: #4299e1;
+      border-bottom-color: #4299e1;
+    }
+    
+    &:hover {
+      color: #4299e1;
+    }
+  }
+`;
+
+const ConversationsList = styled.div`
   flex: 1;
   overflow-y: auto;
 `;
 
 const ConversationItem = styled.button`
-  padding: 0.75rem 1rem; text-align: left; border: none; background: transparent; cursor: pointer; width: 100%;
-  border-bottom: 1px solid #f8fafc;
-  display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 0.75rem;
-  &:hover { background: #f8fafc; }
-  .avatar { width: 44px; height: 44px; border-radius: 9999px; object-fit: cover; }
+  width: 100%;
+  padding: 16px 20px;
+  border: none;
+  background: ${props => props.$active ? '#edf2f7' : 'transparent'};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  transition: background 0.2s;
   
-  /* --- [THE FIX IS HERE] --- */
-  .info-container {
-    overflow: hidden; /* This prevents the container from expanding */
+  &:hover {
+    background: #f7fafc;
   }
-
-  .name { 
-    font-weight: 700; color: #111827;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .preview { 
-      color: #6b7280; font-size: 0.875rem; 
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; 
-      }
-      .time { color: #9ca3af; font-size: 0.75rem; margin-top: -22px; }
+  
+  .avatar-container {
+    position: relative;
+    flex-shrink: 0;
+  }
+  
+  .avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  
+  .online-indicator {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    background: #48bb78;
+    border: 2px solid white;
+    border-radius: 50%;
+  }
+  
+  .conversation-info {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .conversation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  
+  .name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #2d3748;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .time {
+    font-size: 12px;
+    color: #a0aec0;
+    flex-shrink: 0;
+  }
+  
+  .last-message {
+    font-size: 14px;
+    color: #718096;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .unread-badge {
+    background: #e53e3e;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+  }
 `;
 
-const Chat = styled.div`
-  background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; display: flex; flex-direction: column;
+const ChatArea = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: white;
 `;
 
 const ChatHeader = styled.div`
-  position: relative;
-  padding: 0.9rem 1rem; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between;
-  .left { display: flex; align-items: center; gap: 0.75rem; position: relative; }
-  .avatar { width: 40px; height: 40px; border-radius: 9999px; object-fit: cover; }
-  .online-dot { position: absolute; left: 28px; top: 28px; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; border: 2px solid white; }
-  .title { font-weight: 800; color: #111827; }
-  .subtitle { font-size: 0.8rem; color: #9ca3af; }
-  a { font-size: 0.875rem; color: #6366f1; }
-  .right { display: flex; align-items: center; gap: 0.5rem; }
-`;
-
-const MessagesList = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  background: ${({ $bg }) =>
-    $bg === 'plain' ? '#fff'
-      : $bg && CHAT_BACKGROUNDS.find(bg => bg.value === $bg)?.src
-        ? `url(${CHAT_BACKGROUNDS.find(bg => bg.value === $bg).src})`
-        : '#fff'};
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  max-height: calc(100vh - 260px);
-  transition: background-image 0.3s;
-`;
-
-const TypingIndicator = styled.div`
-  align-self: flex-start;
-  color: #6b7280;
-  font-size: 0.875rem;
-  padding: 0.25rem 0.5rem;
-`;
-
-const MessageContainer = styled.div`
-  align-self: ${props => props.$me ? 'flex-end' : 'flex-start'};
-  display: flex;
-  flex-direction: column;
-  max-width: 70%;
-  margin-bottom: 0.5rem;
-`;
-
-const Bubble = styled.div`
-  background: ${props => props.$me ? '#4F46E5' : '#f3f4f6'};
-  color: ${props => props.$me ? '#fff' : '#111827'};
-  padding: 0.5rem 0.75rem; 
-  border-radius: 12px;
-  word-wrap: break-word;
-  position: relative;
-`;
-
-const MessageText = styled.div`
-  margin-bottom: ${props => props.$hasInfo ? '0.5rem' : '0'};
-  line-height: 1.4;
-`;
-
-const MessageInfo = styled.div`
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  font-size: 0.7rem;
-  color: ${props => props.$me ? 'rgba(255, 255, 255, 0.8)' : '#6b7280'};
-  margin-top: 0.25rem;
-`;
-
-const StatusIndicator = styled.span`
-  display: flex;
-  align-items: center;
-  margin-left: 0.25rem;
+  justify-content: space-between;
+  background: white;
   
-  svg {
-    color: ${props => {
-    if (props.$me) {
-      switch (props.$status) {
-        case 'sent': return 'rgba(255, 255, 255, 0.7)';
-        case 'delivered': return 'rgba(255, 255, 255, 0.9)';
-        case 'read': return '#00d4aa'; // WhatsApp blue-green for read
-        default: return 'rgba(255, 255, 255, 0.7)';
-      }
-    } else {
-      switch (props.$status) {
-        case 'sent': return '#9ca3af';
-        case 'delivered': return '#60a5fa';
-        case 'read': return '#00d4aa';
-        default: return '#9ca3af';
-      }
+  .chat-user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .chat-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  
+  .chat-user-details {
+    .name {
+      font-size: 16px;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 2px;
     }
-  }};
+    
+    .status {
+      font-size: 13px;
+      color: #718096;
+    }
+  }
+  
+  .chat-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .action-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #f7fafc;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #718096;
+    transition: all 0.2s;
+    
+    &:hover {
+      background: #edf2f7;
+      color: #4299e1;
+    }
   }
 `;
 
-const TimeStamp = styled.span`
-  font-size: 0.65rem;
-  color: ${props => props.$me ? 'rgba(255, 255, 255, 0.8)' : '#9ca3af'};
-`;
-
-const SystemMessage = styled.div`
-  align-self: center;
-  background: #e5e7eb;
-  color: #4b5563;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  margin: 0.5rem 0;
+const MessagesArea = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 `;
 
 const DateSeparator = styled.div`
-  align-self: center;
-  background: rgba(0, 0, 0, 0.05);
-  color: #6b7280;
-  padding: 0.375rem 0.875rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  margin: 1rem 0;
-  backdrop-filter: blur(10px);
+  text-align: center;
+  margin: 20px 0;
+  
+  .date-text {
+    display: inline-block;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.1);
+    color: #718096;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+  }
 `;
 
-const Composer = styled.form`
-  padding: 0.75rem; border-top: 1px solid #f1f5f9; display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; align-items: center;
-  input { flex: 1; border: 1px solid #e5e7eb; border-radius: 9999px; padding: 0.75rem 1rem; }
-  button { background: #4F46E5; color: #fff; border: none; border-radius: 9999px; padding: 0.6rem 1rem; font-weight: 700; }
+const MessageGroup = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-direction: ${props => props.$isMe ? 'row-reverse' : 'row'};
+  
+  .message-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  
+  .messages-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 60%;
+    align-items: ${props => props.$isMe ? 'flex-end' : 'flex-start'};
+  }
 `;
 
-const BgSelectorButton = styled.button`
-  background: #f3f4f6;
-  border: none;
-  border-radius: 9999px;
-  padding: 0.5rem;
-  cursor: pointer;
+const MessageBubble = styled.div`
+  padding: 12px 16px;
+  border-radius: 18px;
+  word-wrap: break-word;
+  position: relative;
+  max-width: 100%;
+  
+  ${props => props.$isMe ? `
+    background: #4299e1;
+    color: white;
+    border-bottom-right-radius: 6px;
+  ` : `
+    background: white;
+    color: #2d3748;
+    border: 1px solid #e2e8f0;
+    border-bottom-left-radius: 6px;
+  `}
+  
+  .message-text {
+    font-size: 14px;
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+  
+  .message-time {
+    font-size: 11px;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    justify-content: flex-end;
+    margin-top: 4px;
+  }
+`;
+
+const SystemMessage = styled.div`
+  text-align: center;
+  margin: 12px 0;
+  
+  .system-text {
+    display: inline-block;
+    padding: 8px 12px;
+    background: #e2e8f0;
+    color: #4a5568;
+    font-size: 13px;
+    border-radius: 16px;
+    max-width: 80%;
+  }
+`;
+
+const TypingIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  
+  .typing-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  
+  .typing-text {
+    font-size: 13px;
+    color: #718096;
+    font-style: italic;
+  }
+`;
+
+const MessageInput = styled.div`
+  padding: 16px 20px;
+  border-top: 1px solid #e2e8f0;
+  background: white;
+  
+  .input-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f7fafc;
+    border-radius: 24px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s;
+    
+    &:focus-within {
+      border-color: #4299e1;
+      background: white;
+    }
+  }
+  
+  .input-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .input-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #718096;
+    transition: all 0.2s;
+    
+    &:hover {
+      background: #edf2f7;
+      color: #4299e1;
+    }
+  }
+  
+  .message-input {
+    flex: 1;
+    border: none;
+    background: none;
+    outline: none;
+    font-size: 14px;
+    color: #2d3748;
+    
+    &::placeholder {
+      color: #a0aec0;
+    }
+  }
+  
+  .send-btn {
+    background: #4299e1;
+    color: white;
+    
+    &:hover {
+      background: #3182ce;
+    }
+    
+    &:disabled {
+      background: #cbd5e0;
+      cursor: not-allowed;
+    }
+  }
+`;
+
+const EmptyState = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #718096;
+  
+  .empty-icon {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+  
+  .empty-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #4a5568;
+  }
+  
+  .empty-subtitle {
+    font-size: 14px;
+  }
+`;
+
+// Dropdown Menu for More Options
+const DropdownMenu = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 180px;
+  overflow: hidden;
+  
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #2d3748;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s;
+    
+    &:hover {
+      background: #f7fafc;
+    }
+    
+    &.danger {
+      color: #e53e3e;
+      
+      &:hover {
+        background: #fed7d7;
+      }
+    }
+  }
+`;
+
+// Modal Overlay
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
-  color: #4F46E5;
-  &:hover { background: #e0e7ff; }
+  z-index: 2000;
 `;
 
-const BgOptionsModal = styled.div`
-  position: absolute;
-  top: 56px;
-  right: 18px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 1rem;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-  padding: 1rem;
-  z-index: 20;
-  min-width: 220px;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-`;
-
-const BgOption = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.4rem 0.2rem;
-  border-radius: 0.5rem;
-  &:hover { background: #f3f4f6; }
-  .preview {
-    width: 40px; height: 32px; border-radius: 0.5rem; object-fit: cover; background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    display: flex; align-items: center; justify-content: center;
+// Modal Content
+const ModalContent = styled.div`
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2d3748;
+    }
+    
+    .close-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #718096;
+      padding: 4px;
+      
+      &:hover {
+        color: #2d3748;
+      }
+    }
   }
-  .label {
-    font-size: 1rem; color: #374151; font-weight: 600;
+  
+  .modal-body {
+    margin-bottom: 20px;
+    
+    .modal-text {
+      color: #4a5568;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+  }
+  
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      
+      &.btn-secondary {
+        background: #f7fafc;
+        color: #4a5568;
+        border: 1px solid #e2e8f0;
+        
+        &:hover {
+          background: #edf2f7;
+        }
+      }
+      
+      &.btn-danger {
+        background: #e53e3e;
+        color: white;
+        border: 1px solid #e53e3e;
+        
+        &:hover {
+          background: #c53030;
+        }
+      }
+    }
+  }
+`;
+
+// Theme Selector
+const ThemeSelector = styled.div`
+  .theme-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+  }
+  
+  .theme-option {
+    aspect-ratio: 16/9;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    overflow: hidden;
+    transition: all 0.2s;
+    
+    &:hover {
+      transform: scale(1.05);
+    }
+    
+    &.active {
+      border-color: #4299e1;
+    }
+    
+    &.default {
+      background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+    }
+    
+    &.blue {
+      background: linear-gradient(135deg, #ebf8ff 0%, #bee3f8 100%);
+    }
+    
+    &.green {
+      background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%);
+    }
+    
+    &.purple {
+      background: linear-gradient(135deg, #faf5ff 0%, #e9d8fd 100%);
+    }
+    
+    &.pink {
+      background: linear-gradient(135deg, #fff5f5 0%, #fed7e2 100%);
+    }
+    
+    &.dark {
+      background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+    }
+  }
+`;
+
+// Coming Soon Toast
+const ComingSoonToast = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #4299e1;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 3000;
+  animation: slideIn 0.3s ease-out;
+  
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+`;
+
+// Emoji Picker (Simple)
+const EmojiPicker = styled.div`
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  width: 280px;
+  
+  .emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  
+  .emoji-item {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.2s;
+    
+    &:hover {
+      background: #f7fafc;
+    }
   }
 `;
 
@@ -296,6 +796,7 @@ const shouldShowDateSeparator = (currentMessage, previousMessage) => {
 
 const MessagesPage = () => {
   const [conversations, setConversations] = useState([]);
+  const [filteredConversations, setFilteredConversations] = useState([]);
   const [active, setActive] = useState(null);
   const [text, setText] = useState('');
   const [privateKey, setPrivateKey] = useState(null);
@@ -311,17 +812,71 @@ const MessagesPage = () => {
   const [messageStatuses, setMessageStatuses] = useState({});
   const messagesListRef = useRef(null);
 
-  const [chatBg, setChatBg] = useState(() => localStorage.getItem('chatBg') || 'plain');
-  const [showBgModal, setShowBgModal] = useState(false);
+  // New state for interactive features
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showComingSoon, setShowComingSoon] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('chatTheme') || 'default');
+
+  const dropdownRef = useRef(null);
+  const emojiRef = useRef(null);
+
+
 
   const activeRef = useRef(active);
   useEffect(() => {
     activeRef.current = active;
   }, [active]);
 
+  // Handle search functionality
   useEffect(() => {
-    localStorage.setItem('chatBg', chatBg);
-  }, [chatBg]);
+    if (!searchQuery.trim()) {
+      setFilteredConversations(conversations);
+    } else {
+      const filtered = conversations.filter(c => {
+        const peer = c.participants?.find(p => p._id !== currentUser?._id);
+        const peerName = peer?.name?.toLowerCase() || '';
+        const lastMessage = c.messages?.[0]?.message?.toLowerCase() || '';
+        const query = searchQuery.toLowerCase();
+        return peerName.includes(query) || lastMessage.includes(query);
+      });
+      setFilteredConversations(filtered);
+    }
+  }, [conversations, searchQuery, currentUser?._id]);
+
+  // Handle click outside for dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+      if (emojiRef.current && !emojiRef.current.contains(event.target)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Save theme to localStorage
+  useEffect(() => {
+    localStorage.setItem('chatTheme', currentTheme);
+  }, [currentTheme]);
+
+  // Auto-hide coming soon toast
+  useEffect(() => {
+    if (showComingSoon) {
+      const timer = setTimeout(() => setShowComingSoon(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showComingSoon]);
+
+
 
   useEffect(() => {
     (async () => {
@@ -608,25 +1163,157 @@ const MessagesPage = () => {
 
   const handleClearConversation = async () => {
     if (!active || !active._id || active._id.startsWith('new-')) return;
+    setShowDeleteModal(false);
+    setShowDropdown(false);
 
-    if (window.confirm('Are you sure you want to permanently delete this conversation history? This cannot be undone.')) {
-      try {
-        await messagesAPI.clearConversation(active._id);
-        // The websocket event 'conversation:cleared' will handle updating the UI for all participants
-      } catch (error) {
-        console.error("Failed to clear conversation", error);
-        alert('An error occurred while clearing the conversation.');
-      }
+    try {
+      await messagesAPI.clearConversation(active._id);
+      // The websocket event 'conversation:cleared' will handle updating the UI for all participants
+    } catch (error) {
+      console.error("Failed to clear conversation", error);
+      alert('An error occurred while clearing the conversation.');
     }
   };
 
+  const handleComingSoon = (feature) => {
+    setShowComingSoon(true);
+    console.log(`${feature} - Coming Soon!`);
+  };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    // For now, all tabs show the same conversations
+    // In the future, you can filter by conversation type
+  };
+
+  const handleEmojiSelect = (emoji) => {
+    setText(prev => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const handleThemeChange = (theme) => {
+    setCurrentTheme(theme);
+    setShowThemeModal(false);
+  };
+
+  const handleFileAttach = () => {
+    // Create a file input element
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,document/*';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        // For now, just show coming soon
+        handleComingSoon('File Upload');
+      }
+    };
+    input.click();
+  };
+
+
+  // Group messages by sender and time
+  const groupMessages = (messages) => {
+    const groups = [];
+    let currentGroup = null;
+    
+    messages.forEach((message, index) => {
+      const isMe = message.senderId?._id === currentUser?._id;
+      const previousMessage = index > 0 ? messages[index - 1] : null;
+      const showDateSeparator = shouldShowDateSeparator(message, previousMessage);
+      
+      if (showDateSeparator && groups.length > 0) {
+        groups.push({ type: 'date', date: message.createdAt });
+      }
+      
+      if (message.messageType === 'system') {
+        groups.push({ type: 'system', message });
+        currentGroup = null;
+      } else {
+        const shouldStartNewGroup = !currentGroup || 
+          currentGroup.senderId !== message.senderId?._id ||
+          (new Date(message.createdAt) - new Date(currentGroup.lastMessageTime)) > 300000; // 5 minutes
+        
+        if (shouldStartNewGroup) {
+          currentGroup = {
+            type: 'message',
+            senderId: message.senderId?._id,
+            senderName: message.senderId?.name,
+            senderAvatar: isMe ? currentUser?.avatar : other?.avatar,
+            isMe,
+            messages: [message],
+            lastMessageTime: message.createdAt
+          };
+          groups.push(currentGroup);
+        } else {
+          currentGroup.messages.push(message);
+          currentGroup.lastMessageTime = message.createdAt;
+        }
+      }
+    });
+    
+    return groups;
+  };
+
+  // Helper function to get theme background
+  const getThemeBackground = (theme) => {
+    switch (theme) {
+      case 'blue': return 'linear-gradient(135deg, #ebf8ff 0%, #bee3f8 100%)';
+      case 'green': return 'linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%)';
+      case 'purple': return 'linear-gradient(135deg, #faf5ff 0%, #e9d8fd 100%)';
+      case 'pink': return 'linear-gradient(135deg, #fff5f5 0%, #fed7e2 100%)';
+      case 'dark': return 'linear-gradient(135deg, #2d3748 0%, #1a202c 100%)';
+      default: return '#f8fafc';
+    }
+  };
 
   return (
     <Wrapper>
       <Sidebar>
-        <SidebarHeader>Messages</SidebarHeader>
-        <SidebarList>
-          {[...conversations]
+        <SidebarHeader>
+          <div className="user-info">
+            <img 
+              className="user-avatar" 
+              src={currentUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'User')}&background=4299e1&color=fff`} 
+              alt={currentUser?.name} 
+            />
+            <div className="user-name">{currentUser?.name || 'User'}</div>
+          </div>
+          <div className="search-container">
+            <Search className="search-icon" size={16} />
+            <input 
+              className="search-input" 
+              placeholder="Search conversations..." 
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </SidebarHeader>
+        
+        <ChatTabs>
+          <button 
+            className={`tab ${activeTab === 'all' ? 'active' : ''}`}
+            onClick={() => handleTabChange('all')}
+          >
+            All Chats
+          </button>
+          <button 
+            className={`tab ${activeTab === 'groups' ? 'active' : ''}`}
+            onClick={() => handleTabChange('groups')}
+          >
+            Groups
+          </button>
+          <button 
+            className={`tab ${activeTab === 'calls' ? 'active' : ''}`}
+            onClick={() => handleTabChange('calls')}
+          >
+            Last Calls
+          </button>
+        </ChatTabs>
+        
+        <ConversationsList>
+          {[...filteredConversations]
             .sort((a, b) => {
               if ((b.unreadCount || 0) !== (a.unreadCount || 0)) {
                 return (b.unreadCount || 0) - (a.unreadCount || 0);
@@ -637,135 +1324,344 @@ const MessagesPage = () => {
             }).map(c => {
               const peer = (c.participants || []).find(p => p && p._id && p._id !== (currentUser?._id || ''));
               const last = (c.messages && c.messages[0]) || null;
+              const isActive = active?._id === c._id || (active?.participants?.some(p => p._id === peer?._id));
+              
               return (
-                <ConversationItem key={c._id} onClick={async () => {
-                  if (!peer?._id) return;
-                  localStorage.setItem('lastActiveUserId', peer._id);
-                  const { data } = await messagesAPI.getConversationWith(peer._id);
-                  setActive(data || c);
-                  try {
-                    const list = await messagesAPI.getConversations();
-                    setConversations(list.data);
-                  } catch { }
-                }}>
-                  <div style={{ position: 'relative' }}>
-                    <img className="avatar" src={peer?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(peer?.name || 'User')}&background=EEF2FF&color=111827`} alt={peer?.name} />
-                    {onlineUsers.has(peer?._id) && <span style={{ position: 'absolute', left: 28, top: 28, width: 10, height: 10, borderRadius: '50%', background: '#22c55e', border: '2px solid white' }} />}
+                <ConversationItem 
+                  key={c._id} 
+                  $active={isActive}
+                  onClick={async () => {
+                    if (!peer?._id) return;
+                    localStorage.setItem('lastActiveUserId', peer._id);
+                    const { data } = await messagesAPI.getConversationWith(peer._id);
+                    setActive(data || c);
+                    try {
+                      const list = await messagesAPI.getConversations();
+                      setConversations(list.data);
+                    } catch { }
+                  }}
+                >
+                  <div className="avatar-container">
+                    <img 
+                      className="avatar" 
+                      src={peer?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(peer?.name || 'User')}&background=EEF2FF&color=111827`} 
+                      alt={peer?.name} 
+                    />
+                    {onlineUsers.has(peer?._id) && <div className="online-indicator" />}
                   </div>
-                  {/* --- [THE FIX IS HERE] --- */}
-                  <div className="info-container">
-                    <div className="name">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span>{peer?.name || 'User'}</span>
-                        {c.unreadCount > 0 && (
-                          <span style={{ background: '#ef4444', color: 'white', borderRadius: 9999, padding: '2px 8px', fontSize: 12, fontWeight: 700 }}>
-                            {c.unreadCount}
-                          </span>
-                        )}
+                  
+                  <div className="conversation-info">
+                    <div className="conversation-header">
+                      <div className="name">{peer?.name || 'User'}</div>
+                      <div className="time">
+                        {last ? new Date(last.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                       </div>
                     </div>
-                    <div className="preview">{last ? (decryptedTexts[last._id] ?? last.message ?? 'New message') : 'Start a conversation'}</div>
+                    <div className="last-message">
+                      <span>{last ? (decryptedTexts[last._id] ?? last.message ?? 'New message') : 'Start a conversation'}</span>
+                      {c.unreadCount > 0 && (
+                        <span className="unread-badge">{c.unreadCount}</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="time">{last ? new Date(last.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</div>
                 </ConversationItem>
               );
             })}
-        </SidebarList>
+        </ConversationsList>
       </Sidebar>
-      <Chat>
-        <ChatHeader>
-          <div className="left">
-            {other && (
-              <>
-                <img className="avatar" src={other?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(other?.name || 'User')}&background=EEF2FF&color=111827`} alt={other?.name} />
-                {onlineUsers.has(other?._id) && <span className="online-dot" />}
-              </>
-            )}
-            <div>
-              <div className="title">{other?.name || 'Select a conversation'}</div>
-              {other?.email && (
-                <div className="subtitle">
-                  {other.email}
-                  {isOtherTyping ? ' • typing…' : onlineUsers.has(other?._id) ? ' • online' : ' • offline'}
-                  {!socketConnected && ' • connection lost'}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="right">
-            {other?._id && (
-              <BgSelectorButton type="button" onClick={handleClearConversation} title="Clear conversation history">
-                <Trash2 size={18} color="#ef4444" />
-              </BgSelectorButton>
-            )}
-            <BgSelectorButton type="button" onClick={() => setShowBgModal(v => !v)} title="Change background">
-              <Paintbrush size={18} />
-            </BgSelectorButton>
-          </div>
-          {showBgModal && (
-            <BgOptionsModal>
-              {CHAT_BACKGROUNDS.map(bg => (
-                <BgOption key={bg.value} onClick={() => { setChatBg(bg.value); setShowBgModal(false); }}>
-                  <div className="preview">
-                    {bg.src
-                      ? <img src={bg.src} alt={bg.label} style={{ width: '100%', height: '100%', borderRadius: '0.5rem', objectFit: 'cover' }} />
-                      : <span style={{ width: '100%', height: '100%', display: 'block', background: '#fff', borderRadius: '0.5rem' }} />
-                    }
+      
+      <ChatArea>
+        {other ? (
+          <>
+            <ChatHeader>
+              <div className="chat-user-info">
+                <img 
+                  className="chat-avatar" 
+                  src={other?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(other?.name || 'User')}&background=EEF2FF&color=111827`} 
+                  alt={other?.name} 
+                />
+                <div className="chat-user-details">
+                  <div className="name">{other?.name || 'User'}</div>
+                  <div className="status">
+                    {isOtherTyping ? 'typing...' : onlineUsers.has(other?._id) ? 'online' : 'offline'}
+                    {!socketConnected && ' • connection lost'}
                   </div>
-                  <span className="label">{bg.label}</span>
-                </BgOption>
-              ))}
-            </BgOptionsModal>
-          )}
-        </ChatHeader>
-        <MessagesList ref={messagesListRef} $bg={chatBg}>
-          {(active?.messages || []).map((m, index) => {
-            const isMe = m.senderId?._id === (currentUser?._id || '');
-            const messageStatus = messageStatuses[m._id] || { status: m.status || 'sent' };
-            const messageText = decryptedTexts[m._id] ?? (m.message || '');
-            const previousMessage = index > 0 ? active.messages[index - 1] : null;
-            const showDateSeparator = shouldShowDateSeparator(m, previousMessage);
-
-            return (
-              <Fragment key={m._id}>
-                {showDateSeparator && (
-                  <DateSeparator>
-                    {formatDateSeparator(m.createdAt)}
-                  </DateSeparator>
-                )}
-                {m.messageType === 'system' ? (
-                  <SystemMessage>{m.message}</SystemMessage>
-                ) : (
-                  <MessageContainer $me={isMe}>
-                    <Bubble $me={isMe}>
-                      <MessageText $hasInfo={true}>
-                        {messageText}
-                      </MessageText>
-                      <MessageInfo $me={isMe}>
-                        <TimeStamp $me={isMe}>
-                          {formatMessageTime(m.createdAt)}
-                        </TimeStamp>
-                        {isMe && (
-                          <StatusIndicator $status={messageStatus.status} $me={isMe}>
-                            {getStatusIcon(messageStatus.status)}
-                          </StatusIndicator>
-                        )}
-                      </MessageInfo>
-                    </Bubble>
-                  </MessageContainer>
-                )}
-              </Fragment>
-            );
-          })}
-          {isOtherTyping && <TypingIndicator>typing…</TypingIndicator>}
-        </MessagesList>
-        {other?._id && (
-          <Composer onSubmit={handleSend}>
-            <input value={text} onChange={handleInputChange} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e); } }} placeholder="Type a message" />
-            <button type="submit">Send</button>
-          </Composer>
+                </div>
+              </div>
+              
+              <div className="chat-actions">
+                <button 
+                  className="action-btn" 
+                  title="Voice call"
+                  onClick={() => handleComingSoon('Voice Call')}
+                >
+                  <Phone size={18} />
+                </button>
+                <button 
+                  className="action-btn" 
+                  title="Video call"
+                  onClick={() => handleComingSoon('Video Call')}
+                >
+                  <Video size={18} />
+                </button>
+                <div style={{ position: 'relative' }} ref={dropdownRef}>
+                  <button 
+                    className="action-btn" 
+                    title="More options" 
+                    onClick={() => setShowDropdown(!showDropdown)}
+                  >
+                    <MoreHorizontal size={18} />
+                  </button>
+                  {showDropdown && (
+                    <DropdownMenu>
+                      <button 
+                        className="dropdown-item"
+                        onClick={() => setShowThemeModal(true)}
+                      >
+                        <Palette size={16} />
+                        Change Theme
+                      </button>
+                      <button 
+                        className="dropdown-item danger"
+                        onClick={() => setShowDeleteModal(true)}
+                      >
+                        <Trash2 size={16} />
+                        Delete Chat
+                      </button>
+                    </DropdownMenu>
+                  )}
+                </div>
+              </div>
+            </ChatHeader>
+            
+            <MessagesArea ref={messagesListRef} style={{ background: getThemeBackground(currentTheme) }}>
+              {groupMessages(active?.messages || []).map((group, groupIndex) => {
+                if (group.type === 'date') {
+                  return (
+                    <DateSeparator key={`date-${groupIndex}`}>
+                      <span className="date-text">{formatDateSeparator(group.date)}</span>
+                    </DateSeparator>
+                  );
+                }
+                
+                if (group.type === 'system') {
+                  return (
+                    <SystemMessage key={`system-${groupIndex}`}>
+                      <span className="system-text">{group.message.message}</span>
+                    </SystemMessage>
+                  );
+                }
+                
+                return (
+                  <MessageGroup key={`group-${groupIndex}`} $isMe={group.isMe}>
+                    {!group.isMe && (
+                      <img 
+                        className="message-avatar" 
+                        src={group.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(group.senderName || 'User')}&background=EEF2FF&color=111827`} 
+                        alt={group.senderName} 
+                      />
+                    )}
+                    <div className="messages-container">
+                      {group.messages.map((message) => {
+                        const messageStatus = messageStatuses[message._id] || { status: message.status || 'sent' };
+                        const messageText = decryptedTexts[message._id] ?? (message.message || '');
+                        
+                        return (
+                          <MessageBubble key={message._id} $isMe={group.isMe}>
+                            <div className="message-text">{messageText}</div>
+                            <div className="message-time">
+                              {formatMessageTime(message.createdAt)}
+                              {group.isMe && (
+                                <span style={{ marginLeft: '4px' }}>
+                                  {getStatusIcon(messageStatus.status)}
+                                </span>
+                              )}
+                            </div>
+                          </MessageBubble>
+                        );
+                      })}
+                    </div>
+                  </MessageGroup>
+                );
+              })}
+              
+              {isOtherTyping && (
+                <TypingIndicator>
+                  <img 
+                    className="typing-avatar" 
+                    src={other?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(other?.name || 'User')}&background=EEF2FF&color=111827`} 
+                    alt={other?.name} 
+                  />
+                  <span className="typing-text">{other?.name} is typing...</span>
+                </TypingIndicator>
+              )}
+            </MessagesArea>
+            
+            <MessageInput>
+              <form onSubmit={handleSend}>
+                <div className="input-container">
+                  <div className="input-actions">
+                    <button 
+                      type="button" 
+                      className="input-btn" 
+                      title="Attach file"
+                      onClick={handleFileAttach}
+                    >
+                      <Paperclip size={18} />
+                    </button>
+                  </div>
+                  
+                  <input 
+                    className="message-input"
+                    value={text} 
+                    onChange={handleInputChange}
+                    onKeyDown={(e) => { 
+                      if (e.key === 'Enter' && !e.shiftKey) { 
+                        e.preventDefault(); 
+                        handleSend(e); 
+                      } 
+                    }} 
+                    placeholder="Type something..." 
+                  />
+                  
+                  <div className="input-actions" style={{ position: 'relative' }}>
+                    <div ref={emojiRef}>
+                      <button 
+                        type="button" 
+                        className="input-btn" 
+                        title="Emoji"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      >
+                        <Smile size={18} />
+                      </button>
+                      {showEmojiPicker && (
+                        <EmojiPicker>
+                          <div className="emoji-grid">
+                            {['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'].map(emoji => (
+                              <button
+                                key={emoji}
+                                className="emoji-item"
+                                onClick={() => handleEmojiSelect(emoji)}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </EmojiPicker>
+                      )}
+                    </div>
+                    <button 
+                      type="submit" 
+                      className="input-btn send-btn" 
+                      disabled={!text.trim()}
+                      title="Send message"
+                    >
+                      <Send size={18} />
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </MessageInput>
+          </>
+        ) : (
+          <EmptyState>
+            <div className="empty-icon">💬</div>
+            <div className="empty-title">Select a conversation</div>
+            <div className="empty-subtitle">Choose from your existing conversations or start a new one</div>
+          </EmptyState>
         )}
-      </Chat>
+      </ChatArea>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <ModalOverlay onClick={() => setShowDeleteModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">Delete Conversation</div>
+              <button className="close-btn" onClick={() => setShowDeleteModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="modal-text">
+                Are you sure you want to permanently delete this conversation history? 
+                This action cannot be undone and will remove all messages for both participants.
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button 
+                className="btn btn-secondary"
+                onClick={() => setShowDeleteModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-danger"
+                onClick={handleClearConversation}
+              >
+                Delete
+              </button>
+            </div>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Theme Selection Modal */}
+      {showThemeModal && (
+        <ModalOverlay onClick={() => setShowThemeModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">Choose Theme</div>
+              <button className="close-btn" onClick={() => setShowThemeModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <ThemeSelector>
+                <div className="theme-grid">
+                  <div 
+                    className={`theme-option default ${currentTheme === 'default' ? 'active' : ''}`}
+                    onClick={() => handleThemeChange('default')}
+                    title="Default"
+                  />
+                  <div 
+                    className={`theme-option blue ${currentTheme === 'blue' ? 'active' : ''}`}
+                    onClick={() => handleThemeChange('blue')}
+                    title="Blue"
+                  />
+                  <div 
+                    className={`theme-option green ${currentTheme === 'green' ? 'active' : ''}`}
+                    onClick={() => handleThemeChange('green')}
+                    title="Green"
+                  />
+                  <div 
+                    className={`theme-option purple ${currentTheme === 'purple' ? 'active' : ''}`}
+                    onClick={() => handleThemeChange('purple')}
+                    title="Purple"
+                  />
+                  <div 
+                    className={`theme-option pink ${currentTheme === 'pink' ? 'active' : ''}`}
+                    onClick={() => handleThemeChange('pink')}
+                    title="Pink"
+                  />
+                  <div 
+                    className={`theme-option dark ${currentTheme === 'dark' ? 'active' : ''}`}
+                    onClick={() => handleThemeChange('dark')}
+                    title="Dark"
+                  />
+                </div>
+              </ThemeSelector>
+            </div>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Coming Soon Toast */}
+      {showComingSoon && (
+        <ComingSoonToast>
+          🚀 Coming Soon! This feature is under development.
+        </ComingSoonToast>
+      )}
     </Wrapper>
   );
   

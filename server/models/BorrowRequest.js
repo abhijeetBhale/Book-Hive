@@ -30,6 +30,14 @@ const borrowRequestSchema = new mongoose.Schema({
   },
   lastReminderDate: {
     type: Date
+  },
+  communicationStarted: {
+    type: Boolean,
+    default: false
+  },
+  conversationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Conversation'
   }
 }, {
   timestamps: true

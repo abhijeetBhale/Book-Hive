@@ -217,6 +217,8 @@ export const borrowAPI = {
     api.put(`/borrow/${requestId}`, { status }),
   deleteRequest: (requestId) => api.delete(`/borrow/${requestId}`),
   returnBook: (requestId) => api.put(`/borrow/${requestId}/return`),
+  markAsBorrowed: (requestId) => api.put(`/borrow/${requestId}/borrowed`),
+  markAsReturned: (requestId) => api.put(`/borrow/${requestId}/returned`),
 };
 
 export const usersAPI = {

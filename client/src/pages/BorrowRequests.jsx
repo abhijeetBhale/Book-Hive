@@ -6,6 +6,9 @@ import toast from 'react-hot-toast';
 import { borrowAPI, reviewsAPI } from '../utils/api';
 import { formatDate } from '../utils/dateHelpers';
 import ReviewModal from '../components/ReviewModal';
+import BookRequestNotification from '../components/BookRequestNotification';
+import { Link } from 'react-router-dom';
+import { MessageSquare } from 'lucide-react';
 
 const BorrowRequests = () => {
   const [receivedRequests, setReceivedRequests] = useState([]);
@@ -56,6 +59,28 @@ const BorrowRequests = () => {
       fetchData();
     } catch (error) {
       toast.error('Failed to update request status.');
+    }
+  };
+
+  const handleMarkAsBorrowed = async (requestId) => {
+    try {
+      await borrowAPI.markAsBorrowed(requestId);
+      toast.success('Book marked as borrowed! The borrower can now return it when done.');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to mark book as borrowed');
+      console.error('Mark as borrowed error:', error);
+    }
+  };
+
+  const handleMarkAsReturned = async (requestId) => {
+    try {
+      await borrowAPI.markAsReturned(requestId);
+      toast.success('Book returned successfully! You can now leave a review.');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to mark book as returned');
+      console.error('Mark as returned error:', error);
     }
   };
   
@@ -126,6 +151,16 @@ const BorrowRequests = () => {
                     </button>
                   </div>
                 )}
+                {req.status === 'approved' && (
+                  <div className="card-actions">
+                    <Link to={`/messages?userId=${req.borrower._id}`} className="btn message-btn">
+                      <MessageSquare size={16} /> Message {req.borrower?.name}
+                    </Link>
+                    <button onClick={() => handleMarkAsBorrowed(req._id)} className="btn borrowed-btn">
+                      <Check size={16} /> Mark as Borrowed
+                    </button>
+                  </div>
+                )}
                 {req.status === 'returned' && (
                   <div className="card-actions">
                     <button
@@ -148,6 +183,9 @@ const BorrowRequests = () => {
         <div className="requests-grid">
           {myRequests.filter(req => req.book && req.owner).map(req => (
             <div key={req._id} className="request-card">
+              {req.status === 'approved' && (
+                <BookRequestNotification request={req} type="approved" />
+              )}
               <img 
                 src={getFullImageUrl(req.book?.coverImage)} 
                 alt={req.book?.title || 'Book cover'} 
@@ -173,6 +211,26 @@ const BorrowRequests = () => {
                   <p>Requested from {req.owner?.name || 'Unknown User'}.</p>
                 </div>
                 <p className="request-date">Requested on: {formatDate(req.createdAt)}</p>
+                {req.status === 'approved' && (
+                  <div className="card-actions">
+                    <Link to={`/messages?userId=${req.owner._id}`} className="btn message-btn">
+                      <MessageSquare size={16} /> Message {req.owner?.name}
+                    </Link>
+                    <div className="status-info">
+                      <span className="status-text">✅ Approved! Coordinate pickup details</span>
+                    </div>
+                  </div>
+                )}
+                {req.status === 'borrowed' && (
+                  <div className="card-actions">
+                    <Link to={`/messages?userId=${req.owner._id}`} className="btn message-btn">
+                      <MessageSquare size={16} /> Message {req.owner?.name}
+                    </Link>
+                    <button onClick={() => handleMarkAsReturned(req._id)} className="btn return-btn">
+                      <ArrowRight size={16} /> Return Book
+                    </button>
+                  </div>
+                )}
                 {req.status === 'returned' && (
                   <div className="card-actions" style={{ marginTop: 8 }}>
                     <button
@@ -426,6 +484,42 @@ const StyledWrapper = styled.div`
       color: white;
       border: 1px solid transparent;
       &:hover { background-color: #15803d; }
+    }
+    
+    .message-btn {
+      background-color: #4F46E5;
+      color: white;
+      border: 1px solid transparent;
+      text-decoration: none;
+      &:hover { background-color: #4338ca; }
+    }
+    
+    .borrowed-btn {
+      background-color: #059669;
+      color: white;
+      border: 1px solid transparent;
+      &:hover { background-color: #047857; }
+    }
+    
+    .return-btn {
+      background-color: #f59e0b;
+      color: white;
+      border: 1px solid transparent;
+      &:hover { background-color: #d97706; }
+    }
+  }
+  
+  .status-info {
+    margin-top: 0.5rem;
+    
+    .status-text {
+      font-size: 0.875rem;
+      color: #059669;
+      font-weight: 600;
+      background-color: #ecfdf5;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      display: inline-block;
     }
   }
 

@@ -6,6 +6,8 @@ import {
   getReceivedRequests, 
   getMyRequests, 
   updateRequestStatus,
+  markAsBorrowed,
+  markAsReturned,
   deleteRequest
 } from '../controllers/borrowController.js';
 import { protect } from '../middleware/auth.js';
@@ -16,6 +18,8 @@ router.post('/request/:bookId', protect, requestBook);
 router.get('/received-requests', protect, getReceivedRequests);
 router.get('/my-requests', protect, getMyRequests);
 router.put('/:requestId', protect, updateRequestStatus);
+router.put('/:requestId/borrowed', protect, markAsBorrowed);
+router.put('/:requestId/returned', protect, markAsReturned);
 router.delete('/:requestId', protect, deleteRequest);
 router.put('/:requestId/return', protect, returnBook);
 router.put('/accept/:requestId', protect, acceptRequest);

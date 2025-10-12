@@ -1,6 +1,8 @@
 import BorrowRequest from '../models/BorrowRequest.js';
 import Book from '../models/Book.js';
 import Notification from '../models/Notification.js';
+import Conversation from '../models/Conversation.js';
+import Message from '../models/Message.js';
 
 // @desc    Request to borrow a book
 // @route   POST /api/borrow/request/:bookId
@@ -242,14 +244,41 @@ export const updateRequestStatus = async (req, res) => {
         }
       });
 
+      // Create or find existing conversation between borrower and owner
+      let conversation = await Conversation.findOne({
+        participants: { $all: [populatedRequest.borrower._id, populatedRequest.owner._id] }
+      });
+
+      if (!conversation) {
+        conversation = await Conversation.create({
+          participants: [populatedRequest.borrower._id, populatedRequest.owner._id]
+        });
+      }
+
+      // Create an automatic system message about the approved book request
+      const systemMessage = await Message.create({
+        conversationId: conversation._id,
+        senderId: populatedRequest.owner._id,
+        recipientId: populatedRequest.borrower._id,
+        subject: 'Book Request Approved',
+        message: `📚 Great news! Your request to borrow "${populatedRequest.book.title}" has been approved! Let's coordinate the book exchange. When would be a good time for you to pick up the book?`,
+        messageType: 'system'
+      });
+
+      // Update the borrow request with conversation info
+      await BorrowRequest.findByIdAndUpdate(request._id, {
+        communicationStarted: true,
+        conversationId: conversation._id
+      });
+
       // Notify borrower that their request was approved
       try {
         const notification = await Notification.create({
           user: populatedRequest.borrower._id,
           type: 'request_approved',
-          message: `Your request to borrow "${populatedRequest.book.title}" was approved!`,
+          message: `Your request to borrow "${populatedRequest.book.title}" was approved! Check your messages to coordinate pickup.`,
           fromUser: req.user._id,
-          link: '/borrow-requests'
+          link: '/messages'
         });
 
         const io = req.app.get('io');
@@ -257,7 +286,7 @@ export const updateRequestStatus = async (req, res) => {
           const notificationData = {
             id: notification._id,
             type: 'request_approved',
-            message: `Great news! Your request to borrow "${populatedRequest.book.title}" was approved!`,
+            message: `Great news! Your request to borrow "${populatedRequest.book.title}" was approved! Check messages to coordinate.`,
             fromUser: {
               _id: req.user._id,
               name: req.user.name,
@@ -268,13 +297,29 @@ export const updateRequestStatus = async (req, res) => {
               title: populatedRequest.book.title,
               coverImage: populatedRequest.book.coverImage
             },
-            link: '/borrow-requests',
+            link: '/messages',
             createdAt: notification.createdAt,
             read: false
           };
 
           console.log(`Emitting approval notification to user:${populatedRequest.borrower._id}`);
           io.to(`user:${populatedRequest.borrower._id}`).emit('new_notification', notificationData);
+
+          // Also emit the new message to both users
+          const messageData = {
+            _id: systemMessage._id,
+            conversationId: conversation._id,
+            senderId: { _id: populatedRequest.owner._id, name: populatedRequest.owner.name, avatar: populatedRequest.owner.avatar },
+            recipientId: { _id: populatedRequest.borrower._id },
+            subject: systemMessage.subject,
+            message: systemMessage.message,
+            messageType: 'system',
+            createdAt: systemMessage.createdAt,
+            status: 'delivered'
+          };
+
+          io.to(`user:${populatedRequest.borrower._id}`).emit('message:new', messageData);
+          io.to(`user:${populatedRequest.owner._id}`).emit('message:new', messageData);
         }
       } catch (e) {
         console.error('Failed to create/emit approval notification:', e.message);
@@ -337,6 +382,84 @@ export const updateRequestStatus = async (req, res) => {
   } catch (error) {
     console.error('Update request status error:', error);
     res.status(500).json({ message: 'Server error updating request status' });
+  }
+};
+
+// @desc    Mark book as borrowed (picked up)
+// @route   PUT /api/borrow/:requestId/borrowed
+export const markAsBorrowed = async (req, res) => {
+  try {
+    const request = await BorrowRequest.findById(req.params.requestId)
+      .populate('book')
+      .populate('borrower', 'name email')
+      .populate('owner', 'name email');
+
+    if (!request) {
+      return res.status(404).json({ message: 'Borrow request not found' });
+    }
+
+    // Only owner can mark as borrowed
+    if (request.owner._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    if (request.status !== 'approved') {
+      return res.status(400).json({ message: 'Request must be approved first' });
+    }
+
+    await BorrowRequest.findByIdAndUpdate(req.params.requestId, {
+      status: 'borrowed',
+      borrowedDate: new Date()
+    });
+
+    res.json({ message: 'Book marked as borrowed successfully' });
+  } catch (error) {
+    console.error('Mark as borrowed error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Mark book as returned
+// @route   PUT /api/borrow/:requestId/returned
+export const markAsReturned = async (req, res) => {
+  try {
+    const request = await BorrowRequest.findById(req.params.requestId)
+      .populate('book')
+      .populate('borrower', 'name email')
+      .populate('owner', 'name email');
+
+    if (!request) {
+      return res.status(404).json({ message: 'Borrow request not found' });
+    }
+
+    // Only borrower can mark as returned
+    if (request.borrower._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    if (request.status !== 'borrowed') {
+      return res.status(400).json({ message: 'Book must be borrowed first' });
+    }
+
+    await BorrowRequest.findByIdAndUpdate(req.params.requestId, {
+      status: 'returned',
+      returnedDate: new Date()
+    });
+
+    // Update book availability
+    await Book.findByIdAndUpdate(request.book._id, {
+      $unset: {
+        isBooked: 1,
+        bookedFrom: 1,
+        bookedUntil: 1,
+        currentBorrowRequest: 1
+      }
+    });
+
+    res.json({ message: 'Book marked as returned successfully' });
+  } catch (error) {
+    console.error('Mark as returned error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
