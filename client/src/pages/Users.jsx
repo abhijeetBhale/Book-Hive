@@ -375,12 +375,24 @@ const UserCard = ({ user, distance, priority, isOnline }) => {
   const displayRating = rating > 0 ? rating.toFixed(1) : 'New';
   
   // Smart distance formatter to keep text consistent
-  const formatDistance = (dist) => {
-    if (dist === null) return 'N/A';
-    if (dist >= 1000) {
-      return `${(dist / 1000).toFixed(1)}k km`; // 1.2k km instead of 1200 km
+  const formatDistance = (distInMeters) => {
+    if (distInMeters === null) return 'N/A';
+    
+    // Show meters for distances less than 1000m
+    if (distInMeters < 1000) {
+      return `${distInMeters}m`;
     }
-    return `${dist} km`;
+    
+    // Convert to km for distances 1000m and above
+    const distInKm = distInMeters / 1000;
+    
+    // Show as "1.2k km" for very large distances (1000km+)
+    if (distInKm >= 1000) {
+      return `${(distInKm / 1000).toFixed(1)}k km`;
+    }
+    
+    // Show as "1.2 km" for normal distances (1-999 km)
+    return `${distInKm.toFixed(1)} km`;
   };
 
   return (
@@ -460,8 +472,13 @@ const Users = () => {
     const deltaLon = (userCoords[0] - currentCoords[0]) * Math.PI / 180;
     const a = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) ** 2;
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
-    return isNaN(distance) ? null : Math.round(distance);
+    const distanceInKm = R * c;
+    
+    if (isNaN(distanceInKm)) return null;
+    
+    // Return distance in meters for better precision
+    const distanceInMeters = Math.round(distanceInKm * 1000);
+    return distanceInMeters;
   };
 
   const filteredUsers = users.filter(user => {
@@ -500,7 +517,7 @@ const Users = () => {
       return -1;
     } else {
       const distanceDiff = a.distance - b.distance;
-      if (Math.abs(distanceDiff) > 5) {
+      if (Math.abs(distanceDiff) > 5000) { // 5000 meters = 5km
         return distanceDiff;
       }
     }
