@@ -10,6 +10,7 @@ import {
   MessageSquare,
   Heart,
   Bell,
+  Star,
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import Button from '../ui/Button';

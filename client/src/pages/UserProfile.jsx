@@ -4,8 +4,9 @@ import styled, { keyframes } from 'styled-components';
 import { usersAPI, booksAPI, borrowAPI, notificationsAPI, friendsAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { Loader, MapPin, BookOpen, Send, X, User as UserIcon } from 'lucide-react';
+import { Loader, MapPin, BookOpen, Send, X, User as UserIcon, Star } from 'lucide-react';
 import { getFullImageUrl } from '../utils/imageHelpers';
+
 
 // --- Keyframes for Animations ---
 const fadeIn = keyframes` from { opacity: 0; } to { opacity: 1; } `;
@@ -101,42 +102,42 @@ const BookDetailsModal = ({ isOpen, onClose, book, onRequest }) => {
 
   return (
     <StyledBookDetailsModal onClick={onClose}>
-        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button onClick={onClose} className="close-btn"><X size={20} /></button>
-            <div className="image-pane">
-                <img src={getFullImageUrl(book.coverImage)} alt={`Cover of ${book.title}`} />
-            </div>
-            <div className="details-pane">
-                <h2 className="book-title">{book.title}</h2>
-                <p className="book-author">by {book.author}</p>
-                <span className={`status-badge ${book.isAvailable && book.forBorrowing ? 'available' : 'borrowed'}`}>
-                  {book.isAvailable && book.forBorrowing ? 'Available for Borrowing' : 'Currently Unavailable'}
-                </span>
-                
-                <div className="details-grid">
-                    <div><span>Category</span><span>{book.category}</span></div>
-                    <div><span>Condition</span><span>{book.condition}</span></div>
-                    <div><span>Published</span><span>{book.publicationYear || 'N/A'}</span></div>
-                    <div><span>ISBN</span><span>{book.isbn || 'N/A'}</span></div>
-                </div>
-
-                <div className="description">
-                    <h4>Description</h4>
-                    <p>{book.description}</p>
-                </div>
-                
-                <div className="modal-footer">
-                    <button 
-                      className="request-btn"
-                      onClick={() => onRequest(book._id)}
-                      disabled={!book.isAvailable || !book.forBorrowing}
-                    >
-                        <Send size={18}/>
-                        {book.isAvailable && book.forBorrowing ? 'Request This Book' : 'Currently Unavailable'}
-                    </button>
-                </div>
-            </div>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="close-btn"><X size={20} /></button>
+        <div className="image-pane">
+          <img src={getFullImageUrl(book.coverImage)} alt={`Cover of ${book.title}`} />
         </div>
+        <div className="details-pane">
+          <h2 className="book-title">{book.title}</h2>
+          <p className="book-author">by {book.author}</p>
+          <span className={`status-badge ${book.isAvailable && book.forBorrowing ? 'available' : 'borrowed'}`}>
+            {book.isAvailable && book.forBorrowing ? 'Available for Borrowing' : 'Currently Unavailable'}
+          </span>
+
+          <div className="details-grid">
+            <div><span>Category</span><span>{book.category}</span></div>
+            <div><span>Condition</span><span>{book.condition}</span></div>
+            <div><span>Published</span><span>{book.publicationYear || 'N/A'}</span></div>
+            <div><span>ISBN</span><span>{book.isbn || 'N/A'}</span></div>
+          </div>
+
+          <div className="description">
+            <h4>Description</h4>
+            <p>{book.description}</p>
+          </div>
+
+          <div className="modal-footer">
+            <button
+              className="request-btn"
+              onClick={() => onRequest(book._id)}
+              disabled={!book.isAvailable || !book.forBorrowing}
+            >
+              <Send size={18} />
+              {book.isAvailable && book.forBorrowing ? 'Request This Book' : 'Currently Unavailable'}
+            </button>
+          </div>
+        </div>
+      </div>
     </StyledBookDetailsModal>
   );
 };
@@ -166,18 +167,18 @@ const StyledBookCard = styled.div`
 `;
 
 const BookCard = ({ book, onClick }) => {
-    return (
-        <StyledBookCard onClick={() => onClick(book)}>
-            <img src={getFullImageUrl(book.coverImage)} alt={book.title} className="book-cover" />
-            <div className="card-content">
-                <h3 className="book-title">{book.title}</h3>
-                <p className="book-author">by {book.author}</p>
-                <div className="status-badge">
-                  {!book.isAvailable ? 'Currently Borrowed' : book.forBorrowing ? 'Available to Borrow' : 'Not for Borrowing'}
-                </div>
-            </div>
-        </StyledBookCard>
-    );
+  return (
+    <StyledBookCard onClick={() => onClick(book)}>
+      <img src={getFullImageUrl(book.coverImage)} alt={book.title} className="book-cover" />
+      <div className="card-content">
+        <h3 className="book-title">{book.title}</h3>
+        <p className="book-author">by {book.author}</p>
+        <div className="status-badge">
+          {!book.isAvailable ? 'Currently Borrowed' : book.forBorrowing ? 'Available to Borrow' : 'Not for Borrowing'}
+        </div>
+      </div>
+    </StyledBookCard>
+  );
 };
 
 
@@ -330,6 +331,7 @@ const UserProfile = () => {
   const [friendshipId, setFriendshipId] = useState(null);
   const [sendingFriendRequest, setSendingFriendRequest] = useState(false);
 
+
   // ✨ ADDED: Effect to lock body scroll when a modal is open
   useEffect(() => {
     const isModalOpen = isMessageModalOpen || !!viewingBook;
@@ -348,10 +350,10 @@ const UserProfile = () => {
         const userResponse = await usersAPI.getUserProfile(id);
         if (!userResponse.data || !userResponse.data.user) throw new Error('User not found');
         const userData = userResponse.data.user;
-        
+
         const booksResponse = await booksAPI.getUserBooks(id);
         userData.booksOwned = booksResponse.data.books || [];
-        
+
         setUser(userData);
 
         // Check friendship status
@@ -359,7 +361,7 @@ const UserProfile = () => {
           try {
             const friendsResponse = await friendsAPI.getAll();
             const { pending, sent, friends } = friendsResponse.data;
-            
+
             // Check if there's a pending request from this user to current user
             const pendingRequest = pending.find(req => req.requester._id === id);
             if (pendingRequest) {
@@ -367,7 +369,7 @@ const UserProfile = () => {
               setFriendshipId(pendingRequest._id);
               return;
             }
-            
+
             // Check if current user sent a request to this user
             const sentRequest = sent.find(req => req.recipient._id === id);
             if (sentRequest) {
@@ -375,9 +377,9 @@ const UserProfile = () => {
               setFriendshipId(sentRequest._id);
               return;
             }
-            
+
             // Check if they are already friends
-            const friendship = friends.find(f => 
+            const friendship = friends.find(f =>
               (f.requester._id === id) || (f.recipient._id === id)
             );
             if (friendship) {
@@ -385,7 +387,7 @@ const UserProfile = () => {
               setFriendshipId(friendship._id);
               return;
             }
-            
+
             // No relationship exists
             setFriendshipStatus(null);
             setFriendshipId(null);
@@ -428,7 +430,7 @@ const UserProfile = () => {
 
   const handleSendFriendRequest = async () => {
     if (!currentUser || !user) return;
-    
+
     setSendingFriendRequest(true);
     try {
       await friendsAPI.sendRequest(user._id);
@@ -444,7 +446,7 @@ const UserProfile = () => {
 
   const handleAcceptFriendRequest = async () => {
     if (!friendshipId) return;
-    
+
     try {
       await friendsAPI.respond(friendshipId, 'accept');
       setFriendshipStatus('friends');
@@ -456,7 +458,7 @@ const UserProfile = () => {
 
   const handleRejectFriendRequest = async () => {
     if (!friendshipId) return;
-    
+
     try {
       await friendsAPI.respond(friendshipId, 'reject');
       setFriendshipStatus(null);
@@ -469,7 +471,7 @@ const UserProfile = () => {
 
   const handleCancelFriendRequest = async () => {
     if (!friendshipId) return;
-    
+
     try {
       await friendsAPI.cancelRequest(friendshipId);
       setFriendshipStatus(null);
@@ -482,7 +484,7 @@ const UserProfile = () => {
 
   const handleRemoveFriend = async () => {
     if (!friendshipId) return;
-    
+
     if (window.confirm(`Are you sure you want to remove ${user.name} from your friends?`)) {
       try {
         await friendsAPI.remove(friendshipId);
@@ -555,12 +557,25 @@ const UserProfile = () => {
               </div>
             )}
           </div>
+
+          {/* Simple Rating Display */}
+          <div className="rating-section">
+            <div className="simple-rating">
+              <Star size={20} fill="currentColor" style={{ color: '#fbbf24' }} />
+              <span className="rating-value">
+                {user.rating?.overallRating || user.rating?.value || 'New'}
+              </span>
+              <span className="rating-count">
+                ({user.rating?.totalRatings || user.rating?.count || 0} reviews)
+              </span>
+            </div>
+          </div>
         </div>
         <div className="actions-section" style={{ display: 'flex', flexDirection: 'row', gap: '0.5rem' }}>
           <button className="message-btn" onClick={() => setMessageModalOpen(true)}>
             <Send size={18} /> Send Book Inquiry
           </button>
-          
+
           {currentUser && user && currentUser._id !== user._id && (
             <>
               {friendshipStatus === null && (
@@ -573,7 +588,7 @@ const UserProfile = () => {
                   {sendingFriendRequest ? 'Sending...' : 'Add Friend'}
                 </button>
               )}
-              
+
               {friendshipStatus === 'pending' && (
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button
@@ -592,7 +607,7 @@ const UserProfile = () => {
                   </button>
                 </div>
               )}
-              
+
               {friendshipStatus === 'sent' && (
                 <button
                   className="message-btn"
@@ -602,7 +617,7 @@ const UserProfile = () => {
                   Cancel Request
                 </button>
               )}
-              
+
               {friendshipStatus === 'friends' && (
                 <button
                   className="message-btn"
@@ -622,10 +637,10 @@ const UserProfile = () => {
         {user.booksOwned && user.booksOwned.length > 0 ? (
           <div className="books-grid">
             {user.booksOwned.map(book => (
-              <BookCard 
-                key={book._id} 
-                book={book} 
-                onClick={handleOpenDetailsModal} 
+              <BookCard
+                key={book._id}
+                book={book}
+                onClick={handleOpenDetailsModal}
               />
             ))}
           </div>
@@ -639,7 +654,7 @@ const UserProfile = () => {
       </div>
 
       {isMessageModalOpen && <MessageModal user={user} onClose={() => setMessageModalOpen(false)} />}
-      
+
       <BookDetailsModal
         isOpen={!!viewingBook}
         onClose={handleCloseDetailsModal}
@@ -668,7 +683,7 @@ const StyledWrapper = styled.div`
     }
   }
   .profile-header-card {
-    display: grid; grid-template-columns: auto 1fr auto; align-items: center;
+    display: grid; grid-template-columns: auto 1fr auto; align-items: flex-start;
     gap: 2rem; background-color: white; padding: 2rem; border-radius: 1rem;
     border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     margin-bottom: 3rem;
@@ -683,6 +698,29 @@ const StyledWrapper = styled.div`
       display: flex; align-items: center; gap: 0.5rem; font-size: 1rem;
       font-weight: 500; color: #4b5563;
       svg { color: #4F46E5; }
+  }
+  
+  .rating-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+  }
+  
+  .simple-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    
+    .rating-value {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #374151;
+    }
+    
+    .rating-count {
+      font-size: 0.875rem;
+      color: #6b7280;
+    }
   }
   .message-btn {
     display: inline-flex; align-items: center; gap: 0.5rem; background-color: #4F46E5;

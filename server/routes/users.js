@@ -7,6 +7,7 @@ import {
   getUnreadNotificationCount,
   markRelevantNotificationsRead,
   updatePublicKey,
+  migrateUserRatings,
 } from "../controllers/userController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -19,5 +20,6 @@ router.get("/:userId/profile", getUserProfile);
 router.get("/notifications/unread-count", protect, getUnreadNotificationCount);
 router.put("/notifications/mark-read", protect, markRelevantNotificationsRead);
 router.put("/public-key", protect, updatePublicKey);
+router.post("/migrate-ratings", migrateUserRatings);
 
 export default router;

@@ -50,15 +50,54 @@ const userSchema = new mongoose.Schema({
     ref: 'Book'
   }],
   rating: {
-    value: {
+    overallRating: {
       type: Number,
       default: 0,
       min: 0,
       max: 5
     },
-    count: {
+    totalRatings: {
       type: Number,
       default: 0
+    },
+    breakdown: {
+      communication: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 5
+      },
+      bookCondition: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 5
+      },
+      timeliness: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 5
+      }
+    },
+    trustLevel: {
+      type: String,
+      enum: ['new', 'fair', 'good', 'very_good', 'excellent', 'needs_improvement'],
+      default: 'new'
+    },
+    badges: [{
+      type: String,
+      title: String,
+      description: String,
+      icon: String,
+      earnedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
+    lastUpdated: {
+      type: Date,
+      default: Date.now
     }
   },
 }, {

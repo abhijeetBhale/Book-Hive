@@ -368,7 +368,20 @@ import toast from 'react-hot-toast';
 // --- UserCard Component ---
 const UserCard = ({ user, distance, priority, isOnline }) => {
   const booksOwnedCount = (user.booksOwned || []).length;
-  const rating = typeof user.rating?.value === 'number' ? user.rating.value : 4.0;
+  // Use the new rating structure, fallback to old structure, then to default
+  const rating = user.rating?.overallRating || user.rating?.value || 0;
+  
+  // Show "New" for users with no ratings instead of 0.0
+  const displayRating = rating > 0 ? rating.toFixed(1) : 'New';
+  
+  // Smart distance formatter to keep text consistent
+  const formatDistance = (dist) => {
+    if (dist === null) return 'N/A';
+    if (dist >= 1000) {
+      return `${(dist / 1000).toFixed(1)}k km`; // 1.2k km instead of 1200 km
+    }
+    return `${dist} km`;
+  };
 
   return (
     <Link to={`/users/${user._id}`} className="user-card-link">
@@ -396,12 +409,12 @@ const UserCard = ({ user, distance, priority, isOnline }) => {
           <div className="stat-item">
             <Star size={18} className="stat-icon" />
             <span>Rating</span>
-            <strong>{typeof rating === 'number' ? rating.toFixed(1) : rating}</strong>
+            <strong>{displayRating}</strong>
           </div>
           <div className="stat-item">
             <MapPin size={18} className="stat-icon" />
             <span>Distance</span>
-            <strong>{distance !== null ? `${distance} km` : 'N/A'}</strong>
+            <strong className="distance-text">{formatDistance(distance)}</strong>
           </div>
         </div>
       </div>
@@ -466,8 +479,8 @@ const Users = () => {
   }).map(user => {
     // Calculate distance for each user for sorting purposes
     const distance = getDistance(user.location?.coordinates, currentUser?.location?.coordinates);
-    // Use only the fixed rating from user data, fallback to 4.0 if missing
-    const rating = typeof user.rating?.value === 'number' ? user.rating.value : 4.0;
+    // Use the new rating structure, fallback to old structure, then to 0
+    const rating = user.rating?.overallRating || user.rating?.value || 0;
     const booksCount = (user.booksOwned || []).length;
     return { 
       ...user, 
@@ -636,6 +649,7 @@ const StyledWrapper = styled.div`
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
       gap: 1.5rem;
+      align-items: stretch; /* Ensure all cards stretch to same height */
   }
 
   .user-card-link {
@@ -645,7 +659,7 @@ const StyledWrapper = styled.div`
 
   // ...existing code...
   .user-card {
-      position: relative; // <-- Add this
+      position: relative;
       background-color: white;
       border-radius: 1.5rem;
       padding: 1.5rem;
@@ -654,6 +668,8 @@ const StyledWrapper = styled.div`
       transition: all 0.3s ease;
       display: flex;
       flex-direction: column;
+      height: 100%; /* Ensure consistent height */
+      min-height: 320px; /* Set minimum height for all cards */
       &:hover {
           transform: translateY(-5px);
           box-shadow: 0 10px 20px -5px rgba(101, 119, 134, 0.1);
@@ -729,6 +745,9 @@ const StyledWrapper = styled.div`
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
+    flex-wrap: wrap; /* Allow wrapping for long names */
+    line-height: 1.3;
+    min-height: 2.5rem; /* Consistent height for name section */
     
     .online-badge {
       font-size: 0.65rem;
@@ -743,9 +762,16 @@ const StyledWrapper = styled.div`
         0 2px 4px rgba(34, 197, 94, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
       border: 1px solid rgba(255, 255, 255, 0.2);
+      flex-shrink: 0; /* Prevent badge from shrinking */
     }
   }
-  .user-tagline { font-size: 0.9rem; color: #6b7280; margin-bottom: 1.5rem; flex-grow: 1;}
+  .user-tagline { 
+    font-size: 0.9rem; 
+    color: #6b7280; 
+    margin-bottom: 1.5rem; 
+    flex-grow: 1;
+    min-height: 1.5rem; /* Consistent height for tagline */
+  }
   
   .stats-grid {
       display: grid;
@@ -759,6 +785,11 @@ const StyledWrapper = styled.div`
       padding: 0.75rem;
       border-radius: 0.75rem;
       text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 80px; /* Consistent height for stat items */
+      
       .stat-icon {
           color: #4f46e5;
           margin: 0 auto 0.5rem;
@@ -774,6 +805,14 @@ const StyledWrapper = styled.div`
           font-size: 1.1rem;
           font-weight: 600;
           color: #374151;
+          line-height: 1.2;
+          
+          /* Smart text sizing for distance */
+          &.distance-text {
+            font-size: 0.95rem; /* Slightly smaller for distance */
+            word-break: break-word; /* Prevent overflow */
+            hyphens: auto; /* Allow hyphenation if needed */
+          }
       }
   }
 

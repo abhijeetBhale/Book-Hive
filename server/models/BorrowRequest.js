@@ -38,6 +38,44 @@ const borrowRequestSchema = new mongoose.Schema({
   conversationId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Conversation'
+  },
+  
+  // Rating-related fields
+  actualReturnDate: {
+    type: Date
+  },
+  
+  isRatedByLender: {
+    type: Boolean,
+    default: false
+  },
+  
+  isRatedByBorrower: {
+    type: Boolean,
+    default: false
+  },
+  
+  // Auto-calculated penalties
+  penalties: [{
+    type: {
+      type: String,
+      enum: ['late_return', 'very_late_return', 'damaged_book']
+    },
+    value: Number,
+    appliedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  
+  // Transaction metadata for rating calculations
+  metadata: {
+    handoverDate: Date,
+    returnRequestDate: Date,
+    communicationQuality: {
+      responseTime: Number, // Average response time in hours
+      messageCount: Number
+    }
   }
 }, {
   timestamps: true
@@ -51,7 +89,30 @@ borrowRequestSchema.pre('save', async function(next) {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 14); // 14-day loan period
       this.dueDate = dueDate;
-    } else if (this.status === 'returned' || this.status === 'denied') {
+      this.metadata = {
+        ...this.metadata,
+        handoverDate: new Date()
+      };
+    } else if (this.status === 'returned') {
+      await Book.findByIdAndUpdate(this.book, { isAvailable: true });
+      this.actualReturnDate = new Date();
+      
+      // Calculate automatic penalties for late returns
+      if (this.dueDate && this.actualReturnDate > this.dueDate) {
+        const daysLate = Math.ceil((this.actualReturnDate - this.dueDate) / (1000 * 60 * 60 * 24));
+        
+        if (daysLate > 0) {
+          const penaltyType = daysLate <= 3 ? 'late_return' : 'very_late_return';
+          const penaltyValue = daysLate <= 3 ? -0.5 : -1.0;
+          
+          this.penalties.push({
+            type: penaltyType,
+            value: penaltyValue,
+            appliedAt: new Date()
+          });
+        }
+      }
+    } else if (this.status === 'denied') {
       await Book.findByIdAndUpdate(this.book, { isAvailable: true });
     }
   }

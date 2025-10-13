@@ -281,6 +281,8 @@ export const notificationsAPI = {
   delete: (id) => api.delete(`/notifications/${id}`),
 };
 
+
+
 // The problematic line has been removed from here.
 
 export default api;

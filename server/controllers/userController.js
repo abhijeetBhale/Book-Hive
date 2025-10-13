@@ -144,7 +144,7 @@ export const getUsersWithBooks = async (req, res) => {
     }
     
     if (minRating) {
-      query['rating.value'] = { $gte: parseFloat(minRating) };
+      query['rating.overallRating'] = { $gte: parseFloat(minRating) };
     }
     
     const users = await User.find(query)
@@ -262,3 +262,59 @@ export const markRelevantNotificationsRead = async (req, res) => {
     res.status(500).json({ message: 'Error marking notifications as read' });
   }
 };
+
+// @desc    Migrate user ratings to new structure (admin only)
+// @route   POST /api/users/migrate-ratings
+export const migrateUserRatings = async (req, res) => {
+  try {
+    // Find all users with old rating structure
+    const users = await User.find({});
+    let migratedCount = 0;
+
+    for (const user of users) {
+      // Check if user already has new rating structure
+      if (user.rating && typeof user.rating.overallRating !== 'undefined') {
+        continue; // Skip users who already have new structure
+      }
+
+      // Get the old rating value
+      const oldRatingValue = user.rating?.value || 0;
+      const oldRatingCount = user.rating?.count || 0;
+
+      // Update to new rating structure
+      const newRating = {
+        overallRating: oldRatingValue,
+        totalRatings: oldRatingCount,
+        breakdown: {
+          communication: oldRatingValue,
+          bookCondition: oldRatingValue,
+          timeliness: oldRatingValue
+        },
+        trustLevel: getTrustLevel(oldRatingValue, oldRatingCount),
+        badges: [],
+        lastUpdated: new Date()
+      };
+
+      await User.findByIdAndUpdate(user._id, { rating: newRating });
+      migratedCount++;
+    }
+
+    res.json({ 
+      message: `Migration completed! Migrated ${migratedCount} users.`,
+      migratedCount 
+    });
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({ message: 'Server error during migration' });
+  }
+};
+
+// Helper function for migration
+function getTrustLevel(rating, count) {
+  if (count === 0) return 'new';
+  if (rating >= 4.8 && count >= 10) return 'excellent';
+  if (rating >= 4.5 && count >= 5) return 'very_good';
+  if (rating >= 4.0 && count >= 3) return 'good';
+  if (rating >= 3.5) return 'fair';
+  return 'needs_improvement';
+}
