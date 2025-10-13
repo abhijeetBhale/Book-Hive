@@ -211,7 +211,7 @@ NODE_ENV=development
 # Database
 MONGODB_URI=mongodb://localhost:27017/bookhive
 # OR for MongoDB Atlas:
-# MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/bookhive
+# MONGODB_URI
 
 # Authentication
 JWT_SECRET=your_super_secret_jwt_key_here
