@@ -5,7 +5,8 @@ import { importPrivateKeyFromIndexedDB, encryptMessage, decryptMessage } from '.
 import { useSearchParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { io } from 'socket.io-client';
-import { Search, Phone, Video, MoreHorizontal, Send, Paperclip, Smile, Check, CheckCheck, Trash2, Palette, X } from 'lucide-react';
+import { Search, Phone, Video, MoreHorizontal, Send, Paperclip, Smile, Check, CheckCheck, Trash2, Palette, X, Image, File } from 'lucide-react';
+import EmojiPicker from 'emoji-picker-react';
 
 // Modern Messages Page Design
 const Wrapper = styled.div`
@@ -709,40 +710,214 @@ const ComingSoonToast = styled.div`
   }
 `;
 
-// Emoji Picker (Simple)
-const EmojiPicker = styled.div`
+// Emoji Picker Container
+const EmojiPickerContainer = styled.div`
   position: absolute;
   bottom: 100%;
   right: 0;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   z-index: 1000;
-  width: 280px;
   
-  .emoji-grid {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 8px;
-    max-height: 200px;
+  .EmojiPickerReact {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+  }
+`;
+
+// File Upload Modal
+const FileUploadModal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  
+  .upload-content {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
     overflow-y: auto;
   }
   
-  .emoji-item {
-    width: 32px;
-    height: 32px;
+  .upload-header {
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: background 0.2s;
+    justify-content: space-between;
+    margin-bottom: 20px;
     
-    &:hover {
+    .upload-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2d3748;
+    }
+    
+    .close-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #718096;
+      padding: 4px;
+      
+      &:hover {
+        color: #2d3748;
+      }
+    }
+  }
+  
+  .file-drop-zone {
+    border: 2px dashed #cbd5e0;
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    margin-bottom: 20px;
+    transition: all 0.2s;
+    cursor: pointer;
+    
+    &:hover, &.drag-over {
+      border-color: #4299e1;
       background: #f7fafc;
+    }
+    
+    .drop-icon {
+      color: #a0aec0;
+      margin-bottom: 12px;
+    }
+    
+    .drop-text {
+      color: #4a5568;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+    
+    .drop-subtext {
+      color: #718096;
+      font-size: 14px;
+    }
+  }
+  
+  .file-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #f7fafc;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    
+    .file-icon {
+      color: #4299e1;
+    }
+    
+    .file-info {
+      flex: 1;
+      
+      .file-name {
+        font-weight: 500;
+        color: #2d3748;
+        margin-bottom: 4px;
+      }
+      
+      .file-size {
+        font-size: 12px;
+        color: #718096;
+      }
+    }
+    
+    .remove-file {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #e53e3e;
+      padding: 4px;
+      
+      &:hover {
+        color: #c53030;
+      }
+    }
+  }
+  
+  .upload-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      
+      &.btn-secondary {
+        background: #f7fafc;
+        color: #4a5568;
+        border: 1px solid #e2e8f0;
+        
+        &:hover {
+          background: #edf2f7;
+        }
+      }
+      
+      &.btn-primary {
+        background: #4299e1;
+        color: white;
+        border: 1px solid #4299e1;
+        
+        &:hover {
+          background: #3182ce;
+        }
+        
+        &:disabled {
+          background: #cbd5e0;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+`;
+
+// File Message Bubble
+const FileMessageBubble = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: ${props => props.$isMe ? 'rgba(255, 255, 255, 0.2)' : '#f7fafc'};
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: ${props => props.$isMe ? 'rgba(255, 255, 255, 0.3)' : '#edf2f7'};
+  }
+  
+  .file-icon {
+    color: ${props => props.$isMe ? 'white' : '#4299e1'};
+  }
+  
+  .file-info {
+    flex: 1;
+    
+    .file-name {
+      font-weight: 500;
+      color: ${props => props.$isMe ? 'white' : '#2d3748'};
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+    
+    .file-size {
+      font-size: 12px;
+      color: ${props => props.$isMe ? 'rgba(255, 255, 255, 0.8)' : '#718096'};
     }
   }
 `;
@@ -822,8 +997,15 @@ const MessagesPage = () => {
   const [showComingSoon, setShowComingSoon] = useState(false);
   const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('chatTheme') || 'default');
 
+  // File sharing state
+  const [showFileModal, setShowFileModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
   const dropdownRef = useRef(null);
   const emojiRef = useRef(null);
+  const fileInputRef = useRef(null);
 
 
 
@@ -1197,18 +1379,104 @@ const MessagesPage = () => {
   };
 
   const handleFileAttach = () => {
-    // Create a file input element
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*,document/*';
-    input.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        // For now, just show coming soon
-        handleComingSoon('File Upload');
-      }
-    };
-    input.click();
+    setShowFileModal(true);
+  };
+
+  const handleFileSelect = (file) => {
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+
+    // Check file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('File type not supported. Please select an image, PDF, or document file.');
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const handleFileDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleFileSelect(files[0]);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const uploadFile = async () => {
+    if (!selectedFile || !other?._id) return;
+
+    setUploading(true);
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('recipientId', other._id);
+
+      // Upload file to server
+      const response = await messagesAPI.sendFile(other._id, formData);
+
+      // Add file message to chat
+      const fileMessage = {
+        _id: `file-${Date.now()}`,
+        senderId: { _id: currentUser?._id },
+        recipientId: { _id: other._id },
+        messageType: 'file',
+        fileUrl: response.data.fileUrl,
+        fileName: selectedFile.name,
+        fileSize: selectedFile.size,
+        fileType: selectedFile.type,
+        createdAt: new Date().toISOString(),
+      };
+
+      setActive(prev => prev ? { ...prev, messages: [...(prev.messages || []), fileMessage] } : prev);
+
+      // Close modal and reset state
+      setShowFileModal(false);
+      setSelectedFile(null);
+      setUploading(false);
+
+      // Auto-scroll to bottom
+      setTimeout(() => {
+        if (messagesListRef.current) {
+          messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
+        }
+      }, 50);
+
+    } catch (error) {
+      console.error('File upload error:', error);
+      alert('Failed to upload file. Please try again.');
+      setUploading(false);
+    }
+  };
+
+  const handleEmojiClick = (emojiData) => {
+    setText(prev => prev + emojiData.emoji);
+    setShowEmojiPicker(false);
   };
 
 
@@ -1216,24 +1484,24 @@ const MessagesPage = () => {
   const groupMessages = (messages) => {
     const groups = [];
     let currentGroup = null;
-    
+
     messages.forEach((message, index) => {
       const isMe = message.senderId?._id === currentUser?._id;
       const previousMessage = index > 0 ? messages[index - 1] : null;
       const showDateSeparator = shouldShowDateSeparator(message, previousMessage);
-      
+
       if (showDateSeparator && groups.length > 0) {
         groups.push({ type: 'date', date: message.createdAt });
       }
-      
+
       if (message.messageType === 'system') {
         groups.push({ type: 'system', message });
         currentGroup = null;
       } else {
-        const shouldStartNewGroup = !currentGroup || 
+        const shouldStartNewGroup = !currentGroup ||
           currentGroup.senderId !== message.senderId?._id ||
           (new Date(message.createdAt) - new Date(currentGroup.lastMessageTime)) > 300000; // 5 minutes
-        
+
         if (shouldStartNewGroup) {
           currentGroup = {
             type: 'message',
@@ -1251,7 +1519,7 @@ const MessagesPage = () => {
         }
       }
     });
-    
+
     return groups;
   };
 
@@ -1272,46 +1540,46 @@ const MessagesPage = () => {
       <Sidebar>
         <SidebarHeader>
           <div className="user-info">
-            <img 
-              className="user-avatar" 
-              src={currentUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'User')}&background=4299e1&color=fff`} 
-              alt={currentUser?.name} 
+            <img
+              className="user-avatar"
+              src={currentUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'User')}&background=4299e1&color=fff`}
+              alt={currentUser?.name}
             />
             <div className="user-name">{currentUser?.name || 'User'}</div>
           </div>
           <div className="search-container">
             <Search className="search-icon" size={16} />
-            <input 
-              className="search-input" 
-              placeholder="Search conversations..." 
+            <input
+              className="search-input"
+              placeholder="Search conversations..."
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </SidebarHeader>
-        
+
         <ChatTabs>
-          <button 
+          <button
             className={`tab ${activeTab === 'all' ? 'active' : ''}`}
             onClick={() => handleTabChange('all')}
           >
             All Chats
           </button>
-          <button 
+          <button
             className={`tab ${activeTab === 'groups' ? 'active' : ''}`}
             onClick={() => handleTabChange('groups')}
           >
             Groups
           </button>
-          <button 
+          <button
             className={`tab ${activeTab === 'calls' ? 'active' : ''}`}
             onClick={() => handleTabChange('calls')}
           >
             Last Calls
           </button>
         </ChatTabs>
-        
+
         <ConversationsList>
           {[...filteredConversations]
             .sort((a, b) => {
@@ -1325,10 +1593,10 @@ const MessagesPage = () => {
               const peer = (c.participants || []).find(p => p && p._id && p._id !== (currentUser?._id || ''));
               const last = (c.messages && c.messages[0]) || null;
               const isActive = active?._id === c._id || (active?.participants?.some(p => p._id === peer?._id));
-              
+
               return (
-                <ConversationItem 
-                  key={c._id} 
+                <ConversationItem
+                  key={c._id}
                   $active={isActive}
                   onClick={async () => {
                     if (!peer?._id) return;
@@ -1342,14 +1610,14 @@ const MessagesPage = () => {
                   }}
                 >
                   <div className="avatar-container">
-                    <img 
-                      className="avatar" 
-                      src={peer?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(peer?.name || 'User')}&background=EEF2FF&color=111827`} 
-                      alt={peer?.name} 
+                    <img
+                      className="avatar"
+                      src={peer?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(peer?.name || 'User')}&background=EEF2FF&color=111827`}
+                      alt={peer?.name}
                     />
                     {onlineUsers.has(peer?._id) && <div className="online-indicator" />}
                   </div>
-                  
+
                   <div className="conversation-info">
                     <div className="conversation-header">
                       <div className="name">{peer?.name || 'User'}</div>
@@ -1369,16 +1637,16 @@ const MessagesPage = () => {
             })}
         </ConversationsList>
       </Sidebar>
-      
+
       <ChatArea>
         {other ? (
           <>
             <ChatHeader>
               <div className="chat-user-info">
-                <img 
-                  className="chat-avatar" 
-                  src={other?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(other?.name || 'User')}&background=EEF2FF&color=111827`} 
-                  alt={other?.name} 
+                <img
+                  className="chat-avatar"
+                  src={other?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(other?.name || 'User')}&background=EEF2FF&color=111827`}
+                  alt={other?.name}
                 />
                 <div className="chat-user-details">
                   <div className="name">{other?.name || 'User'}</div>
@@ -1388,40 +1656,40 @@ const MessagesPage = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="chat-actions">
-                <button 
-                  className="action-btn" 
+                <button
+                  className="action-btn"
                   title="Voice call"
                   onClick={() => handleComingSoon('Voice Call')}
                 >
                   <Phone size={18} />
                 </button>
-                <button 
-                  className="action-btn" 
+                <button
+                  className="action-btn"
                   title="Video call"
                   onClick={() => handleComingSoon('Video Call')}
                 >
                   <Video size={18} />
                 </button>
                 <div style={{ position: 'relative' }} ref={dropdownRef}>
-                  <button 
-                    className="action-btn" 
-                    title="More options" 
+                  <button
+                    className="action-btn"
+                    title="More options"
                     onClick={() => setShowDropdown(!showDropdown)}
                   >
                     <MoreHorizontal size={18} />
                   </button>
                   {showDropdown && (
                     <DropdownMenu>
-                      <button 
+                      <button
                         className="dropdown-item"
                         onClick={() => setShowThemeModal(true)}
                       >
                         <Palette size={16} />
                         Change Theme
                       </button>
-                      <button 
+                      <button
                         className="dropdown-item danger"
                         onClick={() => setShowDeleteModal(true)}
                       >
@@ -1433,7 +1701,7 @@ const MessagesPage = () => {
                 </div>
               </div>
             </ChatHeader>
-            
+
             <MessagesArea ref={messagesListRef} style={{ background: getThemeBackground(currentTheme) }}>
               {groupMessages(active?.messages || []).map((group, groupIndex) => {
                 if (group.type === 'date') {
@@ -1443,7 +1711,7 @@ const MessagesPage = () => {
                     </DateSeparator>
                   );
                 }
-                
+
                 if (group.type === 'system') {
                   return (
                     <SystemMessage key={`system-${groupIndex}`}>
@@ -1451,24 +1719,43 @@ const MessagesPage = () => {
                     </SystemMessage>
                   );
                 }
-                
+
                 return (
                   <MessageGroup key={`group-${groupIndex}`} $isMe={group.isMe}>
                     {!group.isMe && (
-                      <img 
-                        className="message-avatar" 
-                        src={group.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(group.senderName || 'User')}&background=EEF2FF&color=111827`} 
-                        alt={group.senderName} 
+                      <img
+                        className="message-avatar"
+                        src={group.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(group.senderName || 'User')}&background=EEF2FF&color=111827`}
+                        alt={group.senderName}
                       />
                     )}
                     <div className="messages-container">
                       {group.messages.map((message) => {
                         const messageStatus = messageStatuses[message._id] || { status: message.status || 'sent' };
                         const messageText = decryptedTexts[message._id] ?? (message.message || '');
-                        
+
                         return (
                           <MessageBubble key={message._id} $isMe={group.isMe}>
-                            <div className="message-text">{messageText}</div>
+                            {message.messageType === 'file' ? (
+                              <FileMessageBubble
+                                $isMe={group.isMe}
+                                onClick={() => window.open(message.fileUrl, '_blank')}
+                              >
+                                <div className="file-icon">
+                                  {message.fileType?.startsWith('image/') ? (
+                                    <Image size={24} />
+                                  ) : (
+                                    <File size={24} />
+                                  )}
+                                </div>
+                                <div className="file-info">
+                                  <div className="file-name">{message.fileName}</div>
+                                  <div className="file-size">{formatFileSize(message.fileSize)}</div>
+                                </div>
+                              </FileMessageBubble>
+                            ) : (
+                              <div className="message-text">{messageText}</div>
+                            )}
                             <div className="message-time">
                               {formatMessageTime(message.createdAt)}
                               {group.isMe && (
@@ -1484,75 +1771,74 @@ const MessagesPage = () => {
                   </MessageGroup>
                 );
               })}
-              
+
               {isOtherTyping && (
                 <TypingIndicator>
-                  <img 
-                    className="typing-avatar" 
-                    src={other?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(other?.name || 'User')}&background=EEF2FF&color=111827`} 
-                    alt={other?.name} 
+                  <img
+                    className="typing-avatar"
+                    src={other?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(other?.name || 'User')}&background=EEF2FF&color=111827`}
+                    alt={other?.name}
                   />
                   <span className="typing-text">{other?.name} is typing...</span>
                 </TypingIndicator>
               )}
             </MessagesArea>
-            
+
             <MessageInput>
               <form onSubmit={handleSend}>
                 <div className="input-container">
                   <div className="input-actions">
-                    <button 
-                      type="button" 
-                      className="input-btn" 
+                    <button
+                      type="button"
+                      className="input-btn"
                       title="Attach file"
                       onClick={handleFileAttach}
                     >
                       <Paperclip size={18} />
                     </button>
                   </div>
-                  
-                  <input 
+
+                  <input
                     className="message-input"
-                    value={text} 
+                    value={text}
                     onChange={handleInputChange}
-                    onKeyDown={(e) => { 
-                      if (e.key === 'Enter' && !e.shiftKey) { 
-                        e.preventDefault(); 
-                        handleSend(e); 
-                      } 
-                    }} 
-                    placeholder="Type something..." 
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend(e);
+                      }
+                    }}
+                    placeholder="Type something..."
                   />
-                  
+
                   <div className="input-actions" style={{ position: 'relative' }}>
                     <div ref={emojiRef}>
-                      <button 
-                        type="button" 
-                        className="input-btn" 
+                      <button
+                        type="button"
+                        className="input-btn"
                         title="Emoji"
                         onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                       >
                         <Smile size={18} />
                       </button>
                       {showEmojiPicker && (
-                        <EmojiPicker>
-                          <div className="emoji-grid">
-                            {['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'].map(emoji => (
-                              <button
-                                key={emoji}
-                                className="emoji-item"
-                                onClick={() => handleEmojiSelect(emoji)}
-                              >
-                                {emoji}
-                              </button>
-                            ))}
-                          </div>
-                        </EmojiPicker>
+                        <EmojiPickerContainer>
+                          <EmojiPicker
+                            onEmojiClick={handleEmojiClick}
+                            width={300}
+                            height={400}
+                            searchDisabled={false}
+                            skinTonesDisabled={false}
+                            previewConfig={{
+                              showPreview: false
+                            }}
+                          />
+                        </EmojiPickerContainer>
                       )}
                     </div>
-                    <button 
-                      type="submit" 
-                      className="input-btn send-btn" 
+                    <button
+                      type="submit"
+                      className="input-btn send-btn"
                       disabled={!text.trim()}
                       title="Send message"
                     >
@@ -1584,18 +1870,18 @@ const MessagesPage = () => {
             </div>
             <div className="modal-body">
               <div className="modal-text">
-                Are you sure you want to permanently delete this conversation history? 
+                Are you sure you want to permanently delete this conversation history?
                 This action cannot be undone and will remove all messages for both participants.
               </div>
             </div>
             <div className="modal-actions">
-              <button 
+              <button
                 className="btn btn-secondary"
                 onClick={() => setShowDeleteModal(false)}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 className="btn btn-danger"
                 onClick={handleClearConversation}
               >
@@ -1619,32 +1905,32 @@ const MessagesPage = () => {
             <div className="modal-body">
               <ThemeSelector>
                 <div className="theme-grid">
-                  <div 
+                  <div
                     className={`theme-option default ${currentTheme === 'default' ? 'active' : ''}`}
                     onClick={() => handleThemeChange('default')}
                     title="Default"
                   />
-                  <div 
+                  <div
                     className={`theme-option blue ${currentTheme === 'blue' ? 'active' : ''}`}
                     onClick={() => handleThemeChange('blue')}
                     title="Blue"
                   />
-                  <div 
+                  <div
                     className={`theme-option green ${currentTheme === 'green' ? 'active' : ''}`}
                     onClick={() => handleThemeChange('green')}
                     title="Green"
                   />
-                  <div 
+                  <div
                     className={`theme-option purple ${currentTheme === 'purple' ? 'active' : ''}`}
                     onClick={() => handleThemeChange('purple')}
                     title="Purple"
                   />
-                  <div 
+                  <div
                     className={`theme-option pink ${currentTheme === 'pink' ? 'active' : ''}`}
                     onClick={() => handleThemeChange('pink')}
                     title="Pink"
                   />
-                  <div 
+                  <div
                     className={`theme-option dark ${currentTheme === 'dark' ? 'active' : ''}`}
                     onClick={() => handleThemeChange('dark')}
                     title="Dark"
@@ -1656,6 +1942,85 @@ const MessagesPage = () => {
         </ModalOverlay>
       )}
 
+      {/* File Upload Modal */}
+      {showFileModal && (
+        <FileUploadModal onClick={() => setShowFileModal(false)}>
+          <div className="upload-content" onClick={(e) => e.stopPropagation()}>
+            <div className="upload-header">
+              <div className="upload-title">Share File</div>
+              <button className="close-btn" onClick={() => setShowFileModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {!selectedFile ? (
+              <div
+                className={`file-drop-zone ${dragOver ? 'drag-over' : ''}`}
+                onDrop={handleFileDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="drop-icon">
+                  <Paperclip size={48} />
+                </div>
+                <div className="drop-text">Drop files here or click to browse</div>
+                <div className="drop-subtext">
+                  Supports images, PDFs, and documents (max 10MB)
+                </div>
+              </div>
+            ) : (
+              <div className="file-preview">
+                <div className="file-icon">
+                  {selectedFile.type.startsWith('image/') ? (
+                    <Image size={24} />
+                  ) : (
+                    <File size={24} />
+                  )}
+                </div>
+                <div className="file-info">
+                  <div className="file-name">{selectedFile.name}</div>
+                  <div className="file-size">{formatFileSize(selectedFile.size)}</div>
+                </div>
+                <button
+                  className="remove-file"
+                  onClick={() => setSelectedFile(null)}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,.pdf,.doc,.docx,.txt"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) handleFileSelect(file);
+              }}
+            />
+
+            <div className="upload-actions">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowFileModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={uploadFile}
+                disabled={!selectedFile || uploading}
+              >
+                {uploading ? 'Uploading...' : 'Send File'}
+              </button>
+            </div>
+          </div>
+        </FileUploadModal>
+      )}
+
       {/* Coming Soon Toast */}
       {showComingSoon && (
         <ComingSoonToast>
@@ -1664,7 +2029,7 @@ const MessagesPage = () => {
       )}
     </Wrapper>
   );
-  
+
 };
 
 export default MessagesPage;

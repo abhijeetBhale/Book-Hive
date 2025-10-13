@@ -338,7 +338,7 @@ const Map = () => {
                 )}
               </div>
             ) : (
-              <MapView userGroups={[usersForMap]} />
+              <MapView key="main-map" userGroups={[usersForMap]} />
             )
           ) : (
             <CalendarView />

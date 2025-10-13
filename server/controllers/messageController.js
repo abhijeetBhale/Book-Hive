@@ -2,6 +2,7 @@ import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
+import { v2 as cloudinary } from 'cloudinary';
 
 // ... (keep all the existing controller functions like sendMessage, getConversations, etc.)
 
@@ -268,6 +269,97 @@ export const deleteMessage = async (req, res) => {
     }
 };
 
+
+// @desc    Send a file message to a user
+// @route   POST /api/messages/send-file/:recipientId
+export const sendFileMessage = async (req, res) => {
+  try {
+    const { recipientId } = req.params;
+    const senderId = req.user.id;
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    // Upload file to Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'bookhive/messages',
+      resource_type: 'auto', // Automatically detect file type
+      public_id: `${Date.now()}-${req.file.originalname}`,
+    });
+
+    let conversation = await Conversation.findOne({
+      participants: { $all: [senderId, recipientId] },
+    });
+
+    if (!conversation) {
+      conversation = await Conversation.create({
+        participants: [senderId, recipientId],
+      });
+    }
+
+    const newMessage = new Message({
+      senderId,
+      recipientId,
+      subject: 'File',
+      message: `Shared a file: ${req.file.originalname}`,
+      messageType: 'file',
+      fileUrl: result.secure_url,
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
+      fileType: req.file.mimetype,
+    });
+
+    if (newMessage) {
+      conversation.messages.push(newMessage._id);
+    }
+    
+    await Promise.all([conversation.save(), newMessage.save()]);
+
+    const populatedMessage = await Message.findById(newMessage._id)
+      .populate('senderId', 'name email avatar')
+      .populate('recipientId', 'name email avatar')
+      .lean();
+
+    // Emit realtime event to sender and recipient rooms
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        // Emit to recipient
+        io.to(`user:${recipientId}`).emit('message:new', populatedMessage);
+        
+        // Check if recipient is online and mark as delivered
+        const recipientSocket = io.sockets.adapter.rooms.get(`user:${recipientId}`);
+        if (recipientSocket && recipientSocket.size > 0) {
+          // Recipient is online, mark as delivered
+          await Message.findByIdAndUpdate(newMessage._id, { 
+            status: 'delivered', 
+            deliveredAt: new Date() 
+          });
+          
+          // Emit delivery confirmation to sender
+          io.to(`user:${senderId}`).emit('message:delivered', { 
+            messageId: newMessage._id,
+            deliveredAt: new Date()
+          });
+        }
+        
+        // Also emit to sender for real-time updates
+        io.to(`user:${senderId}`).emit('message:new', populatedMessage);
+      }
+    } catch (e) {
+      console.error('Failed to emit file message event:', e.message);
+    }
+
+    res.status(201).json({
+      ...populatedMessage,
+      fileUrl: result.secure_url
+    });
+  } catch (error) {
+    console.error('Error in sendFileMessage controller: ', error.message);
+    res.status(500).json({ message: 'Server error sending file message' });
+  }
+};
 
 // @desc    Clear a conversation (user-specific, not global)
 // @route   DELETE /api/messages/conversation/:conversationId

@@ -240,6 +240,9 @@ export const friendsAPI = {
 
 export const messagesAPI = {
   sendMessage: (recipientId, data) => api.post(`/messages/send/${recipientId}`, data),
+  sendFile: (recipientId, formData) => api.post(`/messages/send-file/${recipientId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
   getConversations: () => api.get('/messages/conversations'),
   getConversationWith: (userId) => api.get(`/messages/with/${userId}`),
   clearConversation: (conversationId) => api.delete(`/messages/conversation/${conversationId}`),
@@ -274,6 +277,7 @@ export const notificationsAPI = {
   markAsRead: (notificationIds) => api.put('/notifications/mark-read', { notificationIds }).then(res => res.data),
   createBookInquiry: ({ toUserId, subject, body }) => api.post('/notifications/book-inquiry', { toUserId, subject, body }),
   listBookInquiries: (params) => api.get('/notifications/book-inquiry', { params }),
+  createTest: () => api.post('/notifications/test').then(res => res.data),
   delete: (id) => api.delete(`/notifications/${id}`),
 };
 

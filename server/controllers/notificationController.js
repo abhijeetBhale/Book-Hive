@@ -82,48 +82,74 @@ export const getUnreadCount = async (req, res) => {
 // @route   PUT /api/notifications/mark-read
 export const markRead = async (req, res) => {
   try {
-    console.log('Mark read request:', { body: req.body, user: req.user._id });
+    console.log('Mark read request:', { 
+      body: req.body, 
+      user: req.user?._id || req.user?.id,
+      userObject: req.user 
+    });
     
-    const { notificationIds } = req.body;
+    // Ensure we have a user
+    if (!req.user || (!req.user._id && !req.user.id)) {
+      console.error('No user found in request');
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    const userId = req.user._id || req.user.id;
+    const { notificationIds } = req.body || {};
     
     let result;
     if (notificationIds && Array.isArray(notificationIds) && notificationIds.length > 0) {
       // Mark specific notifications as read
+      console.log('Marking specific notifications as read:', notificationIds);
       result = await Notification.updateMany(
         { 
           _id: { $in: notificationIds },
-          user: req.user._id
+          user: userId
         },
         { $set: { read: true } }
       );
       console.log(`Marked ${result.modifiedCount} specific notifications as read`);
     } else {
       // Mark all notifications as read
+      console.log('Marking all notifications as read for user:', userId);
       result = await Notification.updateMany(
         { 
-          user: req.user._id, 
+          user: userId, 
           read: { $ne: true } 
         },
         { $set: { read: true } }
       );
-      console.log(`Marked ${result.modifiedCount} notifications as read for user ${req.user._id}`);
+      console.log(`Marked ${result.modifiedCount} notifications as read for user ${userId}`);
     }
     
     // Get updated count
     const unreadCount = await Notification.countDocuments({
-      user: req.user._id,
+      user: userId,
       read: { $ne: true }
     });
+    
+    console.log('Updated unread count:', unreadCount);
     
     return res.json({ 
       message: 'Notifications marked as read',
       modifiedCount: result.modifiedCount,
-      unreadCount
+      unreadCount,
+      success: true
     });
   } catch (err) {
     console.error('mark read error:', err);
     console.error('Error stack:', err.stack);
-    return res.status(500).json({ message: 'Server error marking notifications as read', error: err.message });
+    console.error('Request details:', {
+      method: req.method,
+      url: req.url,
+      body: req.body,
+      user: req.user
+    });
+    return res.status(500).json({ 
+      message: 'Server error marking notifications as read', 
+      error: err.message,
+      success: false
+    });
   }
 };
 

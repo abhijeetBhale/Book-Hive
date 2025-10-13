@@ -13,9 +13,14 @@ const messageSchema = new mongoose.Schema(
     read: { type: Boolean, default: false },
     messageType: {
       type: String,
-      enum: ['user', 'system'],
+      enum: ['user', 'system', 'file'],
       default: 'user',
     },
+    // File message fields
+    fileUrl: { type: String },
+    fileName: { type: String },
+    fileSize: { type: Number },
+    fileType: { type: String },
     // Message status tracking
     status: {
       type: String,

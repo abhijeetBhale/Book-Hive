@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
@@ -6,6 +6,100 @@ import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { BookOpen, Star, X } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+
+// Error Boundary Component
+class MapErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError(error) {
+        return { hasError: true };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        console.error('Map initialization error caught:', error);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    background: '#f8fafc',
+                    color: '#64748b',
+                    flexDirection: 'column',
+                    padding: '2rem'
+                }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🗺️</div>
+                    <h3 style={{ margin: '0 0 0.5rem 0', color: '#334155' }}>Map Loading Issue</h3>
+                    <p style={{ margin: '0', textAlign: 'center' }}>
+                        The map is temporarily unavailable. Please refresh the page.
+                    </p>
+                    <button 
+                        onClick={() => window.location.reload()}
+                        style={{
+                            marginTop: '1rem',
+                            padding: '0.5rem 1rem',
+                            background: '#4F46E5',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Refresh Page
+                    </button>
+                </div>
+            );
+        }
+
+        return this.props.children;
+    }
+}
+
+// Safe Map Container Component
+const SafeMapContainer = ({ children, center, zoom, mapKey }) => {
+    const containerRef = useRef(null);
+    
+    useEffect(() => {
+        // Cleanup any existing leaflet containers in this element
+        if (containerRef.current) {
+            const existingMaps = containerRef.current.querySelectorAll('.leaflet-container');
+            existingMaps.forEach(mapEl => {
+                if (mapEl._leaflet_id) {
+                    try {
+                        // Try to remove the map instance
+                        const mapInstance = window.L?.map?._getMap?.(mapEl._leaflet_id);
+                        if (mapInstance && mapInstance.remove) {
+                            mapInstance.remove();
+                        }
+                    } catch (e) {
+                        // Ignore cleanup errors
+                    }
+                }
+            });
+        }
+    }, [mapKey]);
+    
+    return (
+        <div ref={containerRef} style={{ height: '100%', width: '100%' }}>
+            <MapContainer 
+                key={mapKey}
+                center={center} 
+                zoom={zoom} 
+                scrollWheelZoom={true} 
+                style={{ height: '100%', width: '100%' }}
+            >
+                {children}
+            </MapContainer>
+        </div>
+    );
+};
 
 // This wrapper component is crucial for applying global styles to override Leaflet's defaults.
 const StyledMapWrapper = styled.div`
@@ -202,17 +296,18 @@ const MapBoundsAdjuster = ({ allUsers }) => {
 const MapView = ({ userGroups }) => {
     const defaultPosition = [22.7196, 75.8577]; // Default center for Indore
     const [selectedPin, setSelectedPin] = useState(null);
+    const [mapKey, setMapKey] = useState(() => `map-${Date.now()}-${Math.random()}`);
 
     // Flatten userGroups to individual users for clustering
     const allUsers = userGroups.flat();
 
-    // Debug logging
-    // console.log('MapView - userGroups:', userGroups);
-    // console.log('MapView - allUsers:', allUsers);
-    // console.log('MapView - allUsers length:', allUsers.length);
-
     // Use only real user data
     const usersToDisplay = allUsers;
+    
+    // Force remount when userGroups change to prevent initialization errors
+    useEffect(() => {
+        setMapKey(`map-${Date.now()}-${Math.random()}`);
+    }, [userGroups]);
 
     const createUserIcon = (user) => {
         const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&color=fff`;
@@ -366,10 +461,14 @@ const MapView = ({ userGroups }) => {
     }
 
     return (
-        <>
+        <MapErrorBoundary>
             <style>{customMarkerStyles}</style>
             <StyledMapWrapper>
-                <MapContainer center={defaultPosition} zoom={12} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+                <SafeMapContainer 
+                    center={defaultPosition} 
+                    zoom={12} 
+                    mapKey={mapKey}
+                >
                     <MapBoundsAdjuster allUsers={usersToDisplay} />
                     <TileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -393,8 +492,6 @@ const MapView = ({ userGroups }) => {
                         ).map((user) => {
                             const position = [user.location.coordinates[1], user.location.coordinates[0]];
                             const key = `user-${user._id}`;
-
-                            // console.log('Creating marker for user:', user.name, 'at position:', position);
 
                             return (
                                 <Marker
@@ -454,9 +551,9 @@ const MapView = ({ userGroups }) => {
                             </PopupCard>
                         </Popup>
                     )}
-                </MapContainer>
+                </SafeMapContainer>
             </StyledMapWrapper>
-        </>
+        </MapErrorBoundary>
     );
 };
 

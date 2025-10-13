@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   sendMessage,
+  sendFileMessage,
   getConversations,
   getConversationWithUser,
   getReceivedMessages,
@@ -8,6 +9,7 @@ import {
   clearConversation,
 } from '../controllers/messageController.js';
 import { protect } from '../middleware/auth.js';
+import upload from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -20,6 +22,9 @@ router.get('/received', protect, getReceivedMessages);
 
 // This route sends a message to a specific user
 router.post('/send/:recipientId', protect, sendMessage);
+
+// This route sends a file message to a specific user
+router.post('/send-file/:recipientId', protect, upload.single('file'), sendFileMessage);
 
 // This route deletes a message
 router.delete('/:messageId', protect, deleteMessage);
