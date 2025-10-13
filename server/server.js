@@ -23,6 +23,10 @@ import reportRoutes from './routes/reportRoutes.js';
 import testimonialRoutes from './routes/testimonials.js';
 import reviewRoutes from './routes/reviews.js';
 import notificationRoutes from './routes/notifications.js';
+import bookClubRoutes from './routes/bookClubRoutes.js';
+import achievementRoutes from './routes/achievementRoutes.js';
+import challengeRoutes from './routes/challengeRoutes.js';
+import { initializeDefaultAchievements } from './services/achievementService.js';
 
 
 const app = express();
@@ -30,6 +34,11 @@ const PORT = process.env.PORT || 5000;
 
 // Connect to database
 connectDatabase();
+
+// Initialize achievements after database connection
+setTimeout(async () => {
+  await initializeDefaultAchievements();
+}, 2000);
 
 // Security middleware
 app.use(helmet());
@@ -72,6 +81,9 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/testimonials', testimonialRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/clubs', bookClubRoutes);
+app.use('/api/achievements', achievementRoutes);
+app.use('/api/challenges', challengeRoutes);
 
 
 // Error handler

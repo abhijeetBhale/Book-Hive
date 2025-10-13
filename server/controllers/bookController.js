@@ -1,6 +1,7 @@
 import Book from '../models/Book.js';
 import User from '../models/User.js';
 import { uploadToCloudinary } from '../config/cloudinary.js';
+import { awardPoints } from '../services/achievementService.js';
 
 // @desc    Get all books
 // @route   GET /api/books
@@ -112,6 +113,9 @@ export const createBook = async (req, res) => {
       { $push: { booksOwned: createdBook._id } },
       { new: true }
     );
+    
+    // Award points for adding a book
+    await awardPoints(req.user._id, 'book_added', 10);
     
     res.status(201).json(createdBook);
   } catch (error) {

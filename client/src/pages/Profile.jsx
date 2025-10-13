@@ -5,7 +5,8 @@ import { authAPI, borrowAPI, messagesAPI, reportAPI, usersAPI } from '../utils/a
 import toast from 'react-hot-toast';
 
 // Import new icons for the password fields
-import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy } from 'lucide-react';
+import GamificationSection from '../components/profile/GamificationSection';
 
 const Profile = () => {
   const { user, setUser, fetchProfile } = useContext(AuthContext);
@@ -15,6 +16,7 @@ const Profile = () => {
     email: user.email,
   });
   const [activeTab, setActiveTab] = useState('profile');
+  const [activeSubTab, setActiveSubTab] = useState('overview');
 
   // --- STATE FOR REPORT USER ---
   const [reportData, setReportData] = useState({
@@ -600,6 +602,19 @@ const Profile = () => {
             </form>
           </div>
         );
+      case 'gamification':
+        return (
+          <div>
+            <div className="section-header">
+              <h3>Reading Journey</h3>
+              <p>Track your achievements, join clubs, and compete with fellow readers.</p>
+            </div>
+            <GamificationSection 
+              activeSubTab={activeSubTab} 
+              setActiveSubTab={setActiveSubTab} 
+            />
+          </div>
+        );
       default:
         return (
           <div>
@@ -629,6 +644,9 @@ const Profile = () => {
             </div>
             <span>Notifications</span>
             {totalNotifications > 0 && <span className="notification-count">{totalNotifications}</span>}
+          </a>
+          <a href="#gamification" onClick={() => setActiveTab('gamification')} className={activeTab === 'gamification' ? 'active' : ''}>
+            <Trophy size={20} /> Reading Journey
           </a>
           <a href="#security" onClick={() => setActiveTab('security')} className={activeTab === 'security' ? 'active' : ''}>
             <Lock size={20} /> Security

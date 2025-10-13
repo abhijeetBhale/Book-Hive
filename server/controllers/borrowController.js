@@ -3,6 +3,7 @@ import Book from '../models/Book.js';
 import Notification from '../models/Notification.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
+import { awardPoints, updateUserStatsAndAchievements } from '../services/achievementService.js';
 
 // @desc    Request to borrow a book
 // @route   POST /api/borrow/request/:bookId
@@ -148,6 +149,9 @@ export const returnBook = async (req, res) => {
         currentBorrowRequest: null,
       }
     });
+
+    // Award points for successful book return
+    await awardPoints(req.user._id, 'book_returned', 5);
 
     // Review prompt notifications for both users
     try {
@@ -411,6 +415,20 @@ export const markAsBorrowed = async (req, res) => {
       status: 'borrowed',
       borrowedDate: new Date()
     });
+
+    // Award points and update stats for both users
+    await Promise.all([
+      // Award points to lender for lending a book
+      updateUserStatsAndAchievements(request.owner._id, 'book_lent', {
+        bookId: request.book._id,
+        borrowerId: request.borrower._id
+      }),
+      // Award points to borrower for borrowing a book
+      updateUserStatsAndAchievements(request.borrower._id, 'book_borrowed', {
+        bookId: request.book._id,
+        ownerId: request.owner._id
+      })
+    ]);
 
     res.json({ message: 'Book marked as borrowed successfully' });
   } catch (error) {

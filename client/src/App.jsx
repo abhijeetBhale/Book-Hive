@@ -21,6 +21,7 @@ import Books from './pages/Books';
 import BookDetails from './pages/BookDetails';
 
 
+
 function App() {
   return (
     <Router>
@@ -36,6 +37,7 @@ function App() {
             
             <Route path="/books" element={<ProtectedRoute><Books /></ProtectedRoute>} />
             <Route path="/books/:id" element={<ProtectedRoute><BookDetails /></ProtectedRoute>} />
+
 
             {/* Protected Routes */}
             <Route path="/my-books" element={<ProtectedRoute><MyBooks /></ProtectedRoute>} />
