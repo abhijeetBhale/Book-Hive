@@ -14,6 +14,7 @@ import Profile from './pages/Profile';
 import Map from './pages/Map';
 import ForgotPassword from './pages/ForgotPassword';
 import AuthCallback from './pages/AuthCallback';
+import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { OnlineStatusProvider } from './context/OnlineStatusContext';
@@ -27,30 +28,37 @@ function App() {
     <Router>
       <AuthProvider>
         <OnlineStatusProvider>
-          <Layout>
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
+            {/* Hidden Admin Route - Completely separate from main app layout */}
+            <Route path="/admin-dashboard-secure" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
             
-            <Route path="/books" element={<ProtectedRoute><Books /></ProtectedRoute>} />
-            <Route path="/books/:id" element={<ProtectedRoute><BookDetails /></ProtectedRoute>} />
+            {/* Main App Routes with Layout */}
+            <Route path="/*" element={
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
+                  
+                  <Route path="/books" element={<ProtectedRoute><Books /></ProtectedRoute>} />
+                  <Route path="/books/:id" element={<ProtectedRoute><BookDetails /></ProtectedRoute>} />
 
-
-            {/* Protected Routes */}
-            <Route path="/my-books" element={<ProtectedRoute><MyBooks /></ProtectedRoute>} />
-            <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
-            <Route path="/users/:id" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-            <Route path="/profile/:id" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-            <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
-            <Route path="/borrow-requests" element={<ProtectedRoute><BorrowRequests /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/map" element={<ProtectedRoute><Map /></ProtectedRoute>} />
+                  {/* Protected Routes */}
+                  <Route path="/my-books" element={<ProtectedRoute><MyBooks /></ProtectedRoute>} />
+                  <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+                  <Route path="/users/:id" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+                  <Route path="/profile/:id" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+                  <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+                  <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
+                  <Route path="/borrow-requests" element={<ProtectedRoute><BorrowRequests /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                  <Route path="/map" element={<ProtectedRoute><Map /></ProtectedRoute>} />
+                </Routes>
+              </Layout>
+            } />
           </Routes>
-          </Layout>
         </OnlineStatusProvider>
       </AuthProvider>
     </Router>

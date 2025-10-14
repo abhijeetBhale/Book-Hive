@@ -1,10 +1,17 @@
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
+
+// Ensure uploads directory exists
+const uploadsDir = 'uploads/';
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // Use disk storage for Cloudinary upload
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // Make sure this directory exists
+    cb(null, uploadsDir);
   },
   filename: function (req, file, cb) {
     // Generate unique filename
@@ -14,9 +21,28 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  // Allow images, PDFs, and documents
+  // For avatar uploads, only allow images
+  if (file.fieldname === 'avatar') {
+    const allowedImageTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png', 
+      'image/gif',
+      'image/webp'
+    ];
+    
+    if (allowedImageTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Avatar must be an image file (JPEG, PNG, GIF, or WebP)'), false);
+    }
+    return;
+  }
+
+  // For other uploads, allow images, PDFs, and documents
   const allowedTypes = [
     'image/jpeg',
+    'image/jpg',
     'image/png', 
     'image/gif',
     'image/webp',
@@ -36,7 +62,14 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit for file sharing
+  limits: { 
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    files: 1 // Only allow 1 file at a time
+  },
+  onError: function(err, next) {
+    console.error('Multer configuration error:', err);
+    next(err);
+  }
 });
 
 export default upload;

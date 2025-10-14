@@ -65,6 +65,7 @@ const StyledModal = styled.div`
     position: relative;
     max-height: 90vh;
     overflow-y: auto;
+    z-index: 51; /* Ensure modal content has higher z-index than backdrop */
   }
   .modal-header {
     display: flex; justify-content: space-between; align-items: center;
@@ -94,15 +95,42 @@ const Modal = ({ isOpen, onClose, title, children }) => {
 
 const StyledBookForm = styled.form`
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-  .form-group { display: flex; flex-direction: column; &.full-width { grid-column: 1 / -1; } }
+  .form-group { 
+    display: flex; 
+    flex-direction: column; 
+    position: relative;
+    &.full-width { grid-column: 1 / -1; } 
+    &:first-child {
+      z-index: 10; /* Ensure the first form group (title with search) has higher z-index */
+    }
+  }
   label { font-weight: 600; color: #374151; margin-bottom: 0.5rem; display: block; }
   span.required-star { color: #ef4444; margin-left: 2px; }
   input, select, textarea { width: 100%; padding: 0.75rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; &:focus { outline: none; border-color: #4F46E5; box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2); } }
-  .search-container { position: relative; }
+  .search-container { 
+    position: relative; 
+    z-index: 100; /* High z-index to ensure dropdown appears above other elements */
+  }
   .search-indicator { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: #4F46E5; font-weight: 500; }
   .selected-book-indicator { display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem; padding: 0.5rem; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.375rem; font-size: 0.8rem; color: #16a34a; font-weight: 500; }
   .clear-btn { background: none; border: none; color: #dc2626; font-size: 0.8rem; cursor: pointer; text-decoration: underline; &:hover { color: #b91c1c; } }
-  .search-results { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d5db; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); z-index: 10; max-height: 300px; overflow-y: auto; }
+  .search-results { 
+    position: absolute; 
+    top: 100%; 
+    left: 0; 
+    right: 0; 
+    background: white; 
+    border: 1px solid #d1d5db; 
+    border-radius: 0.5rem; 
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); 
+    z-index: 1000; 
+    max-height: 300px; 
+    overflow-y: auto; 
+    margin-top: 4px;
+    border-top: none;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
   .results-header { padding: 0.75rem 1rem; font-size: 0.8rem; font-weight: 600; color: #374151; border-bottom: 1px solid #f3f4f6; background-color: #f9fafb; }
   .result-item { display: flex; align-items: center; padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background-color 0.2s; &:hover { background-color: #f9fafb; } &:last-child { border-bottom: none; } }
   .result-image { width: 40px; height: 60px; margin-right: 1rem; flex-shrink: 0; img { width: 100%; height: 100%; object-fit: cover; border-radius: 0.25rem; } .no-image { width: 100%; height: 100%; background-color: #f3f4f6; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem; color: #9ca3af; } }
@@ -142,6 +170,7 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
   const titleValue = watch('title');
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const searchContainerRef = useRef(null);
 
   useEffect(() => {
     if (initialData) {
@@ -193,6 +222,20 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
     }, 500);
     return () => clearTimeout(timeoutId);
   }, [titleValue, selectedGoogleBook, initialData]);
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target)) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const selectBookFromResults = (book) => {
     setSelectedGoogleBook(book);
@@ -291,8 +334,18 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
       <div className="form-grid">
         <div className="form-group">
           <label htmlFor="title">Title <span className="required-star">*</span></label>
-          <div className="search-container">
-            <input id="title" placeholder="Enter book title (auto-search enabled)" {...register('title', { required: true })} disabled={!!initialData} />
+          <div className="search-container" ref={searchContainerRef}>
+            <input 
+              id="title" 
+              placeholder="Enter book title (auto-search enabled)" 
+              {...register('title', { required: true })} 
+              disabled={!!initialData}
+              onFocus={() => {
+                if (searchResults.length > 0 && titleValue && titleValue.length >= 3) {
+                  setShowResults(true);
+                }
+              }}
+            />
             {isSearching && <div className="search-indicator">Searching...</div>}
             {selectedGoogleBook && (
               <div className="selected-book-indicator">
@@ -300,20 +353,20 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
                 <button type="button" onClick={clearSelection} className="clear-btn">Clear</button>
               </div>
             )}
+            {showResults && searchResults.length > 0 && (
+              <div className="search-results">
+                <div className="results-header">Found books:</div>
+                {searchResults.map((book) => (<div key={book.id} className="result-item" onClick={() => selectBookFromResults(book)}>
+                  <div className="result-image">{book.coverImage ? (<img src={book.coverImage} alt={book.title} />) : (<div className="no-image"><BookOpen size={20} /></div>)}</div>
+                  <div className="result-info">
+                    <div className="result-title">{book.title}</div>
+                    <div className="result-author">by {book.author}</div>
+                    <div className="result-year">{book.publishedDate ? new Date(book.publishedDate).getFullYear() : 'Unknown year'}</div>
+                  </div>
+                </div>))}
+              </div>
+            )}
           </div>
-          {showResults && searchResults.length > 0 && (
-            <div className="search-results">
-              <div className="results-header">Found books:</div>
-              {searchResults.map((book) => (<div key={book.id} className="result-item" onClick={() => selectBookFromResults(book)}>
-                <div className="result-image">{book.coverImage ? (<img src={book.coverImage} alt={book.title} />) : (<div className="no-image"><BookOpen size={20} /></div>)}</div>
-                <div className="result-info">
-                  <div className="result-title">{book.title}</div>
-                  <div className="result-author">by {book.author}</div>
-                  <div className="result-year">{book.publishedDate ? new Date(book.publishedDate).getFullYear() : 'Unknown year'}</div>
-                </div>
-              </div>))}
-            </div>
-          )}
         </div>
         <div className="form-group"><label htmlFor="author">Author <span className="required-star">*</span></label><input id="author" placeholder="Enter author name" {...register('author', { required: true })} /></div>
         <div className="form-group"><label htmlFor="category">Category <span className="required-star">*</span></label><select id="category" {...register('category', { required: true })}><option value="">Select a category</option><option value="Fiction">Fiction</option><option value="Non-Fiction">Non-Fiction</option><option value="Science Fiction">Science Fiction</option><option value="Fantasy">Fantasy</option><option value="Mystery">Mystery</option></select></div>

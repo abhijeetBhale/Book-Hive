@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { validateEmail, validatePassword } from '../utils/validation.js';
-import cloudinary, { uploadToCloudinary } from '../config/cloudinary.js';
+import { uploadFileToCloudinary } from '../config/cloudinary.js';
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
@@ -76,7 +76,8 @@ export const loginUser = async (req, res) => {
 // @route   GET /api/auth/profile
 export const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    // Fix: Use req.user._id instead of req.user.id
+    const user = await User.findById(req.user._id);
     if (user) {
       res.json({
         _id: user._id,
@@ -96,62 +97,193 @@ export const getProfile = async (req, res) => {
 
 // @desc    Update user profile
 // @route   PUT /api/auth/profile
-// THE DEFINITIVE FIX: This function now correctly handles file uploads and saves the URL.
 export const updateProfile = async (req, res) => {
   try {
-    const { name, email } = req.body;
-    const user = await User.findById(req.user.id);
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Prepare data for update
-    user.name = name || user.name;
-    user.email = email || user.email;
-
-    // 1. Check if a new avatar file was uploaded
-    if (req.file) {
-      // 2. Upload the new file to your cloud service (e.g., Cloudinary)
-      const result = await uploadToCloudinary(req.file.buffer, {
-        folder: 'bookhive_avatars',
-        width: 200,
-        height: 200,
-        crop: 'fill',
-        gravity: 'face',
-        resource_type: 'image'
+    // Log profile update attempt for debugging
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Profile update request:', {
+        userId: req.user._id,
+        hasFile: !!req.file
       });
-      // 3. CRITICAL STEP: Assign the new, permanent URL to the user object.
-      user.avatar = result.secure_url;
     }
 
-    // 4. Save the updated user object (with the new avatar URL) to the database.
-    const updatedUser = await user.save();
+    const { name, email } = req.body;
+    
+    // Validate required fields
+    if (!name || !email) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Name and email are required' 
+      });
+    }
 
-    // 5. Send back the complete, saved user object.
+    // Find user
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+
+    // Update basic profile data
+    user.name = name.trim();
+    user.email = email.trim().toLowerCase();
+
+    // Handle avatar upload if file is provided
+    if (req.file) {
+      try {
+        // Upload avatar to Cloudinary
+        const result = await uploadFileToCloudinary(req.file.path, {
+          folder: 'bookhive_avatars',
+          width: 200,
+          height: 200,
+          crop: 'fill',
+          gravity: 'face',
+          resource_type: 'image',
+          format: 'jpg',
+          quality: 'auto'
+        });
+        user.avatar = result.secure_url;
+        
+        // Clean up the temporary file
+        try {
+          const fs = await import('fs');
+          fs.unlinkSync(req.file.path);
+          // Temporary file cleaned up successfully
+        } catch (cleanupError) {
+          console.error('Error cleaning up temp file:', cleanupError);
+          // Don't fail the request for cleanup errors
+        }
+      } catch (uploadError) {
+        console.error('Avatar upload error:', uploadError);
+        
+        // Clean up temp file even if upload failed
+        try {
+          const fs = await import('fs');
+          fs.unlinkSync(req.file.path);
+        } catch (cleanupError) {
+          console.error('Error cleaning up temp file after upload failure:', cleanupError);
+        }
+        
+        // Return error for avatar upload failure
+        return res.status(400).json({ 
+          success: false,
+          message: 'Failed to upload avatar image. Please try again.',
+          error: process.env.NODE_ENV === 'development' ? uploadError.message : undefined
+        });
+      }
+    }
+
+    // Save the updated user
+    const updatedUser = await user.save();
+    // User profile updated successfully
+
+    // Return the updated user data
     res.status(200).json({
       success: true,
+      message: 'Profile updated successfully',
       user: {
         _id: updatedUser._id,
         name: updatedUser.name,
         email: updatedUser.email,
         avatar: updatedUser.avatar,
-        // include other fields you need on the frontend
-      },
+        location: updatedUser.location
+      }
     });
-  } catch (error)    {
+  } catch (error) {
     console.error('Error updating profile:', error);
-    res.status(500).json({ message: 'Server error updating profile' });
+    
+    // Clean up temp file if it exists
+    if (req.file && req.file.path) {
+      try {
+        const fs = await import('fs');
+        fs.unlinkSync(req.file.path);
+        // Cleaned up temp file after error
+      } catch (cleanupError) {
+        console.error('Error cleaning up temp file after error:', cleanupError);
+      }
+    }
+    
+    // Handle specific error types
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(400).json({ 
+        success: false,
+        message: messages.join(', ')
+      });
+    }
+    
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email already exists'
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error updating profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
+// @desc    Change user password
+// @route   PUT /api/auth/change-password
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ 
+        message: 'Please provide current password and new password' 
+      });
+    }
+
+    // Get user with password field
+    const user = await User.findById(req.user._id).select('+password');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if current password is correct
+    const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+
+    // Validate new password
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ 
+      message: 'Server error changing password',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
 
 // @desc    Update user location
 // @route   PUT /api/auth/location
 export const updateLocation = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
-    const user = await User.findById(req.user.id);
+    // Fix: Use req.user._id instead of req.user.id
+    const user = await User.findById(req.user._id);
 
     if (user) {
       user.location = {

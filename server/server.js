@@ -26,6 +26,7 @@ import notificationRoutes from './routes/notifications.js';
 import bookClubRoutes from './routes/bookClubRoutes.js';
 import achievementRoutes from './routes/achievementRoutes.js';
 import challengeRoutes from './routes/challengeRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 import { initializeDefaultAchievements } from './services/achievementService.js';
 
 
@@ -84,6 +85,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/clubs', bookClubRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/challenges', challengeRoutes);
+app.use('/api/admin', adminRoutes);
 
 
 // Error handler
@@ -184,7 +186,20 @@ io.on('connection', (socket) => {
   });
 });
 
+// Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
-  console.log(`Error: ${err.message}`);
-  server.close(() => process.exit(1));
+  console.error('Unhandled Promise Rejection:', err);
+  console.error('Promise:', promise);
+  // Don't exit the process in development, just log the error
+  if (process.env.NODE_ENV === 'production') {
+    server.close(() => process.exit(1));
+  }
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  console.error('Stack:', err.stack);
+  // Exit the process for uncaught exceptions
+  process.exit(1);
 });

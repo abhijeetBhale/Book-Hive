@@ -100,6 +100,24 @@ const userSchema = new mongoose.Schema({
       default: Date.now
     }
   },
+  // Admin fields
+  role: {
+    type: String,
+    enum: ['user', 'admin', 'superadmin'],
+    default: 'user'
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  adminNotes: {
+    type: String,
+    default: ''
+  },
+  lastActive: {
+    type: Date,
+    default: Date.now
+  },
 }, {
   timestamps: true
 })

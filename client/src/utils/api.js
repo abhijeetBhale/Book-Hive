@@ -189,6 +189,7 @@ export const authAPI = {
     api.put("/auth/profile", data, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
+  changePassword: (passwordData) => api.put("/auth/change-password", passwordData),
   updateLocation: (location) => api.put("/auth/location", location),
 };
 

@@ -18,14 +18,16 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: '/api/auth/google/callback', // This must exactly match your Google API Console settings
-      proxy: true
-    },
+// Only initialize Google OAuth if credentials are provided
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: '/api/auth/google/callback', // This must exactly match your Google API Console settings
+        proxy: true
+      },
     async (accessToken, refreshToken, profile, done) => {
       try {
         console.log('🔍 Google Profile Data:', {
@@ -102,3 +104,7 @@ passport.use(
     }
   )
 );
+} else {
+  console.log('⚠️ Google OAuth credentials not found. Google login will be disabled.');
+  console.log('💡 To enable Google login, add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your .env file');
+}
