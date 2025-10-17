@@ -1,92 +1,197 @@
-import React, { useEffect, useState } from 'react';
-import styled, { keyframes } from 'styled-components';
-import { friendsAPI } from '../utils/api';
+import { useEffect, useState, useContext } from 'react';
+import styled from 'styled-components';
+import { friendsAPI, usersAPI } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, X, UserX } from 'lucide-react';
-
-// Animations
-const fadeIn = keyframes`
-  from { opacity: 0; }
-  to { opacity: 1; }
-`;
-
-const slideIn = keyframes`
-  from { transform: translateY(-20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-`;
+import { MessageSquare, Search, Check, X } from 'lucide-react';
+import { AuthContext } from '../context/AuthContext';
+import toast from 'react-hot-toast';
+import AnimatedAddButton from '../components/ui/AnimatedAddButton';
 
 // Styled Components
-const Wrapper = styled.div`
+const Container = styled.div`
+  max-width: 800px;
+  margin: 0 auto;
   padding: 2rem;
-  background-color: #f9f9f9;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 2rem;
-  min-height: 100vh;
+  
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
 `;
 
-const Card = styled.div`
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+const Header = styled.div`
+  text-align: center;
+  margin-bottom: 2rem;
+  
+  @media (max-width: 768px) {
+    margin-bottom: 1.5rem;
+  }
+`;
+
+const Title = styled.h1`
+  font-size: 3rem;
+      font-weight: 900;
+      color: #111827;
+      margin-bottom: 1.5rem;
+  
+  @media (max-width: 768px) {
+    font-size: 2.5rem;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 2rem;
+  }
+`;
+
+const TabContainer = styled.div`
   display: flex;
-  flex-direction: column;
-  animation: ${fadeIn} 0.5s ease-in-out;
+  justify-content: center;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #e9ecef;
+  
+  @media (max-width: 768px) {
+    margin-bottom: 1.5rem;
+  }
 `;
 
-const CardHeader = styled.div`
+const Tab = styled.button`
+  background: none;
+  border: none;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: ${props => props.active ? '#8b5cf6' : '#6c757d'};
+  border-bottom: 2px solid ${props => props.active ? '#8b5cf6' : 'transparent'};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    color: #8b5cf6;
+  }
+`;
+
+const SearchAndAddContainer = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  align-items: center;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+`;
+
+const SearchContainer = styled.div`
+  flex: 1;
+  position: relative;
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 1px solid #dee2e6;
+  border-radius: 25px;
+  font-size: 0.9rem;
+  background-color: #f8f9fa;
+  
+  &:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    background-color: white;
+  }
+  
+  &::placeholder {
+    color: #adb5bd;
+  }
+`;
+
+const SearchIcon = styled(Search)`
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: #adb5bd;
+`;
+
+
+
+const FriendsContainer = styled.div`
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+`;
+
+const SectionHeader = styled.div`
   padding: 1rem 1.5rem;
-  font-weight: 700;
-  font-size: 1.25rem;
-  color: #333;
-  border-bottom: 1px solid #f0f0f0;
-  background-color: #fafafa;
-  `;
-  
-  const ItemList = styled.div`
-  padding: 0.5rem 0;
-  flex-grow: 1;
-  `;
-  
-  const Item = styled.div`
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  font-weight: 600;
+  color: #495057;
+`;
+
+const FriendsList = styled.div`
+  /* No scroll styling - content flows naturally */
+`;
+
+const Actions = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+`;
+
+const FriendItem = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #f5f5f5;
-  transition: background-color 0.2s ease-in-out;
-
+  border-bottom: 1px solid #f8f9fa;
+  transition: background-color 0.2s ease;
+  
   &:last-child {
     border-bottom: none;
   }
-
+  
   &:hover {
-    background-color: #fcfcfc;
+    background-color: #f8f9fa;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 0.75rem 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    
+    ${Actions} {
+      align-self: flex-end;
+    }
   }
 `;
 
 const UserInfo = styled.div`
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 `;
 
 const Avatar = styled.div`
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background-color: #e0e0e0;
+  background: #8b5cf6;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  color: #555;
-  font-size: 1.25rem;
-  background-image: url(${props => props.src});
-  background-size: cover;
-  background-position: center;
+  color: white;
+  font-size: 0.9rem;
+  ${props => props.src && `
+    background-image: url(${props.src});
+    background-size: cover;
+    background-position: center;
+  `}
 `;
 
 const UserDetails = styled.div`
@@ -97,167 +202,113 @@ const UserDetails = styled.div`
 const UserName = styled.div`
   font-weight: 600;
   color: #333;
+  font-size: 0.95rem;
 `;
 
 const UserEmail = styled.div`
-  font-size: 0.875rem;
-  color: #777;
+  font-size: 0.8rem;
+  color: #6c757d;
 `;
 
-const Actions = styled.div`
-  display: flex;
-  gap: 0.75rem;
+const ActionButton = styled.button`
+  border: none;
+  background: ${props => props.variant === 'primary' ? '#28a745' : props.variant === 'danger' ? '#dc3545' : '#f8f9fa'};
+  color: ${props => props.variant === 'primary' || props.variant === 'danger' ? 'white' : '#6c757d'};
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: ${props =>
+    props.variant === 'primary' ? '#218838' :
+      props.variant === 'danger' ? '#c82333' : '#e9ecef'};
+  }
 `;
 
 const IconButton = styled.button`
   border: none;
-  background: transparent;
-  cursor: pointer;
-  padding: 0.5rem;
+  background: #f8f9fa;
+  color: #6c757d;
   border-radius: 50%;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #555;
-  transition: all 0.2s ease-in-out;
-
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+  }
+  
   svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  &:hover {
-    background-color: #f0f0f0;
-    transform: scale(1.1);
+    width: 16px;
+    height: 16px;
   }
 `;
 
-const MessageButton = styled(IconButton)`
-  &:hover { 
-    background-color: #e0f7fa;
-    color: #008CBA; 
-  }
-`;
-
-const CancelButton = styled(IconButton)`
-  &:hover { 
-    background-color: #ffebee;
-    color: #f44336;
-  }
-`;
-
-const RemoveButton = styled(IconButton)`
-  &:hover { 
-    background-color: #ffebee;
-    color: #f44336;
-  }
-`;
-
-
-const PrimaryButton = styled.button`
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-
-  &:hover {
-    background-color: #45a049;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  }
-`;
-
-const SecondaryButton = styled.button`
-  background-color: #f44336;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-
-  &:hover {
-    background-color: #e53935;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  }
-`;
-
-
-const ModalBackdrop = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  animation: ${fadeIn} 0.3s;
-`;
-
-const ModalContent = styled.div`
-  background: white;
-  padding: 2rem;
-  border-radius: 16px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+const EmptyState = styled.div`
   text-align: center;
-  max-width: 400px;
-  width: 90%;
-  animation: ${slideIn} 0.3s;
-
-  h2 {
-    margin-top: 0;
-    color: #333;
-  }
-
-  p {
-    color: #666;
-    margin-bottom: 2rem;
-  }
+  padding: 3rem 1rem;
+  color: #6c757d;
 `;
 
-const ModalActions = styled.div`
+const SearchResults = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 4px;
+`;
+
+const SearchResultItem = styled.div`
   display: flex;
-  justify-content: center;
-  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f8f9fa;
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background-color: #f8f9fa;
+  }
+  
+  &:last-child {
+    border-bottom: none;
+  }
 `;
-
-// Confirmation Modal Component
-const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
-  if (!isOpen) return null;
-
-  return (
-    <ModalBackdrop onClick={onClose}>
-      <ModalContent onClick={e => e.stopPropagation()}>
-        <h2>{title}</h2>
-        <p>{message}</p>
-        <ModalActions>
-          <PrimaryButton onClick={onConfirm}>Confirm</PrimaryButton>
-          <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
-        </ModalActions>
-      </ModalContent>
-    </ModalBackdrop>
-  );
-};
-
 
 const FriendsPage = () => {
+  const { user } = useContext(AuthContext);
+  const [activeTab, setActiveTab] = useState('friends');
   const [data, setData] = useState({ pending: [], sent: [], friends: [] });
-  const [modalState, setModalState] = useState({ isOpen: false, item: null, action: null });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
   const navigate = useNavigate();
 
   const refresh = async () => {
     try {
-      const { data } = await friendsAPI.getAll();
-      setData(data);
+      const { data: friendsData } = await friendsAPI.getAll();
+      setData(friendsData);
     } catch (error) {
       console.error("Failed to fetch friends data:", error);
+      toast.error("Failed to load friends data");
     }
   };
 
@@ -265,31 +316,94 @@ const FriendsPage = () => {
     refresh();
   }, []);
 
-  const openModal = (item, action) => {
-    setModalState({ isOpen: true, item, action });
-  };
-
-  const closeModal = () => {
-    setModalState({ isOpen: false, item: null, action: null });
-  };
-
-  const handleConfirm = async () => {
-    const { item, action } = modalState;
-    if (!item || !action) return;
-
-    try {
-      if (action === 'remove') {
-        await friendsAPI.remove(item._id);
-      } else if (action === 'cancel') {
-        await friendsAPI.cancelRequest(item._id);
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.search-container')) {
+        setShowSearchResults(false);
       }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Search users with debouncing (only for new users, not for filtering friends)
+  useEffect(() => {
+    // Only search for new users when not in friends tab or when search is focused on finding new users
+    if (activeTab === 'friends') {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      if (searchTerm.trim().length >= 2) {
+        setSearchLoading(true);
+        try {
+          const { data: users } = await usersAPI.searchUsers({ keyword: searchTerm });
+          // Filter out current user and existing friends
+          const filteredUsers = users.filter(u =>
+            u._id !== user._id &&
+            !data.friends.some(f =>
+              (f.requester._id === u._id || f.recipient._id === u._id)
+            ) &&
+            !data.pending.some(p => p.requester._id === u._id) &&
+            !data.sent.some(s => s.recipient._id === u._id)
+          );
+          setSearchResults(filteredUsers);
+          setShowSearchResults(true);
+        } catch (error) {
+          console.error('Search error:', error);
+        } finally {
+          setSearchLoading(false);
+        }
+      } else {
+        setSearchResults([]);
+        setShowSearchResults(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, data, user._id, activeTab]);
+
+  const handleSendFriendRequest = async (userId) => {
+    try {
+      await friendsAPI.sendRequest(userId);
+      toast.success('Friend request sent!');
+      setSearchTerm('');
+      setShowSearchResults(false);
       refresh();
     } catch (error) {
-      console.error(`Failed to ${action} request/friend:`, error);
-    } finally {
-      closeModal();
+      console.error('Failed to send friend request:', error);
+      toast.error('Failed to send friend request');
     }
   };
+
+  const handleAcceptRequest = async (requestId) => {
+    try {
+      await friendsAPI.respond(requestId, 'accept');
+      toast.success('Friend request accepted!');
+      refresh();
+    } catch (error) {
+      console.error('Failed to accept request:', error);
+      toast.error('Failed to accept request');
+    }
+  };
+
+  const handleRejectRequest = async (requestId) => {
+    try {
+      await friendsAPI.respond(requestId, 'reject');
+      toast.success('Friend request rejected');
+      refresh();
+    } catch (error) {
+      console.error('Failed to reject request:', error);
+      toast.error('Failed to reject request');
+    }
+  };
+
 
 
   const getInitials = (name) => {
@@ -300,116 +414,226 @@ const FriendsPage = () => {
       : name[0].toUpperCase();
   };
 
-  const modalDetails = {
-    remove: {
-      title: 'Remove Friend',
-      message: `Are you sure you want to remove ${modalState.item?.requester?.name || modalState.item?.recipient?.name} from your friends?`,
-    },
-    cancel: {
-      title: 'Cancel Request',
-      message: `Are you sure you want to cancel the friend request to ${modalState.item?.recipient?.name}?`,
-    },
+  const getAvatarColor = (name) => {
+    const colors = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+    const index = name ? name.charCodeAt(0) % colors.length : 0;
+    return colors[index];
+  };
+
+  const friendsCount = data.friends?.length || 0;
+  const pendingCount = data.pending?.length || 0;
+
+  // Filter friends based on search term when in friends tab
+  const getFilteredFriends = () => {
+    if (!searchTerm.trim() || activeTab !== 'friends') {
+      return data.friends || [];
+    }
+
+    return (data.friends || []).filter(friendship => {
+      const friend = friendship.requester._id === user._id
+        ? friendship.recipient
+        : friendship.requester;
+
+      return friend.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        friend.email.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+  };
+
+  // Sort filtered friends to show matching ones first
+  const getSortedFilteredFriends = () => {
+    const filtered = getFilteredFriends();
+
+    if (!searchTerm.trim() || activeTab !== 'friends') {
+      return filtered;
+    }
+
+    return filtered.sort((a, b) => {
+      const friendA = a.requester._id === user._id ? a.recipient : a.requester;
+      const friendB = b.requester._id === user._id ? b.recipient : b.requester;
+
+      const nameMatchA = friendA.name.toLowerCase().startsWith(searchTerm.toLowerCase());
+      const nameMatchB = friendB.name.toLowerCase().startsWith(searchTerm.toLowerCase());
+
+      if (nameMatchA && !nameMatchB) return -1;
+      if (!nameMatchA && nameMatchB) return 1;
+
+      return friendA.name.localeCompare(friendB.name);
+    });
   };
 
   return (
-    <>
-      <ConfirmationModal
-        isOpen={modalState.isOpen}
-        onClose={closeModal}
-        onConfirm={handleConfirm}
-        title={modalState.action ? modalDetails[modalState.action].title : ''}
-        message={modalState.action ? modalDetails[modalState.action].message : ''}
-      />
-      <Wrapper>
-        {/* Pending Requests Card */}
-        <Card>
-          <CardHeader>Pending Requests</CardHeader>
-          <ItemList>
-            {(data.pending || []).map(req => (
-              <Item key={req._id}>
-                <UserInfo>
-                  <Avatar>{getInitials(req.requester?.name)}</Avatar>
-                  <UserDetails>
-                    <UserName>{req.requester?.name}</UserName>
-                    <UserEmail>{req.requester?.email}</UserEmail>
-                  </UserDetails>
-                </UserInfo>
-                <Actions>
-                  <PrimaryButton onClick={async () => { 
-                    try {
-                      await friendsAPI.respond(req._id, 'accept'); 
-                      refresh(); 
-                    } catch (error) {
-                      console.error('Failed to accept friend request:', error);
-                    }
-                  }}>Accept</PrimaryButton>
-                  <SecondaryButton onClick={async () => { 
-                    try {
-                      await friendsAPI.respond(req._id, 'reject'); 
-                      refresh(); 
-                    } catch (error) {
-                      console.error('Failed to reject friend request:', error);
-                    }
-                  }}>Reject</SecondaryButton>
-                </Actions>
-              </Item>
-            ))}
-          </ItemList>
-        </Card>
+    <Container>
+      <Header>
+        <Title>Friends</Title>
 
-        {/* Sent Requests Card */}
-        <Card>
-          <CardHeader>Sent Requests</CardHeader>
-          <ItemList>
-            {(data.sent || []).map(req => (
-              <Item key={req._id}>
-                <UserInfo>
-                  <Avatar>{getInitials(req.recipient?.name)}</Avatar>
-                  <UserDetails>
-                    <UserName>{req.recipient?.name}</UserName>
-                    <UserEmail>{req.recipient?.email}</UserEmail>
-                  </UserDetails>
-                </UserInfo>
-                <Actions>
-                  <CancelButton onClick={() => openModal(req, 'cancel')} title="Cancel Request">
-                    <X />
-                  </CancelButton>
-                </Actions>
-              </Item>
-            ))}
-          </ItemList>
-        </Card>
+        <TabContainer>
+          <Tab
+            active={activeTab === 'friends'}
+            onClick={() => {
+              setActiveTab('friends');
+              setSearchTerm('');
+              setShowSearchResults(false);
+            }}
+          >
+            My Friends ({friendsCount})
+          </Tab>
+          <Tab
+            active={activeTab === 'pending'}
+            onClick={() => {
+              setActiveTab('pending');
+              setSearchTerm('');
+              setShowSearchResults(false);
+            }}
+          >
+            Pending Requests {pendingCount > 0 && `(${pendingCount})`}
+          </Tab>
+        </TabContainer>
 
-        {/* Friends Card */}
-        <Card>
-          <CardHeader>Friends</CardHeader>
-          <ItemList>
-            {(data.friends || []).map(f => {
-              const other = f.requester?._id === (window?.CURRENT_USER_ID || '') ? f.recipient : f.requester;
-              return (
-                <Item key={f._id}>
-                  <UserInfo>
-                    <Avatar>{getInitials(other?.name)}</Avatar>
-                    <UserDetails>
-                      <UserName>{other?.name}</UserName>
-                      <UserEmail>{other?.email}</UserEmail>
-                    </UserDetails>
-                  </UserInfo>
-                  <Actions>
-                    <MessageButton onClick={() => navigate(`/messages?userId=${other?._id}`)} title="Send Message">
-                      <MessageSquare />
-                    </MessageButton>
-                    <RemoveButton onClick={() => openModal(f, 'remove')} title="Remove Friend">
-                      <UserX />
-                    </RemoveButton>
-                  </Actions>
-                </Item>
-              );
-            })}
-          </ItemList>
-        </Card>
-      </Wrapper>
-    </>
+        <SearchAndAddContainer>
+          <SearchContainer className="search-container">
+            <SearchIcon />
+            <SearchInput
+              type="text"
+              placeholder={activeTab === 'friends' ? "Search Friends..." : "Search Users..."}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => {
+                if (searchResults.length > 0 && activeTab !== 'friends') setShowSearchResults(true);
+              }}
+            />
+            {showSearchResults && activeTab !== 'friends' && (
+              <SearchResults>
+                {searchLoading ? (
+                  <SearchResultItem>Searching...</SearchResultItem>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map(user => (
+                    <SearchResultItem key={user._id}>
+                      <UserInfo>
+                        <Avatar
+                          src={user.avatar}
+                          style={{ backgroundColor: getAvatarColor(user.name) }}
+                        >
+                          {!user.avatar && getInitials(user.name)}
+                        </Avatar>
+                        <UserDetails>
+                          <UserName>{user.name}</UserName>
+                          <UserEmail>{user.email}</UserEmail>
+                        </UserDetails>
+                      </UserInfo>
+                      <ActionButton
+                        variant="primary"
+                        onClick={() => handleSendFriendRequest(user._id)}
+                      >
+                        Add Friend
+                      </ActionButton>
+                    </SearchResultItem>
+                  ))
+                ) : searchTerm.length >= 2 ? (
+                  <SearchResultItem>No users found</SearchResultItem>
+                ) : null}
+              </SearchResults>
+            )}
+          </SearchContainer>
+          <AnimatedAddButton onClick={() => navigate('/users')}>
+            Add Friend
+          </AnimatedAddButton>
+        </SearchAndAddContainer>
+      </Header>
+
+      <FriendsContainer>
+        {activeTab === 'friends' ? (
+          <>
+            <SectionHeader>Socials ( Friends )</SectionHeader>
+            <FriendsList>
+              {getSortedFilteredFriends().length > 0 ? (
+                getSortedFilteredFriends().map(friendship => {
+                  const friend = friendship.requester._id === user._id
+                    ? friendship.recipient
+                    : friendship.requester;
+
+                  return (
+                    <FriendItem key={friendship._id}>
+                      <UserInfo>
+                        <Avatar
+                          src={friend.avatar}
+                          style={{ backgroundColor: getAvatarColor(friend.name) }}
+                        >
+                          {!friend.avatar && getInitials(friend.name)}
+                        </Avatar>
+                        <UserDetails>
+                          <UserName>{friend.name}</UserName>
+                          <UserEmail>{friend.email}</UserEmail>
+                        </UserDetails>
+                      </UserInfo>
+                      <Actions>
+                        <IconButton
+                          onClick={() => navigate(`/messages?userId=${friend._id}`)}
+                          title="Send Message"
+                        >
+                          <MessageSquare />
+                        </IconButton>
+                      </Actions>
+                    </FriendItem>
+                  );
+                })
+              ) : searchTerm.trim() && activeTab === 'friends' ? (
+                <EmptyState>
+                  <p>No friends found matching "{searchTerm}"</p>
+                </EmptyState>
+              ) : (
+                <EmptyState>
+                  <p>No friends yet. Start by searching and adding friends!</p>
+                </EmptyState>
+              )}
+            </FriendsList>
+          </>
+        ) : (
+          <>
+            <SectionHeader>Pending Friend Requests</SectionHeader>
+            <FriendsList>
+              {data.pending?.length > 0 ? (
+                data.pending.map(request => (
+                  <FriendItem key={request._id}>
+                    <UserInfo>
+                      <Avatar
+                        src={request.requester.avatar}
+                        style={{ backgroundColor: getAvatarColor(request.requester.name) }}
+                      >
+                        {!request.requester.avatar && getInitials(request.requester.name)}
+                      </Avatar>
+                      <UserDetails>
+                        <UserName>{request.requester.name}</UserName>
+                        <UserEmail>{request.requester.email}</UserEmail>
+                      </UserDetails>
+                    </UserInfo>
+                    <Actions>
+                      <ActionButton
+                        variant="primary"
+                        onClick={() => handleAcceptRequest(request._id)}
+                      >
+                        <Check size={14} />
+                        Accept
+                      </ActionButton>
+                      <ActionButton
+                        variant="danger"
+                        onClick={() => handleRejectRequest(request._id)}
+                      >
+                        <X size={14} />
+                        Reject
+                      </ActionButton>
+                    </Actions>
+                  </FriendItem>
+                ))
+              ) : (
+                <EmptyState>
+                  <p>No pending friend requests</p>
+                </EmptyState>
+              )}
+            </FriendsList>
+          </>
+        )}
+      </FriendsContainer>
+    </Container>
   );
 };
 
