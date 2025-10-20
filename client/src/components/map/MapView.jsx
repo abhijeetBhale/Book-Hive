@@ -136,23 +136,31 @@ const PopupCard = styled.div`
   
   .close-popup-btn {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    background: #f3f4f6;
-    border: none;
+    top: 8px;
+    right: 8px;
+    background: #ffffff;
+    border: 2px solid #e5e7eb;
     border-radius: 50%;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #6b7280;
     transition: all 0.2s;
+    z-index: 9999;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
     &:hover {
-        background: #e5e7eb;
+        background: #f3f4f6;
         color: #111827;
+        border-color: #d1d5db;
+        transform: scale(1.1);
+    }
+
+    &:active {
+        transform: scale(0.95);
     }
   }
   
@@ -274,10 +282,14 @@ const PopupCard = styled.div`
 
 
 // Component to automatically adjust map bounds
-const MapBoundsAdjuster = ({ allUsers }) => {
+const MapBoundsAdjuster = ({ allUsers, userToShowPopup }) => {
     const map = useMap();
     useEffect(() => {
-        if (allUsers && allUsers.length > 0) {
+        if (userToShowPopup && userToShowPopup.location?.coordinates) {
+            // Center on specific user with higher zoom
+            const position = [userToShowPopup.location.coordinates[1], userToShowPopup.location.coordinates[0]];
+            map.setView(position, 15, { animate: true });
+        } else if (allUsers && allUsers.length > 0) {
             const bounds = L.latLngBounds(
                 allUsers.map(user => [
                     user.location.coordinates[1],
@@ -288,15 +300,16 @@ const MapBoundsAdjuster = ({ allUsers }) => {
                 map.fitBounds(bounds, { padding: [50, 50] });
             }
         }
-    }, [allUsers, map]);
+    }, [allUsers, userToShowPopup, map]);
     return null;
 };
 
 
-const MapView = ({ userGroups }) => {
+const MapView = ({ userGroups, userToShowPopup }) => {
     const defaultPosition = [22.7196, 75.8577]; // Default center for Indore
     const [selectedPin, setSelectedPin] = useState(null);
     const [mapKey, setMapKey] = useState(() => `map-${Date.now()}-${Math.random()}`);
+    const [hasProcessedUserToShow, setHasProcessedUserToShow] = useState(false);
 
     // Flatten userGroups to individual users for clustering
     const allUsers = userGroups.flat();
@@ -308,6 +321,53 @@ const MapView = ({ userGroups }) => {
     useEffect(() => {
         setMapKey(`map-${Date.now()}-${Math.random()}`);
     }, [userGroups]);
+
+    // Reset processed flag when userToShowPopup changes
+    useEffect(() => {
+        if (userToShowPopup) {
+            setHasProcessedUserToShow(false);
+        }
+    }, [userToShowPopup]);
+
+    // Handle userToShowPopup - automatically select and show their popup (only once)
+    useEffect(() => {
+        if (userToShowPopup && !hasProcessedUserToShow) {
+            console.log('Processing userToShowPopup:', userToShowPopup);
+            // Find the user in the current users list or use the provided user data
+            const userInList = allUsers.find(user => user._id === userToShowPopup._id);
+            if (userInList) {
+                setSelectedPin(userInList);
+            } else {
+                // If user is not in the current list, use the provided user data
+                setSelectedPin(userToShowPopup);
+            }
+            setHasProcessedUserToShow(true);
+        }
+    }, [userToShowPopup, allUsers, hasProcessedUserToShow]);
+
+    // Handle keyboard events for closing popup
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && selectedPin) {
+                setSelectedPin(null);
+            }
+        };
+
+        if (selectedPin) {
+            document.addEventListener('keydown', handleKeyDown);
+        }
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [selectedPin]);
+
+    // Debug selectedPin changes
+    useEffect(() => {
+        console.log('selectedPin changed:', selectedPin);
+    }, [selectedPin]);
+
+
 
     const createUserIcon = (user) => {
         const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&color=fff`;
@@ -460,6 +520,16 @@ const MapView = ({ userGroups }) => {
         setSelectedPin(user);
     }
 
+    const handleClosePopup = (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        console.log('Close button clicked, current selectedPin:', selectedPin);
+        setSelectedPin(null);
+        console.log('selectedPin set to null');
+    }
+
     return (
         <MapErrorBoundary>
             <style>{customMarkerStyles}</style>
@@ -469,7 +539,7 @@ const MapView = ({ userGroups }) => {
                     zoom={12} 
                     mapKey={mapKey}
                 >
-                    <MapBoundsAdjuster allUsers={usersToDisplay} />
+                    <MapBoundsAdjuster allUsers={usersToDisplay} userToShowPopup={userToShowPopup} />
                     <TileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -483,37 +553,60 @@ const MapView = ({ userGroups }) => {
                         zoomToBoundsOnClick={true}
                         disableClusteringAtZoom={15}
                     >
-                        {usersToDisplay.filter(user =>
-                            user.location &&
-                            user.location.coordinates &&
-                            user.location.coordinates.length === 2 &&
-                            !isNaN(user.location.coordinates[0]) &&
-                            !isNaN(user.location.coordinates[1])
-                        ).map((user) => {
-                            const position = [user.location.coordinates[1], user.location.coordinates[0]];
-                            const key = `user-${user._id}`;
-
-                            return (
-                                <Marker
-                                    key={key}
-                                    position={position}
-                                    icon={createUserIcon(user)}
-                                    eventHandlers={{ click: () => handleMarkerClick(user) }}
-                                />
+                        {(() => {
+                            // Get all users to display
+                            let allUsersToShow = usersToDisplay.filter(user =>
+                                user.location &&
+                                user.location.coordinates &&
+                                user.location.coordinates.length === 2 &&
+                                !isNaN(user.location.coordinates[0]) &&
+                                !isNaN(user.location.coordinates[1])
                             );
-                        })}
+
+                            // Add userToShowPopup if not already in the list
+                            if (userToShowPopup && 
+                                userToShowPopup.location?.coordinates && 
+                                userToShowPopup.location.coordinates.length === 2 &&
+                                !allUsersToShow.find(user => user._id === userToShowPopup._id)) {
+                                allUsersToShow = [...allUsersToShow, userToShowPopup];
+                            }
+
+                            return allUsersToShow.map((user) => {
+                                const position = [user.location.coordinates[1], user.location.coordinates[0]];
+                                const key = `user-${user._id}`;
+
+                                return (
+                                    <Marker
+                                        key={key}
+                                        position={position}
+                                        icon={createUserIcon(user)}
+                                        eventHandlers={{ click: () => handleMarkerClick(user) }}
+                                    />
+                                );
+                            });
+                        })()}
                     </MarkerClusterGroup>
 
                     {selectedPin && (
                         <Popup
+                            key={`popup-${selectedPin._id}-${Date.now()}`}
                             position={[selectedPin.location.coordinates[1], selectedPin.location.coordinates[0]]}
-                            onClose={() => setSelectedPin(null)}
-                            closeButton={false}
-                            closeOnClick={false}
+                            closeButton={true}
+                            closeOnClick={true}
                             autoPan={true}
+                            eventHandlers={{
+                                remove: () => {
+                                    console.log('Popup removed by Leaflet');
+                                    setSelectedPin(null);
+                                }
+                            }}
                         >
-                            <PopupCard>
-                                <button className="close-popup-btn" onClick={() => setSelectedPin(null)}>
+                            <PopupCard onClick={(e) => e.stopPropagation()}>
+                                <button 
+                                    className="close-popup-btn" 
+                                    onClick={handleClosePopup}
+                                    type="button"
+                                >
                                     <X size={16} />
                                 </button>
                                 <div className="card-header">

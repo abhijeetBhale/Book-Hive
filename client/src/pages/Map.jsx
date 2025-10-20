@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useContext } from 'react';
 import styled from 'styled-components';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { usersAPI, borrowAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import { useOnlineStatus } from '../context/OnlineStatusContext';
@@ -44,6 +44,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 const Map = () => {
   const { user: currentUser } = useContext(AuthContext);
   const { isUserOnline, onlineCount } = useOnlineStatus();
+  const location = useLocation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,6 +55,16 @@ const Map = () => {
   const [ratingFilter, setRatingFilter] = useState(0); // Default 0 (no filter)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState([]);
+  const [userToShowPopup, setUserToShowPopup] = useState(null);
+
+  // Handle user popup from navigation state
+  useEffect(() => {
+    if (location.state?.showUserPopup) {
+      setUserToShowPopup(location.state.showUserPopup);
+      // Clear the state to prevent issues on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -338,7 +349,7 @@ const Map = () => {
                 )}
               </div>
             ) : (
-              <MapView key="main-map" userGroups={[usersForMap]} />
+              <MapView key="main-map" userGroups={[usersForMap]} userToShowPopup={userToShowPopup} />
             )
           ) : (
             <CalendarView />

@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import styled, { css } from 'styled-components';
 import { booksAPI } from '../utils/api';
 import BookCard from '../components/books/BookCard';
-import { Loader, X, ChevronDown, SlidersHorizontal } from 'lucide-react';
-import StyledSearchInput from '../components/ui/StyledSearchInput'; // Import the new component
+import { Loader, X, ChevronDown, SlidersHorizontal, Search as SearchIcon } from 'lucide-react';
+import StyledSearchInput from '../components/ui/StyledSearchInput';
+import AdvancedSearchModal from '../components/search/AdvancedSearchModal';
+import ErrorBoundary from '../components/ui/ErrorBoundary';
+import toast from 'react-hot-toast';
 
 // --- DATA FOR FILTERS ---
 
@@ -104,8 +107,8 @@ const ControlsWrapper = styled.aside`
     border-radius: 0;
     z-index: 50;
     transform: translateX(-100%);
-    ${({ isOpen }) =>
-      isOpen &&
+    ${({ $isOpen }) =>
+      $isOpen &&
       css`
         transform: translateX(0);
         box-shadow: 0 10px 25px rgba(0,0,0,0.2);
@@ -209,7 +212,7 @@ const AccordionHeader = styled.button`
 
   svg {
     transition: transform 0.2s ease;
-    ${({ isOpen }) => isOpen && 'transform: rotate(180deg);'}
+    ${({ $isOpen }) => $isOpen && 'transform: rotate(180deg);'}
   }
 `;
 
@@ -218,8 +221,8 @@ const AccordionContent = styled.div`
   overflow: hidden;
   transition: max-height 0.3s ease-in-out;
   padding-top: 0.5rem;
-  ${({ isOpen }) =>
-    isOpen &&
+  ${({ $isOpen }) =>
+    $isOpen &&
     css`
       max-height: 300px;
       overflow-y: auto;
@@ -231,11 +234,11 @@ const Accordion = ({ title, children }) => {
     const [isOpen, setIsOpen] = useState(true);
     return (
         <div>
-            <AccordionHeader isOpen={isOpen} onClick={() => setIsOpen(!isOpen)}>
+            <AccordionHeader $isOpen={isOpen} onClick={() => setIsOpen(!isOpen)}>
                 <span>{title}</span>
                 <ChevronDown size={20} />
             </AccordionHeader>
-            <AccordionContent isOpen={isOpen}>{children}</AccordionContent>
+            <AccordionContent $isOpen={isOpen}>{children}</AccordionContent>
         </div>
     );
 };
@@ -245,62 +248,64 @@ const Books = () => {
     const [books, setBooks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [pagination, setPagination] = useState({});
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [sortOrder, setSortOrder] = useState('title-asc');
     const [selectedGenre, setSelectedGenre] = useState('All');
     const [selectedLanguage, setSelectedLanguage] = useState('All');
     const [filterAvailable, setFilterAvailable] = useState(false);
+    const [currentFilters, setCurrentFilters] = useState({});
 
     useEffect(() => {
-        const fetchBooks = async () => {
-            try {
-                setLoading(true);
-                const response = await booksAPI.getAll();
-                setBooks(response.data.books || []);
-                setError(null);
-            } catch (err) {
-                setError('Failed to load books. Please try again later.');
-                console.error('Error fetching books:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchBooks();
-    }, []);
+    }, [currentFilters]);
 
-    const filteredAndSortedBooks = useMemo(() => {
-        let result = [...books];
+    const fetchBooks = async (filters = {}) => {
+        try {
+            setLoading(true);
+            const searchParams = {
+                ...currentFilters,
+                ...filters,
+                search: searchQuery,
+                category: selectedGenre !== 'All' ? selectedGenre : '',
+                language: selectedLanguage !== 'All' ? selectedLanguage : '',
+                isAvailable: filterAvailable ? 'true' : '',
+                sortBy: sortOrder.split('-')[0],
+                sortOrder: sortOrder.split('-')[1],
+                limit: 20
+            };
 
-        if (filterAvailable) {
-            result = result.filter(book => book.isCurrentlyAvailable);
+            const response = await booksAPI.getAll(searchParams);
+            setBooks(response.data.books || []);
+            setPagination(response.data.pagination || {});
+            setError(null);
+        } catch (err) {
+            setError('Failed to load books. Please try again later.');
+            console.error('Error fetching books:', err);
+        } finally {
+            setLoading(false);
         }
+    };
 
-        if (selectedGenre !== 'All') {
-            result = result.filter(book => book.category === selectedGenre);
+    const handleAdvancedSearch = (filters) => {
+        try {
+            setCurrentFilters(filters);
+            // Reset basic filters when using advanced search
+            setSearchQuery(filters.search || '');
+            setSelectedGenre(filters.category || 'All');
+            setSelectedLanguage(filters.language || 'All');
+            setFilterAvailable(filters.isAvailable === 'true');
+            setSortOrder(`${filters.sortBy || 'createdAt'}-${filters.sortOrder || 'desc'}`);
+        } catch (error) {
+            console.error('Error handling advanced search:', error);
+            toast.error('Error applying search filters');
         }
-        
-        if (selectedLanguage !== 'All') {
-            result = result.filter(book => book.language === selectedLanguage);
-        }
+    };
 
-        if (searchQuery) {
-            const lowercasedQuery = searchQuery.toLowerCase();
-            result = result.filter(book =>
-                book.title.toLowerCase().includes(lowercasedQuery) ||
-                book.author.toLowerCase().includes(lowercasedQuery)
-            );
-        }
 
-        result.sort((a, b) => {
-            if (sortOrder === 'title-asc') return a.title.localeCompare(b.title);
-            if (sortOrder === 'title-desc') return b.title.localeCompare(a.title);
-            return 0;
-        });
-
-        return result;
-    }, [books, searchQuery, sortOrder, selectedGenre, selectedLanguage, filterAvailable]);
 
     return (
         <PageWrapper>
@@ -309,13 +314,36 @@ const Books = () => {
                 <Subtitle>
                     Dive into a universe of stories. Search for your next adventure or browse through the shelves of our community's library.
                 </Subtitle>
-                {/* ========== REPLACE SEARCH BAR HERE ========== */}
-                <StyledSearchInput
-                    placeholder="Search by title or author..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                {/* ============================================= */}
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <StyledSearchInput
+                        placeholder="Search by title or author..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <button
+                        onClick={() => setIsAdvancedSearchOpen(true)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.75rem 1.5rem',
+                            background: '#4F46E5',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        }}
+                        onMouseOver={(e) => e.target.style.background = '#4338ca'}
+                        onMouseOut={(e) => e.target.style.background = '#4F46E5'}
+                    >
+                        <SearchIcon size={16} />
+                        Advanced Search
+                    </button>
+                </div>
             </HeaderSection>
             
             <SidebarToggle onClick={() => setIsSidebarOpen(true)}>
@@ -323,7 +351,7 @@ const Books = () => {
             </SidebarToggle>
 
             <MainContent>
-                <ControlsWrapper isOpen={isSidebarOpen}>
+                <ControlsWrapper $isOpen={isSidebarOpen}>
                     <SidebarHeader>
                         <h3>Filters</h3>
                         <CloseButton onClick={() => setIsSidebarOpen(false)}>
@@ -378,14 +406,77 @@ const Books = () => {
                     ) : error ? (
                         <ErrorMessage>{error}</ErrorMessage>
                     ) : (
-                        <BookGrid>
-                            {filteredAndSortedBooks.map((book) => (
-                                <BookCard key={book._id} book={book} />
-                            ))}
-                        </BookGrid>
+                        <>
+                            {Object.keys(currentFilters).length > 0 && (
+                                <div style={{ 
+                                    padding: '1rem', 
+                                    background: '#f0f9ff', 
+                                    borderRadius: '8px', 
+                                    marginBottom: '1rem',
+                                    border: '1px solid #bae6fd'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span style={{ fontSize: '0.875rem', color: '#0369a1', fontWeight: '500' }}>
+                                            Advanced filters applied • {books.length} results
+                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                setCurrentFilters({});
+                                                setSearchQuery('');
+                                                setSelectedGenre('All');
+                                                setSelectedLanguage('All');
+                                                setFilterAvailable(false);
+                                                setSortOrder('title-asc');
+                                            }}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#0369a1',
+                                                fontSize: '0.875rem',
+                                                cursor: 'pointer',
+                                                textDecoration: 'underline'
+                                            }}
+                                        >
+                                            Clear filters
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                            <BookGrid>
+                                {books.map((book) => (
+                                    <BookCard key={book._id} book={book} />
+                                ))}
+                            </BookGrid>
+                            {pagination && pagination.pages > 1 && (
+                                <div style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'center', 
+                                    alignItems: 'center', 
+                                    gap: '1rem', 
+                                    marginTop: '2rem',
+                                    padding: '1rem'
+                                }}>
+                                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                                        Page {pagination.page} of {pagination.pages} • {pagination.total} total books
+                                    </span>
+                                </div>
+                            )}
+                        </>
                     )}
                 </BookGridContainer>
             </MainContent>
+
+            {/* Advanced Search Modal */}
+            {isAdvancedSearchOpen && (
+                <ErrorBoundary>
+                    <AdvancedSearchModal
+                        isOpen={isAdvancedSearchOpen}
+                        onClose={() => setIsAdvancedSearchOpen(false)}
+                        onSearch={handleAdvancedSearch}
+                        initialFilters={currentFilters}
+                    />
+                </ErrorBoundary>
+            )}
         </PageWrapper>
     );
 };

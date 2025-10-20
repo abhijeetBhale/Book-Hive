@@ -208,6 +208,19 @@ export const booksAPI = {
   delete: (id) => api.delete(`/books/${id}`),
   getMyBooks: () => api.get("/books/my-books"),
   getUserBooks: (userId) => api.get(`/books/user/${userId}`),
+  // New advanced search endpoints
+  searchByISBN: (isbn) => api.get(`/books/search/isbn/${isbn}`).then(res => res.data),
+  getSuggestions: (params) => api.get("/books/suggestions", { params }).then(res => res.data),
+  getTrending: (params) => api.get("/books/trending", { params }).then(res => res.data),
+  getFilterOptions: () => api.get("/books/filters"),
+};
+
+export const bookSearchAPI = {
+  searchBooks: (query, limit = 10) => api.get(`/book-search/search?q=${encodeURIComponent(query)}&limit=${limit}`).then(res => res.data),
+  searchByISBN: (isbn) => api.get(`/book-search/search/isbn/${isbn}`).then(res => res.data),
+  getBookCovers: (bookData) => api.post('/book-search/covers', bookData).then(res => res.data),
+  validateImage: (url) => api.post('/book-search/validate-image', { url }).then(res => res.data),
+  getExternalBookDetails: (source, id) => api.get(`/book-search/external/${source}/${id}`).then(res => res.data),
 };
 
 export const borrowAPI = {
@@ -276,10 +289,16 @@ export const notificationsAPI = {
   getAll: (params) => api.get('/notifications', { params }).then(res => res.data),
   markRead: () => api.put('/notifications/mark-read').then(res => res.data),
   markAsRead: (notificationIds) => api.put('/notifications/mark-read', { notificationIds }).then(res => res.data),
+  markAllAsRead: () => api.put('/notifications/mark-all-read').then(res => res.data),
   createBookInquiry: ({ toUserId, subject, body }) => api.post('/notifications/book-inquiry', { toUserId, subject, body }),
   listBookInquiries: (params) => api.get('/notifications/book-inquiry', { params }),
   createTest: () => api.post('/notifications/test').then(res => res.data),
   delete: (id) => api.delete(`/notifications/${id}`),
+  // New notification endpoints
+  getNotificationsByType: (type, params) => api.get(`/notifications/type/${type}`, { params }).then(res => res.data),
+  getNotificationStats: () => api.get('/notifications/stats').then(res => res.data),
+  clearReadNotifications: () => api.delete('/notifications/clear-read').then(res => res.data),
+  updatePreferences: (preferences) => api.put('/notifications/preferences', { preferences }).then(res => res.data),
 };
 
 

@@ -1,4 +1,4 @@
-import React from 'react';
+
 
 const AnimatedAddButton = ({ onClick, children = "Add Friend", ...props }) => {
     return (

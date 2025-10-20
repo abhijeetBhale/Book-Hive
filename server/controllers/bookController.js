@@ -1,23 +1,221 @@
 import Book from '../models/Book.js';
 import User from '../models/User.js';
+import BorrowRequest from '../models/BorrowRequest.js';
 import { uploadToCloudinary } from '../config/cloudinary.js';
 import { awardPoints } from '../services/achievementService.js';
 
-// @desc    Get all books
+// @desc    Get all books with advanced search and filtering
 // @route   GET /api/books
 export const getAllBooks = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
-    const pageNum = Number(page) || 1;
-    const limitNum = Number(limit) || 20;
+    const { 
+      page = 1, 
+      limit = 20,
+      search = '',
+      category = '',
+      author = '',
+      condition = '',
+      language = '',
+      genre = '',
+      minYear = '',
+      maxYear = '',
+      isAvailable = '',
+      forBorrowing = '',
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+      latitude = '',
+      longitude = '',
+      maxDistance = '50000', // 50km default
+      isbn = '',
+      tags = ''
+    } = req.query;
 
-    const [books, total] = await Promise.all([
-      Book.find({})
-        .populate('owner', 'name email')
-        .skip((pageNum - 1) * limitNum)
-        .limit(limitNum),
-      Book.countDocuments({}),
-    ]);
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, Number(limit) || 20));
+
+    // Build query object
+    let query = {};
+
+    // Text search across multiple fields
+    if (search.trim()) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { author: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } },
+        { genre: { $in: [new RegExp(search, 'i')] } },
+        { tags: { $in: [new RegExp(search, 'i')] } }
+      ];
+    }
+
+    // Category filter
+    if (category && category !== 'All') {
+      query.category = category;
+    }
+
+    // Author filter
+    if (author.trim()) {
+      query.author = { $regex: author, $options: 'i' };
+    }
+
+    // Condition filter
+    if (condition && condition !== 'All') {
+      query.condition = condition;
+    }
+
+    // Language filter
+    if (language && language !== 'All') {
+      query.language = language;
+    }
+
+    // Genre filter
+    if (genre && genre !== 'All') {
+      query.genre = { $in: [genre] };
+    }
+
+    // Publication year range
+    if (minYear || maxYear) {
+      query.publicationYear = {};
+      if (minYear) query.publicationYear.$gte = Number(minYear);
+      if (maxYear) query.publicationYear.$lte = Number(maxYear);
+    }
+
+    // Availability filters
+    if (isAvailable !== '') {
+      query.isAvailable = isAvailable === 'true';
+    }
+
+    if (forBorrowing !== '') {
+      query.forBorrowing = forBorrowing === 'true';
+    }
+
+    // ISBN search
+    if (isbn.trim()) {
+      query.isbn = { $regex: isbn.replace(/[-\s]/g, ''), $options: 'i' };
+    }
+
+    // Tags filter
+    if (tags.trim()) {
+      const tagArray = tags.split(',').map(tag => tag.trim());
+      query.tags = { $in: tagArray.map(tag => new RegExp(tag, 'i')) };
+    }
+
+    // Build sort object
+    let sort = {};
+    const validSortFields = ['title', 'author', 'createdAt', 'publicationYear', 'viewCount', 'borrowCount'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const sortDirection = sortOrder === 'asc' ? 1 : -1;
+    sort[sortField] = sortDirection;
+
+    // Location-based search
+    let aggregationPipeline = [];
+    
+    if (latitude && longitude) {
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      const maxDist = parseInt(maxDistance) || 50000;
+
+      if (!isNaN(lat) && !isNaN(lng)) {
+        aggregationPipeline = [
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'owner',
+              foreignField: '_id',
+              as: 'ownerData'
+            }
+          },
+          {
+            $match: {
+              ...query,
+              'ownerData.location': {
+                $near: {
+                  $geometry: { type: 'Point', coordinates: [lng, lat] },
+                  $maxDistance: maxDist
+                }
+              }
+            }
+          },
+          {
+            $addFields: {
+              distance: {
+                $let: {
+                  vars: {
+                    ownerLocation: { $arrayElemAt: ['$ownerData.location.coordinates', 0] }
+                  },
+                  in: {
+                    $multiply: [
+                      {
+                        $acos: {
+                          $add: [
+                            {
+                              $multiply: [
+                                { $sin: { $degreesToRadians: lat } },
+                                { $sin: { $degreesToRadians: { $arrayElemAt: ['$$ownerLocation', 1] } } }
+                              ]
+                            },
+                            {
+                              $multiply: [
+                                { $cos: { $degreesToRadians: lat } },
+                                { $cos: { $degreesToRadians: { $arrayElemAt: ['$$ownerLocation', 1] } } },
+                                { $cos: { $degreesToRadians: { $subtract: [lng, { $arrayElemAt: ['$$ownerLocation', 0] }] } } }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      6371000 // Earth's radius in meters
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          { $sort: { distance: 1, ...sort } },
+          { $skip: (pageNum - 1) * limitNum },
+          { $limit: limitNum },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'owner',
+              foreignField: '_id',
+              as: 'owner',
+              pipeline: [{ $project: { name: 1, email: 1, avatar: 1, location: 1 } }]
+            }
+          },
+          { $unwind: '$owner' }
+        ];
+      }
+    }
+
+    let books, total;
+
+    if (aggregationPipeline.length > 0) {
+      // Use aggregation for location-based search
+      const [booksResult, totalResult] = await Promise.all([
+        Book.aggregate(aggregationPipeline),
+        Book.aggregate([
+          ...aggregationPipeline.slice(0, -3), // Remove skip, limit, and lookup
+          { $count: 'total' }
+        ])
+      ]);
+      
+      books = booksResult;
+      total = totalResult[0]?.total || 0;
+    } else {
+      // Use regular find for non-location searches
+      const [booksResult, totalResult] = await Promise.all([
+        Book.find(query)
+          .populate('owner', 'name email avatar location')
+          .sort(sort)
+          .skip((pageNum - 1) * limitNum)
+          .limit(limitNum),
+        Book.countDocuments(query),
+      ]);
+      
+      books = booksResult;
+      total = totalResult;
+    }
 
     res.json({
       books,
@@ -27,10 +225,25 @@ export const getAllBooks = async (req, res) => {
         limit: limitNum,
         pages: Math.ceil(total / limitNum) || 1,
       },
+      filters: {
+        search,
+        category,
+        author,
+        condition,
+        language,
+        genre,
+        minYear,
+        maxYear,
+        isAvailable,
+        forBorrowing,
+        sortBy,
+        sortOrder,
+        hasLocationFilter: !!(latitude && longitude)
+      }
     });
   } catch (error) {
     console.error('Get all books error:', error);
-    res.status(500).json({ message: 'Server error getting books' });
+    res.status(500).json({ message: 'Server error getting books', error: error.message });
   }
 };
 
@@ -271,5 +484,155 @@ export const getMyBooks = async (req, res) => {
   } catch (error) {
     console.error('Get my books error:', error);
     res.status(500).json({ message: 'Server error getting your books' });
+  }
+};
+
+// @desc    Search books by ISBN
+// @route   GET /api/books/search/isbn/:isbn
+export const searchByISBN = async (req, res) => {
+  try {
+    const { isbn } = req.params;
+    const cleanISBN = isbn.replace(/[-\s]/g, '');
+
+    const books = await Book.find({
+      isbn: { $regex: cleanISBN, $options: 'i' }
+    }).populate('owner', 'name email avatar location');
+
+    res.json({ books, count: books.length });
+  } catch (error) {
+    console.error('ISBN search error:', error);
+    res.status(500).json({ message: 'Server error searching by ISBN' });
+  }
+};
+
+// @desc    Get book suggestions based on user's reading history
+// @route   GET /api/books/suggestions
+export const getBookSuggestions = async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    const limitNum = Math.min(50, Number(limit) || 10);
+
+    // This is a simplified recommendation system
+    // In a real-world scenario, you'd use more sophisticated algorithms
+    
+    // Get user's borrowed books to understand preferences
+    const userBorrowHistory = await BorrowRequest.find({
+      borrower: req.user._id,
+      status: { $in: ['borrowed', 'returned'] }
+    }).populate('book');
+
+    let suggestedBooks = [];
+
+    if (userBorrowHistory.length > 0) {
+      // Get categories and authors from user's history
+      const userCategories = [...new Set(userBorrowHistory.map(req => req.book.category))];
+      const userAuthors = [...new Set(userBorrowHistory.map(req => req.book.author))];
+
+      // Find similar books
+      suggestedBooks = await Book.find({
+        owner: { $ne: req.user._id }, // Exclude user's own books
+        isAvailable: true,
+        forBorrowing: true,
+        $or: [
+          { category: { $in: userCategories } },
+          { author: { $in: userAuthors } }
+        ]
+      })
+      .populate('owner', 'name email avatar location')
+      .sort({ viewCount: -1, createdAt: -1 })
+      .limit(limitNum);
+    } else {
+      // For new users, show popular books
+      suggestedBooks = await Book.find({
+        owner: { $ne: req.user._id },
+        isAvailable: true,
+        forBorrowing: true
+      })
+      .populate('owner', 'name email avatar location')
+      .sort({ borrowCount: -1, viewCount: -1 })
+      .limit(limitNum);
+    }
+
+    res.json({ books: suggestedBooks, count: suggestedBooks.length });
+  } catch (error) {
+    console.error('Get suggestions error:', error);
+    res.status(500).json({ message: 'Server error getting suggestions' });
+  }
+};
+
+// @desc    Get trending books
+// @route   GET /api/books/trending
+export const getTrendingBooks = async (req, res) => {
+  try {
+    const { limit = 20 } = req.query;
+    const limitNum = Math.min(50, Number(limit) || 20);
+
+    // Get books with high activity in the last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const trendingBooks = await Book.find({
+      isAvailable: true,
+      forBorrowing: true,
+      createdAt: { $gte: thirtyDaysAgo }
+    })
+    .populate('owner', 'name email avatar location')
+    .sort({ viewCount: -1, borrowCount: -1, createdAt: -1 })
+    .limit(limitNum);
+
+    res.json({ books: trendingBooks, count: trendingBooks.length });
+  } catch (error) {
+    console.error('Get trending books error:', error);
+    res.status(500).json({ message: 'Server error getting trending books' });
+  }
+};
+
+// @desc    Get filter options for advanced search
+// @route   GET /api/books/filters
+export const getFilterOptions = async (req, res) => {
+  try {
+    console.log('Getting filter options...');
+    
+    const [categories, authors, conditions, languages, genres] = await Promise.all([
+      Book.distinct('category'),
+      Book.distinct('author'),
+      Book.distinct('condition'),
+      Book.distinct('language'),
+      Book.distinct('genre')
+    ]);
+
+    console.log('Filter data:', { categories, authors, conditions, languages, genres });
+
+    const yearRange = await Book.aggregate([
+      {
+        $group: {
+          _id: null,
+          minYear: { $min: '$publicationYear' },
+          maxYear: { $max: '$publicationYear' }
+        }
+      }
+    ]);
+
+    // Provide fallback data if no books exist
+    const defaultConditions = ['New', 'Like New', 'Very Good', 'Good', 'Fair', 'Poor'];
+    const defaultLanguages = ['English', 'Spanish', 'French', 'German', 'Other'];
+    
+    const response = {
+      categories: categories.length > 0 ? categories.sort() : ['Fiction', 'Non-Fiction', 'Science', 'History'],
+      authors: authors.sort(),
+      conditions: conditions.length > 0 ? conditions : defaultConditions,
+      languages: languages.length > 0 ? languages.sort() : defaultLanguages,
+      genres: genres.flat().filter(Boolean).sort(),
+      yearRange: yearRange[0] || { minYear: 1800, maxYear: new Date().getFullYear() }
+    };
+
+    console.log('Sending filter options response:', response);
+    res.json(response);
+  } catch (error) {
+    console.error('Get filter options error:', error);
+    res.status(500).json({ 
+      message: 'Server error getting filter options',
+      error: error.message 
+    });
   }
 };

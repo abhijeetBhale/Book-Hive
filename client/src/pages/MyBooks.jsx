@@ -2,10 +2,11 @@ import React, { useState, useEffect, useCallback, useContext, useRef } from 'rea
 import styled from 'styled-components';
 import { useForm } from 'react-hook-form';
 import toast, { Toaster } from 'react-hot-toast';
-import { Loader, PlusCircle, BookOpen, Trash2, Edit, X, AlertTriangle, Camera } from 'lucide-react';
+import { Loader, PlusCircle, BookOpen, Trash2, Edit, X, AlertTriangle, Camera, Search } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import { booksAPI } from '../utils/api';
+import BookSearchModal from '../components/books/BookSearchModal';
 
 // --- UI Components ---
 
@@ -156,6 +157,7 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
   const { register, handleSubmit, watch, setValue, reset } = useForm({
     defaultValues: {
       isCurrentlyAvailable: true,
+      isAvailableForBorrowing: true,
       condition: 'Good',
       ...initialData
     }
@@ -180,11 +182,61 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
       } else {
         setImagePreview(null);
       }
+    } else if (selectedGoogleBook) {
+      // If we have a selected book from search, use its data
+      // Map category to available options
+      const mapCategory = (apiCategory) => {
+        if (!apiCategory) return '';
+        
+        const categoryMap = {
+          'Fiction': 'Fiction',
+          'Non-Fiction': 'Non-Fiction',
+          'Nonfiction': 'Non-Fiction',
+          'Mystery': 'Mystery',
+          'Romance': 'Romance',
+          'Science Fiction': 'Sci-Fi',
+          'Fantasy': 'Fantasy',
+          'Biography': 'Biography',
+          'Autobiography': 'Biography',
+          'History': 'History',
+          'Science': 'Science',
+          'Technology': 'Technology',
+          'Business': 'Business',
+          'Self-Help': 'Self-Help',
+          'Poetry': 'Poetry',
+          'Drama': 'Drama',
+          'Children': 'Children',
+          'Young Adult': 'Young Adult',
+          'Comics': 'Comics',
+          'Graphic Novel': 'Comics'
+        };
+        
+        return categoryMap[apiCategory] || 'Other';
+      };
+      
+      const bookData = {
+        title: selectedGoogleBook.title || '',
+        author: selectedGoogleBook.author || '',
+        description: selectedGoogleBook.description || '',
+        category: mapCategory(selectedGoogleBook.category),
+        isbn: selectedGoogleBook.isbn || '',
+        publicationYear: selectedGoogleBook.publicationYear ? String(selectedGoogleBook.publicationYear) : '',
+        condition: 'Good',
+        isCurrentlyAvailable: true,
+        isAvailableForBorrowing: true
+      };
+      console.log('Resetting form with book data:', bookData);
+      reset(bookData);
+      if (selectedGoogleBook.coverImage) {
+        setImagePreview(selectedGoogleBook.coverImage);
+      }
     } else {
       reset({ isCurrentlyAvailable: true, condition: 'Good' });
       setImagePreview(null);
     }
-  }, [initialData, reset]);
+  }, [initialData, selectedGoogleBook, reset]);
+
+
 
   useEffect(() => {
     if (coverImageFile instanceof FileList && coverImageFile.length > 0) {
@@ -502,6 +554,7 @@ const MyBooks = () => {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingBook, setEditingBook] = useState(null);
   const [bookToDelete, setBookToDelete] = useState(null);
+  const [isBookSearchOpen, setIsBookSearchOpen] = useState(false);
 
   const fetchMyBooks = useCallback(async (isInitialLoad = false) => {
     if (!userId) { setMyBooks([]); setLoading(false); return; };
@@ -541,6 +594,13 @@ const MyBooks = () => {
     setBookToDelete(null);
   };
 
+  const handleSelectBookFromSearch = (bookData) => {
+    console.log('Book selected from search:', bookData);
+    setSelectedGoogleBook(bookData);
+    setEditingBook(null);
+    setIsFormModalOpen(true);
+  };
+
   const handleFormSubmit = async (formData) => {
     if (!userId) {
       toast.error("You must be logged in.");
@@ -549,6 +609,7 @@ const MyBooks = () => {
     setIsSubmitting(true);
     const data = new FormData();
     const hasGoogleBooksCover = selectedGoogleBook && selectedGoogleBook.coverImage && (!formData.coverImage || formData.coverImage.length === 0);
+    console.log('Form submission data:', { formData, selectedGoogleBook, hasGoogleBooksCover });
 
     for (const key in formData) {
       if (key === 'coverImage') {
@@ -624,9 +685,14 @@ const MyBooks = () => {
           <h1 className="main-title">My Bookshelf</h1>
           <p className="subtitle">Manage your personal book collection and see their status.</p>
         </div>
-        <button className="add-book-btn" onClick={handleOpenAddModal}>
-          <PlusCircle size={20} /> Add New Book
-        </button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button className="add-book-btn" onClick={() => setIsBookSearchOpen(true)}>
+            <Search size={20} /> Search Online
+          </button>
+          <button className="add-book-btn" onClick={handleOpenAddModal}>
+            <PlusCircle size={20} /> Add Manually
+          </button>
+        </div>
       </div>
       <div className="content-area">
         {loading ? (
@@ -652,6 +718,7 @@ const MyBooks = () => {
         title={editingBook ? 'Edit Book Details' : 'Add a New Book'}
       >
         <BookForm
+          key={selectedGoogleBook ? `selected-${selectedGoogleBook.title}` : editingBook ? `edit-${editingBook._id}` : 'new'}
           onSubmit={handleFormSubmit}
           isSubmitting={isSubmitting}
           initialData={editingBook}
@@ -665,6 +732,13 @@ const MyBooks = () => {
         onConfirm={handleConfirmDelete}
         title="Delete Book"
         message="Are you sure you want to permanently delete this book from your bookshelf? This action cannot be undone."
+      />
+      
+      {/* Book Search Modal */}
+      <BookSearchModal
+        isOpen={isBookSearchOpen}
+        onClose={() => setIsBookSearchOpen(false)}
+        onSelectBook={handleSelectBookFromSearch}
       />
     </StyledWrapper>
   );

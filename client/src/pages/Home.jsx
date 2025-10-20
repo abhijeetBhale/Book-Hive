@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
@@ -20,15 +20,25 @@ import {
   ArrowRight,
   PlusCircle,
   Globe,
-  ChevronDown,
   Star,
   Quote,
 } from 'lucide-react';
+import { AvatarCircles } from '../components/ui/avatar-circles';
 
 const Home = () => {
   const { user } = useContext(AuthContext);
   const [quoteIndex, setQuoteIndex] = useState(0);
-  const [activeIndex, setActiveIndex] = useState(0);
+
+  // Get current month name
+  const getCurrentMonth = () => {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const currentDate = new Date();
+    return months[currentDate.getMonth()];
+  };
+
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showTestimonialModal, setShowTestimonialModal] = useState(false);
   const [testimonials, setTestimonials] = useState([]);
@@ -121,8 +131,35 @@ const Home = () => {
     title: 'The Midnight Library',
     author: 'Matt Haig',
     coverUrl: 'https://books.google.co.in/books/publisher/content?id=M53SDwAAQBAJ&pg=PP1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U2Lz0_4XfWJHNkQEVOk6UwFhlc96g&w=1280',
-    reason: `A compelling read that has sparked incredible discussions within our community. Its themes of choice and regret resonate deeply, making it our must-read pick for September!`,
+    reason: `A compelling read that has sparked incredible discussions within our community. Its themes of choice and regret resonate deeply, making it our must-read pick for ${getCurrentMonth()}!`,
   };
+
+  const avatars = [
+    {
+      imageUrl: "https://avatars.githubusercontent.com/u/16860528",
+      profileUrl: "https://github.com/dillionverma",
+    },
+    {
+      imageUrl: "https://avatars.githubusercontent.com/u/20110627",
+      profileUrl: "https://github.com/tomonarifeehan",
+    },
+    {
+      imageUrl: "https://avatars.githubusercontent.com/u/106103625",
+      profileUrl: "https://github.com/BankkRoll",
+    },
+    {
+      imageUrl: "https://avatars.githubusercontent.com/u/59228569",
+      profileUrl: "https://github.com/safethecode",
+    },
+    {
+      imageUrl: "https://avatars.githubusercontent.com/u/59442788",
+      profileUrl: "https://github.com/sanjay-mali",
+    },
+    {
+      imageUrl: "https://avatars.githubusercontent.com/u/89768406",
+      profileUrl: "https://github.com/itsarghyadas",
+    },
+  ];
 
   const howItWorks = [
     { step: '1', title: 'Join BookHive', description: 'Create your account and set up your profile with your location and reading preferences.' },
@@ -269,13 +306,19 @@ const Home = () => {
               <img src={getFullImageUrl(bookOfTheMonth.coverUrl)} alt={`Cover of ${bookOfTheMonth.title}`} className="book-cover-image" />
             </div>
             <div className="book-details">
-              <p className="eyebrow-text">
-                <Star className="eyebrow-icon" />
-                Community Pick for September
-              </p>
+              <div className="eyebrow-section">
+                <p className="eyebrow-text">
+                  <Star className="eyebrow-icon" />
+                  Community Pick for {getCurrentMonth()}
+                </p>
+                <div className="community-readers">
+                  <AvatarCircles numPeople={99} avatarUrls={avatars} />
+                </div>
+              </div>
               <h2 className="book-title-featured">{bookOfTheMonth.title}</h2>
               <h3 className="book-author-featured">by {bookOfTheMonth.author}</h3>
               <p className="book-reason">{bookOfTheMonth.reason}</p>
+
               <Link to="/books" className="btn primary-btn group">
                 Find This Book
                 <ArrowRight className="arrow-icon" />
@@ -868,6 +911,19 @@ const StyledWrapper = styled.div`
     }
   }
 
+  .eyebrow-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    @media (min-width: 1024px) {
+      justify-content: flex-start;
+      flex-wrap: nowrap;
+    }
+  }
+
   .eyebrow-text {
     display: inline-flex;
     align-items: center;
@@ -875,10 +931,10 @@ const StyledWrapper = styled.div`
     font-size: 1rem;
     font-weight: 700;
     color: #4F46E5;
-    margin-bottom: 1.5rem;
     background-color: #eef2ff;
     padding: 0.5rem 1rem;
     border-radius: 9999px;
+    margin-bottom: 0;
   }
 
   .eyebrow-icon {
@@ -908,7 +964,13 @@ const StyledWrapper = styled.div`
     font-size: 1.125rem;
     line-height: 1.75;
     color: #374151;
-    margin-bottom: 2.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .community-readers {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0;
   }
 
   /* How It Works Section */

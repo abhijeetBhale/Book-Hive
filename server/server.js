@@ -15,6 +15,7 @@ import './config/cloudinary.js';
 import './config/passport-setup.js'; 
 import authRoutes from './routes/auth.js';
 import bookRoutes from './routes/books.js';
+import bookSearchRoutes from './routes/bookSearch.js';
 import borrowRoutes from './routes/borrow.js';
 import userRoutes from './routes/users.js';
 import friendRoutes from './routes/friends.js';
@@ -28,6 +29,7 @@ import achievementRoutes from './routes/achievementRoutes.js';
 import challengeRoutes from './routes/challengeRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import { initializeDefaultAchievements } from './services/achievementService.js';
+import NotificationService from './services/notificationService.js';
 
 
 const app = express();
@@ -74,6 +76,7 @@ app.use(passport.initialize());
 // Mount routers
 app.use('/api/auth', authRoutes);
 app.use('/api/books', bookRoutes);
+app.use('/api/book-search', bookSearchRoutes);
 app.use('/api/borrow', borrowRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/friends', friendRoutes);
@@ -123,6 +126,10 @@ const io = new SocketIOServer(server, {
 
 // Expose io to routes/controllers
 app.set('io', io);
+
+// Initialize notification service
+const notificationService = new NotificationService(io);
+app.set('notificationService', notificationService);
 
 // Track online users: userId -> Set of socketIds
 const onlineUsers = new Map();

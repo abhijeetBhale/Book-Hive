@@ -20,6 +20,7 @@ import SignButton from '../SignButton';
 import { notificationsAPI } from '../../utils/api';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
+import NotificationCenter from '../notifications/NotificationCenter';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,6 +28,7 @@ const Navbar = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [realtimeNotifications, setRealtimeNotifications] = useState([]);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false);
   const socketRef = useRef(null);
   const dropdownRef = useRef(null);
 
@@ -246,7 +248,7 @@ const Navbar = () => {
                   {/* Real-time Notification Bell */}
                   <div className="relative">
                     <button
-                      onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                      onClick={() => setShowNotificationCenter(!showNotificationCenter)}
                       className="relative p-2 text-gray-600 hover:text-primary transition-colors duration-300"
                     >
                       <Bell size={24} />
@@ -422,6 +424,12 @@ const Navbar = () => {
           </div>
         )}
       </nav>
+
+      {/* Notification Center */}
+      <NotificationCenter 
+        isOpen={showNotificationCenter} 
+        onClose={() => setShowNotificationCenter(false)} 
+      />
     </header>
   );
 };

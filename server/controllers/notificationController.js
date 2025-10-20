@@ -233,3 +233,138 @@ export const deleteNotification = async (req, res) => {
     return res.status(500).json({ message: 'Server error deleting notification' });
   }
 };
+
+// @desc    Get notifications by type
+// @route   GET /api/notifications/type/:type
+export const getNotificationsByType = async (req, res) => {
+  try {
+    const { type } = req.params;
+    const { limit = 20, page = 1 } = req.query;
+    const l = Math.min(Number(limit) || 20, 50);
+    const p = Math.max(Number(page) || 1, 1);
+
+    const [items, total] = await Promise.all([
+      Notification.find({ 
+        user: req.user._id, 
+        type 
+      })
+        .populate('fromUser', 'name email avatar')
+        .populate('metadata.bookId', 'title author coverImage')
+        .sort({ createdAt: -1 })
+        .skip((p - 1) * l)
+        .limit(l),
+      Notification.countDocuments({ 
+        user: req.user._id, 
+        type 
+      }),
+    ]);
+
+    return res.json({ notifications: items, total, page: p, limit: l });
+  } catch (err) {
+    console.error('get notifications by type error:', err);
+    return res.status(500).json({ message: 'Server error getting notifications by type' });
+  }
+};
+
+// @desc    Get notification statistics
+// @route   GET /api/notifications/stats
+export const getNotificationStats = async (req, res) => {
+  try {
+    const stats = await Notification.aggregate([
+      { $match: { user: req.user._id } },
+      {
+        $group: {
+          _id: '$type',
+          count: { $sum: 1 },
+          unreadCount: {
+            $sum: { $cond: [{ $eq: ['$read', false] }, 1, 0] }
+          }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+
+    const totalUnread = await Notification.countDocuments({
+      user: req.user._id,
+      read: false
+    });
+
+    return res.json({ stats, totalUnread });
+  } catch (err) {
+    console.error('get notification stats error:', err);
+    return res.status(500).json({ message: 'Server error getting notification stats' });
+  }
+};
+
+// @desc    Mark all notifications as read
+// @route   PUT /api/notifications/mark-all-read
+export const markAllAsRead = async (req, res) => {
+  try {
+    const result = await Notification.updateMany(
+      { 
+        user: req.user._id, 
+        read: false 
+      },
+      { $set: { read: true } }
+    );
+
+    return res.json({ 
+      message: 'All notifications marked as read',
+      modifiedCount: result.modifiedCount,
+      success: true
+    });
+  } catch (err) {
+    console.error('mark all as read error:', err);
+    return res.status(500).json({ 
+      message: 'Server error marking all notifications as read',
+      success: false
+    });
+  }
+};
+
+// @desc    Delete all read notifications
+// @route   DELETE /api/notifications/clear-read
+export const clearReadNotifications = async (req, res) => {
+  try {
+    const result = await Notification.deleteMany({
+      user: req.user._id,
+      read: true
+    });
+
+    return res.json({
+      message: 'Read notifications cleared',
+      deletedCount: result.deletedCount,
+      success: true
+    });
+  } catch (err) {
+    console.error('clear read notifications error:', err);
+    return res.status(500).json({
+      message: 'Server error clearing read notifications',
+      success: false
+    });
+  }
+};
+
+// @desc    Update notification preferences
+// @route   PUT /api/notifications/preferences
+export const updateNotificationPreferences = async (req, res) => {
+  try {
+    const { preferences } = req.body;
+    
+    // Update user's notification preferences
+    // This would typically be stored in the User model
+    // For now, we'll just return success
+    
+    return res.json({
+      message: 'Notification preferences updated',
+      preferences,
+      success: true
+    });
+  } catch (err) {
+    console.error('update notification preferences error:', err);
+    return res.status(500).json({
+      message: 'Server error updating notification preferences',
+      success: false
+    });
+  }
+};

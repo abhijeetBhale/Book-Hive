@@ -24,6 +24,16 @@ const notificationSchema = new mongoose.Schema(
         'profile_update',    // e.g., a system notification confirming a profile change
         'review_prompt',      // ask users to review each other after return
         'book_inquiry',       // message sent from profile "Send message" modal
+        'due_reminder',       // Book due date reminder
+        'overdue_reminder',   // Book overdue reminder
+        'availability_alert', // Book became available
+        'new_book_nearby',    // New book added in user's area
+        'friend_activity',    // Friend added a book, made a review, etc.
+        'club_update',        // Book club related notifications
+        'system_announcement', // System-wide announcements
+        'book_returned',      // Book has been returned
+        'book_borrowed',      // Book has been borrowed
+        'rating_received',    // User received a rating/review
       ],
     },
 
@@ -49,6 +59,28 @@ const notificationSchema = new mongoose.Schema(
     link: {
       type: String,
     },
+
+    // Additional metadata for enhanced notifications
+    metadata: {
+      bookId: { type: mongoose.Schema.Types.ObjectId, ref: 'Book' },
+      borrowRequestId: { type: mongoose.Schema.Types.ObjectId, ref: 'BorrowRequest' },
+      conversationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Conversation' },
+      clubId: { type: mongoose.Schema.Types.ObjectId, ref: 'BookClub' },
+      priority: { type: String, enum: ['low', 'medium', 'high', 'urgent'], default: 'medium' },
+      actionRequired: { type: Boolean, default: false },
+      expiresAt: { type: Date }, // For time-sensitive notifications
+    },
+
+    // Delivery tracking
+    deliveryStatus: {
+      type: String,
+      enum: ['pending', 'sent', 'delivered', 'failed'],
+      default: 'pending'
+    },
+
+    // For scheduled notifications
+    scheduledFor: { type: Date },
+    isScheduled: { type: Boolean, default: false },
   },
   {
     // Automatically adds `createdAt` and `updatedAt` fields.

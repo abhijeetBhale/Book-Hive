@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { usersAPI, booksAPI, borrowAPI, notificationsAPI, friendsAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
@@ -321,6 +321,7 @@ const MessageModal = ({ user, onClose }) => {
 // --- MAIN USER PROFILE COMPONENT ---
 const UserProfile = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user: currentUser } = useContext(AuthContext);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -509,6 +510,27 @@ const UserProfile = () => {
     return Math.round(R * c);
   };
 
+  const handleDistanceClick = () => {
+    if (user?.location?.coordinates) {
+      // Navigate to map page with user data to show their popup
+      navigate('/map', {
+        state: {
+          showUserPopup: {
+            _id: user._id,
+            name: user.name,
+            location: user.location,
+            avatar: user.avatar,
+            booksOwned: user.booksOwned || [],
+            rating: user.rating
+          }
+        }
+      });
+    } else {
+      // Fallback to just opening the map
+      navigate('/map');
+    }
+  };
+
   if (loading) {
     return (
       <StyledWrapper>
@@ -551,7 +573,7 @@ const UserProfile = () => {
               <span>{totalBooksCount} {totalBooksCount === 1 ? 'Book' : 'Books'} in Bookshelf</span>
             </div>
             {distance !== null && (
-              <div className="stat-item">
+              <div className="stat-item clickable-distance" onClick={handleDistanceClick}>
                 <MapPin size={16} />
                 <span>{distance} km away</span>
               </div>
@@ -698,6 +720,23 @@ const StyledWrapper = styled.div`
       display: flex; align-items: center; gap: 0.5rem; font-size: 1rem;
       font-weight: 500; color: #4b5563;
       svg { color: #4F46E5; }
+      
+      &.clickable-distance {
+        cursor: pointer;
+        transition: color 0.2s ease;
+        
+        &:hover {
+          color: #0369a1;
+          
+          svg {
+            color: #0369a1;
+          }
+          
+          span {
+            text-decoration: underline;
+          }
+        }
+      }
   }
   
   .rating-section {
