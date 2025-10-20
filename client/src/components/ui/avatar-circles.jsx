@@ -1,22 +1,21 @@
 import { memo } from 'react';
 import styled from 'styled-components';
 
-const AvatarCircles = memo(({ numPeople, avatarUrls, className }) => {
+const AvatarCircles = memo(({ numPeople, avatarUrls, className, onAvatarClick }) => {
   return (
     <AvatarContainer className={className}>
       <AvatarList>
         {avatarUrls.slice(0, 6).map((avatar, index) => (
           <AvatarItem key={index} $index={index}>
-            <AvatarLink 
-              href={avatar.profileUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
+            <AvatarButton 
+              onClick={() => onAvatarClick && onAvatarClick(avatar)}
+              title={avatar.userName ? `View ${avatar.userName}'s profile` : 'View profile'}
             >
               <AvatarImage 
                 src={avatar.imageUrl} 
-                alt={`Avatar ${index + 1}`}
+                alt={avatar.userName || `Avatar ${index + 1}`}
               />
-            </AvatarLink>
+            </AvatarButton>
           </AvatarItem>
         ))}
         {numPeople > 6 && (
@@ -49,8 +48,12 @@ const AvatarItem = styled.div`
   z-index: ${props => 10 - props.$index};
 `;
 
-const AvatarLink = styled.a`
+const AvatarButton = styled.button`
   display: block;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
   transition: transform 0.2s ease;
   
   &:hover {

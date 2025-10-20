@@ -10,7 +10,7 @@ import { useInView } from 'react-intersection-observer';
 import CountUp from 'react-countup';
 import LocationPermission from '../components/LocationPermission';
 import TestimonialModal from '../components/TestimonialModal';
-import { testimonialAPI } from '../utils/api';
+import { testimonialAPI, usersAPI } from '../utils/api';
 import {
   BookOpen,
   Users,
@@ -22,8 +22,42 @@ import {
   Globe,
   Star,
   Quote,
+  X,
 } from 'lucide-react';
 import { AvatarCircles } from '../components/ui/avatar-circles';
+
+// Authentication Modal Component
+const AuthModal = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="auth-modal-overlay" onClick={onClose}>
+      <div className="auth-modal-content" onClick={(e) => e.stopPropagation()}>
+        <button className="auth-modal-close" onClick={onClose}>
+          <X size={20} />
+        </button>
+        <div className="auth-modal-header">
+          <Users size={48} className="auth-modal-icon" />
+          <h2>Join Our Reading Community</h2>
+          <p>You need to be logged in to view community member profiles and connect with fellow readers.</p>
+        </div>
+        <div className="auth-modal-buttons">
+          <Link to="/login" className="auth-modal-btn login-btn">
+            <BookOpen size={18} />
+            Sign In
+          </Link>
+          <Link to="/register" className="auth-modal-btn signup-btn">
+            <Users size={18} />
+            Join BookHive
+          </Link>
+        </div>
+        <div className="auth-modal-footer">
+          <p>Join thousands of book lovers sharing and discovering great reads!</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Home = () => {
   const { user } = useContext(AuthContext);
@@ -43,6 +77,8 @@ const Home = () => {
   const [showTestimonialModal, setShowTestimonialModal] = useState(false);
   const [testimonials, setTestimonials] = useState([]);
   const [testimonialsLoaded, setTestimonialsLoaded] = useState(false);
+  const [communityUsers, setCommunityUsers] = useState([]);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const quotes = [
     { text: 'Community-Driven Book Sharing', icon: <BookOpen className="badge-icon" /> },
@@ -89,6 +125,62 @@ const Home = () => {
     loadTestimonials();
   }, [testimonialsLoaded]);
 
+  // Load community users for avatar circles
+  useEffect(() => {
+    const loadCommunityUsers = async () => {
+      try {
+        // Try to get users with books first
+        const response = await usersAPI.getUsersWithBooks({ limit: 10 });
+        const users = response.data.users || [];
+
+        if (users.length > 0) {
+          setCommunityUsers(users);
+        } else {
+          // Fallback: create some placeholder users if no real users available
+          const placeholderUsers = [
+            { _id: 'placeholder1', name: 'Sarah Johnson', avatar: null },
+            { _id: 'placeholder2', name: 'Mike Chen', avatar: null },
+            { _id: 'placeholder3', name: 'Emma Davis', avatar: null },
+            { _id: 'placeholder4', name: 'Alex Rodriguez', avatar: null },
+            { _id: 'placeholder5', name: 'Lisa Wang', avatar: null },
+            { _id: 'placeholder6', name: 'David Kim', avatar: null },
+          ];
+          setCommunityUsers(placeholderUsers);
+        }
+      } catch (error) {
+        console.error('Failed to load community users:', error);
+        // Fallback to placeholder users if API fails
+        const placeholderUsers = [
+          { _id: 'placeholder1', name: 'Sarah Johnson', avatar: null },
+          { _id: 'placeholder2', name: 'Mike Chen', avatar: null },
+          { _id: 'placeholder3', name: 'Emma Davis', avatar: null },
+          { _id: 'placeholder4', name: 'Alex Rodriguez', avatar: null },
+          { _id: 'placeholder5', name: 'Lisa Wang', avatar: null },
+          { _id: 'placeholder6', name: 'David Kim', avatar: null },
+        ];
+        setCommunityUsers(placeholderUsers);
+      }
+    };
+
+    loadCommunityUsers();
+  }, []);
+
+  const handleAvatarClick = (avatar) => {
+    if (!user) {
+      // User not logged in - show auth modal
+      setShowAuthModal(true);
+    } else {
+      // Check if it's a placeholder user
+      if (avatar.userId && avatar.userId.startsWith('placeholder')) {
+        // For placeholder users, show auth modal encouraging to join community
+        setShowAuthModal(true);
+      } else {
+        // Real user - navigate to profile
+        window.location.href = avatar.profileUrl;
+      }
+    }
+  };
+
   const handleTestimonialSubmit = async (testimonialData) => {
     try {
       console.log('Submitting testimonial data:', testimonialData);
@@ -134,32 +226,13 @@ const Home = () => {
     reason: `A compelling read that has sparked incredible discussions within our community. Its themes of choice and regret resonate deeply, making it our must-read pick for ${getCurrentMonth()}!`,
   };
 
-  const avatars = [
-    {
-      imageUrl: "https://avatars.githubusercontent.com/u/16860528",
-      profileUrl: "https://github.com/dillionverma",
-    },
-    {
-      imageUrl: "https://avatars.githubusercontent.com/u/20110627",
-      profileUrl: "https://github.com/tomonarifeehan",
-    },
-    {
-      imageUrl: "https://avatars.githubusercontent.com/u/106103625",
-      profileUrl: "https://github.com/BankkRoll",
-    },
-    {
-      imageUrl: "https://avatars.githubusercontent.com/u/59228569",
-      profileUrl: "https://github.com/safethecode",
-    },
-    {
-      imageUrl: "https://avatars.githubusercontent.com/u/59442788",
-      profileUrl: "https://github.com/sanjay-mali",
-    },
-    {
-      imageUrl: "https://avatars.githubusercontent.com/u/89768406",
-      profileUrl: "https://github.com/itsarghyadas",
-    },
-  ];
+  // Create avatars from real community users
+  const avatars = communityUsers.map(user => ({
+    imageUrl: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&color=fff`,
+    profileUrl: `/profile/${user._id}`,
+    userId: user._id,
+    userName: user.name
+  }));
 
   const howItWorks = [
     { step: '1', title: 'Join BookHive', description: 'Create your account and set up your profile with your location and reading preferences.' },
@@ -312,7 +385,20 @@ const Home = () => {
                   Community Pick for {getCurrentMonth()}
                 </p>
                 <div className="community-readers">
-                  <AvatarCircles numPeople={99} avatarUrls={avatars} />
+                  {avatars.length > 0 ? (
+                    <AvatarCircles
+                      numPeople={communityUsers.length + 93}
+                      avatarUrls={avatars}
+                      onAvatarClick={handleAvatarClick}
+                    />
+                  ) : (
+                    <div className="loading-avatars">
+                      <div className="avatar-skeleton"></div>
+                      <div className="avatar-skeleton"></div>
+                      <div className="avatar-skeleton"></div>
+                      <span className="loading-text">Loading community...</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <h2 className="book-title-featured">{bookOfTheMonth.title}</h2>
@@ -574,6 +660,12 @@ const Home = () => {
           onSubmit={handleTestimonialSubmit}
         />
       )}
+
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
     </StyledWrapper>
   );
 };
@@ -971,6 +1063,42 @@ const StyledWrapper = styled.div`
     display: flex;
     align-items: center;
     margin-bottom: 0;
+  }
+
+  .loading-avatars {
+    display: flex;
+    align-items: center;
+    gap: -8px;
+  }
+
+  .avatar-skeleton {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border: 3px solid white;
+    margin-left: -8px;
+
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+
+  .loading-text {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-left: 1rem;
+  }
+
+  @keyframes loading {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   /* How It Works Section */
@@ -1536,6 +1664,134 @@ const StyledWrapper = styled.div`
         font-size: 1rem;
         margin: 0;
         line-height: 1.6;
+    }
+  }
+  
+  /* Authentication Modal Styles */
+  .auth-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(17, 24, 39, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+
+  .auth-modal-content {
+    background: white;
+    border-radius: 1.5rem;
+    padding: 2rem;
+    max-width: 480px;
+    width: 100%;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    text-align: center;
+  }
+
+  .auth-modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #f3f4f6;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #6b7280;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #e5e7eb;
+      color: #374151;
+    }
+  }
+
+  .auth-modal-header {
+    margin-bottom: 2rem;
+
+    .auth-modal-icon {
+      color: #4F46E5;
+      margin-bottom: 1rem;
+    }
+
+    h2 {
+      font-size: 1.875rem;
+      font-weight: 800;
+      color: #111827;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      font-size: 1rem;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+  }
+
+  .auth-modal-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+
+    @media (min-width: 640px) {
+      flex-direction: row;
+    }
+  }
+
+  .auth-modal-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    flex: 1;
+
+    &.login-btn {
+      background: #f8fafc;
+      color: #374151;
+      border: 2px solid #e5e7eb;
+
+      &:hover {
+        background: #f1f5f9;
+        border-color: #d1d5db;
+        transform: translateY(-1px);
+      }
+    }
+
+    &.signup-btn {
+      background: linear-gradient(135deg, #4F46E5, #7c3aed);
+      color: white;
+      border: 2px solid transparent;
+
+      &:hover {
+        background: linear-gradient(135deg, #4338ca, #6d28d9);
+        transform: translateY(-1px);
+        box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+      }
+    }
+  }
+
+  .auth-modal-footer {
+    p {
+      font-size: 0.875rem;
+      color: #9ca3af;
+      font-style: italic;
     }
   }
 `;
