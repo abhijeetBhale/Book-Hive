@@ -40,6 +40,12 @@ import { AuthContext } from '../context/AuthContext';
 import { adminAPIService } from '../utils/adminAPI';
 import { Navigate } from 'react-router-dom';
 
+// Import new admin components
+import BookSharingActivity from '../components/admin/BookSharingActivity';
+import TopCategories from '../components/admin/TopCategories';
+import RecentActivity from '../components/admin/RecentActivity';
+import TopBooks from '../components/admin/TopBooks';
+
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('overview');
@@ -65,6 +71,12 @@ const AdminDashboard = () => {
     total: 0,
     pages: 0
   });
+
+  // Books-specific state
+  const [booksPerPage, setBooksPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
 
   // Check if user has admin access
   const hasAdminAccess = user && (
@@ -106,6 +118,11 @@ const AdminDashboard = () => {
     }
   }, [hasAdminAccess, activeTab, filters, pagination.page]);
 
+  // Reset to first page when books filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters.search, filters.status, booksPerPage]);
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
@@ -129,13 +146,22 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchBooks = async () => {
+  const fetchBooks = async (customParams = {}) => {
     try {
       const params = {
         page: pagination.page,
         limit: pagination.limit,
-        ...filters
+        ...filters,
+        ...customParams
       };
+      
+      // If limit is 'all', fetch all books
+      if (params.limit === 'all') {
+        params.all = true;
+        delete params.page;
+        delete params.limit;
+      }
+      
       const response = await adminAPIService.getBooks(params);
       setBooks(response.data.data.books);
       setPagination(prev => ({
@@ -144,6 +170,7 @@ const AdminDashboard = () => {
       }));
     } catch (error) {
       console.error('Error fetching books:', error);
+      setBooks([]);
     }
   };
 
@@ -442,235 +469,24 @@ const AdminDashboard = () => {
 
       {/* Charts and Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue Chart */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Book Sharing Activity</h3>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Active Borrows</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">New Books</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-4 mb-4">
-            <button className="px-3 py-1 text-sm font-medium text-gray-600 hover:text-gray-900">Monthly</button>
-            <button className="px-3 py-1 text-sm font-medium text-gray-600 hover:text-gray-900">Quarterly</button>
-            <button className="px-3 py-1 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg">Yearly</button>
-          </div>
-
-          {/* Chart Placeholder */}
-          <div className="h-64 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg flex items-center justify-center">
-            <div className="text-center">
-              <BarChart className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-500">Chart visualization will appear here</p>
-              <p className="text-sm text-gray-400">Real data from your BookHive platform</p>
-            </div>
-          </div>
-
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Active Borrows</p>
-                <p className="text-lg font-semibold text-gray-900">{dashboardData?.overview?.activeBorrowRequests || '0'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">New Books Added</p>
-                <p className="text-lg font-semibold text-gray-900">{dashboardData?.overview?.newBooksThisMonth || '0'}</p>
-              </div>
-            </div>
-          </div>
+        {/* Book Sharing Activity - Real-time Component */}
+        <div className="lg:col-span-2">
+          <BookSharingActivity />
         </div>
 
-        {/* Top Categories */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Top Categories</h3>
-            <button className="text-sm text-blue-600 hover:text-blue-700">See All</button>
-          </div>
-
-          {/* Donut Chart Placeholder */}
-          <div className="flex items-center justify-center mb-6">
-            <div className="relative w-32 h-32">
-              <div className="w-32 h-32 rounded-full border-8 border-gray-200"></div>
-              <div className="absolute inset-0 w-32 h-32 rounded-full border-8 border-transparent border-t-blue-500 border-r-purple-500 border-b-green-500 border-l-orange-500"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <p className="text-sm text-gray-600">Total Books</p>
-                  <p className="text-lg font-bold text-gray-900">{dashboardData?.overview?.totalBooks || '0'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
-                <span className="text-sm text-gray-600">Fiction</span>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{Math.round((dashboardData?.overview?.totalBooks || 0) * 0.68)}</p>
-                <p className="text-xs text-gray-500">68%</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-purple-500 rounded-full mr-3"></div>
-                <span className="text-sm text-gray-600">Non-Fiction</span>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{Math.round((dashboardData?.overview?.totalBooks || 0) * 0.20)}</p>
-                <p className="text-xs text-gray-500">20%</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-                <span className="text-sm text-gray-600">Educational</span>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{Math.round((dashboardData?.overview?.totalBooks || 0) * 0.08)}</p>
-                <p className="text-xs text-gray-500">8%</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-orange-500 rounded-full mr-3"></div>
-                <span className="text-sm text-gray-600">Children's</span>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{Math.round((dashboardData?.overview?.totalBooks || 0) * 0.04)}</p>
-                <p className="text-xs text-gray-500">4%</p>
-              </div>
-            </div>
-          </div>
+        {/* Top Categories - Real-time Component */}
+        <div>
+          <TopCategories />
         </div>
       </div>
 
       {/* Recent Activity and Top Books */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-            <button className="text-sm text-blue-600 hover:text-blue-700">See All</button>
-          </div>
+        {/* Recent Activity - Real-time Component */}
+        <RecentActivity />
 
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <Package className="w-4 h-4 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-gray-900">New Book Added</p>
-                  <span className="px-2 py-1 text-xs font-medium text-blue-600 bg-blue-100 rounded-full">New</span>
-                </div>
-                <p className="text-xs text-gray-500">John Doe • 12 Jan 25</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg">
-              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-4 h-4 text-red-600" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-gray-900">Book Overdue Alert</p>
-                  <span className="px-2 py-1 text-xs font-medium text-red-600 bg-red-100 rounded-full">Alert</span>
-                </div>
-                <p className="text-xs text-gray-500">MacBook Air M2 • 3 Jan 25</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg">
-              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                <Star className="w-4 h-4 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-gray-900">Book Club Event</p>
-                  <span className="px-2 py-1 text-xs font-medium text-purple-600 bg-purple-100 rounded-full">Event</span>
-                </div>
-                <p className="text-xs text-gray-500">Applied 50 times • 8 Jan 25</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg">
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                <Database className="w-4 h-4 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-gray-900">System Update</p>
-                  <span className="px-2 py-1 text-xs font-medium text-green-600 bg-green-100 rounded-full">System</span>
-                </div>
-                <p className="text-xs text-gray-500">Version 1.2.1 • 2 Jan 25</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Top Books */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Top Books</h3>
-            <div className="flex items-center space-x-2">
-              <button className="p-1 hover:bg-gray-100 rounded">
-                <Filter className="w-4 h-4 text-gray-400" />
-              </button>
-              <button className="p-1 hover:bg-gray-100 rounded">
-                <MoreHorizontal className="w-4 h-4 text-gray-400" />
-              </button>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left">
-                  <th className="text-xs font-medium text-gray-500 uppercase tracking-wider pb-3">Book</th>
-                  <th className="text-xs font-medium text-gray-500 uppercase tracking-wider pb-3">Borrows</th>
-                  <th className="text-xs font-medium text-gray-500 uppercase tracking-wider pb-3">Rating</th>
-                  <th className="text-xs font-medium text-gray-500 uppercase tracking-wider pb-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="space-y-2">
-                {dashboardData?.recentActivity?.recentBooks?.slice(0, 3).map((book, index) => (
-                  <tr key={index} className="border-t border-gray-100">
-                    <td className="py-3">
-                      <div className="flex items-center">
-                        <div className={`w-8 h-8 rounded flex items-center justify-center mr-3 ${
-                          index === 0 ? 'bg-blue-100' : index === 1 ? 'bg-purple-100' : 'bg-green-100'
-                        }`}>
-                          <BookOpen className={`w-4 h-4 ${
-                            index === 0 ? 'text-blue-600' : index === 1 ? 'text-purple-600' : 'text-green-600'
-                          }`} />
-                        </div>
-                        <span className="text-sm font-medium text-gray-900">{book.title}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 text-sm text-gray-600">-</td>
-                    <td className="py-3 text-sm text-gray-600">-</td>
-                    <td className="py-3 text-sm text-gray-600">Available</td>
-                  </tr>
-                )) || [
-                  <tr key="no-data" className="border-t border-gray-100">
-                    <td colSpan="4" className="py-6 text-center text-gray-500">
-                      No books available yet
-                    </td>
-                  </tr>
-                ]}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* Top Books - Real-time Component */}
+        <TopBooks />
       </div>
     </div>
   );
@@ -822,109 +638,392 @@ const AdminDashboard = () => {
     </div>
   );
 
-  const renderBooks = () => (
-    <div className="space-y-6">
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search books by title, author, or ISBN..."
-                value={filters.search}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+  const renderBooks = () => {
+
+    // Filter books based on search and status
+    const filteredBooks = books.filter(book => {
+      const matchesSearch = !filters.search || 
+        book.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        book.author?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        book.isbn?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        book.category?.toLowerCase().includes(filters.search.toLowerCase());
+      
+      const matchesStatus = filters.status === 'all' || 
+        (filters.status === 'available' && book.isAvailable) ||
+        (filters.status === 'borrowed' && !book.isAvailable);
+      
+      return matchesSearch && matchesStatus;
+    });
+
+    // Sort books
+    const sortedBooks = [...filteredBooks].sort((a, b) => {
+      let aValue = a[sortBy];
+      let bValue = b[sortBy];
+      
+      if (sortBy === 'owner') {
+        aValue = a.owner?.name || '';
+        bValue = b.owner?.name || '';
+      }
+      
+      if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+      
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+    // Paginate books
+    const totalBooks = sortedBooks.length;
+    const totalPages = booksPerPage === 'all' ? 1 : Math.ceil(totalBooks / booksPerPage);
+    const startIndex = booksPerPage === 'all' ? 0 : (currentPage - 1) * booksPerPage;
+    const endIndex = booksPerPage === 'all' ? totalBooks : startIndex + booksPerPage;
+    const paginatedBooks = sortedBooks.slice(startIndex, endIndex);
+
+
+
+    return (
+      <div className="space-y-6">
+        {/* Enhanced Filters */}
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Search */}
+            <div className="lg:col-span-2">
+              <div className="relative">
+                <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search books by title, author, ISBN, or category..."
+                  value={filters.search}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            
+            {/* Status Filter */}
+            <div>
+              <select
+                value={filters.status}
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Status</option>
+                <option value="available">Available</option>
+                <option value="borrowed">Borrowed</option>
+              </select>
+            </div>
+
+            {/* Items per page */}
+            <div>
+              <select
+                value={booksPerPage}
+                onChange={(e) => setBooksPerPage(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value={10}>Show 10</option>
+                <option value={20}>Show 20</option>
+                <option value={30}>Show 30</option>
+                <option value={50}>Show 50</option>
+                <option value="all">Show All</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Sort Options */}
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-600">Sort by:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="createdAt">Date Added</option>
+                <option value="title">Title</option>
+                <option value="author">Author</option>
+                <option value="category">Category</option>
+                <option value="owner">Owner</option>
+              </select>
+              <button
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {sortOrder === 'asc' ? '↑ Ascending' : '↓ Descending'}
+              </button>
+            </div>
+            <div className="text-sm text-gray-600">
+              Showing {startIndex + 1}-{Math.min(endIndex, totalBooks)} of {totalBooks} books
+            </div>
+          </div>
+        </div>
+
+        {/* Books Table */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-100">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Books ({totalBooks} total)
+              </h3>
+              <div className="flex items-center space-x-2">
+                <RefreshCw 
+                  className="w-4 h-4 text-gray-400 cursor-pointer hover:text-gray-600" 
+                  onClick={fetchBooks}
+                />
+                <span className="text-sm text-gray-500">
+                  {booksPerPage === 'all' ? 'All books' : `Page ${currentPage} of ${totalPages}`}
+                </span>
+              </div>
             </div>
           </div>
           
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Books</option>
-            <option value="available">Available</option>
-            <option value="borrowed">Borrowed</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Books Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Books ({books.length})</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Book
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Owner
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Added
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {books.map((book) => (
-                <tr key={book._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-green-100 rounded flex items-center justify-center">
-                        <BookOpen className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{book.title}</div>
-                        <div className="text-sm text-gray-500">by {book.author}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{book.owner?.name}</div>
-                    <div className="text-sm text-gray-500">{book.owner?.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      book.isAvailable
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {book.isAvailable ? 'Available' : 'Borrowed'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(book.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => handleDeleteBook(book._id)}
-                      className="text-red-600 hover:text-red-900"
-                      title="Delete Book"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Book Details
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Owner
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Stats
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Added
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {paginatedBooks.length > 0 ? paginatedBooks.map((book) => (
+                  <tr key={book._id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="w-12 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded flex items-center justify-center flex-shrink-0">
+                          {book.coverImage ? (
+                            <img 
+                              src={book.coverImage} 
+                              alt={book.title}
+                              className="w-full h-full object-cover rounded"
+                            />
+                          ) : (
+                            <BookOpen className="w-6 h-6 text-blue-600" />
+                          )}
+                        </div>
+                        <div className="ml-4 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">{book.title}</div>
+                          <div className="text-sm text-gray-500 truncate">by {book.author}</div>
+                          {book.isbn && (
+                            <div className="text-xs text-gray-400">ISBN: {book.isbn}</div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                        {book.category || 'Uncategorized'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{book.owner?.name || 'Unknown'}</div>
+                      <div className="text-sm text-gray-500 truncate">{book.owner?.email || 'No email'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        book.isAvailable
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {book.isAvailable ? 'Available' : 'Borrowed'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <div className="space-y-1">
+                        <div className="flex items-center">
+                          <Eye className="w-3 h-3 mr-1" />
+                          {book.viewCount || 0} views
+                        </div>
+                        <div className="flex items-center">
+                          <ArrowLeftRight className="w-3 h-3 mr-1" />
+                          {book.borrowCount || 0} borrows
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(book.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBook(book._id)}
+                          className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
+                          title="Delete Book"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center">
+                      <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Books Found</h3>
+                      <p className="text-gray-600">
+                        {filters.search || filters.status !== 'all' 
+                          ? 'Try adjusting your search or filters.' 
+                          : 'Books will appear here when users add them to the platform.'
+                        }
+                      </p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {booksPerPage !== 'all' && totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  Showing {startIndex + 1} to {Math.min(endIndex, totalBooks)} of {totalBooks} results
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    Previous
+                  </button>
+                  
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const pageNum = i + 1;
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-3 py-1 text-sm rounded ${
+                            currentPage === pageNum
+                              ? 'bg-blue-600 text-white'
+                              : 'border border-gray-300 hover:bg-gray-100'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    {totalPages > 5 && (
+                      <>
+                        <span className="px-2 text-gray-500">...</span>
+                        <button
+                          onClick={() => setCurrentPage(totalPages)}
+                          className={`px-3 py-1 text-sm rounded ${
+                            currentPage === totalPages
+                              ? 'bg-blue-600 text-white'
+                              : 'border border-gray-300 hover:bg-gray-100'
+                          }`}
+                        >
+                          {totalPages}
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <BookOpen className="w-4 h-4 text-blue-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Total Books</p>
+                <p className="text-lg font-semibold text-gray-900">{books.length}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Available</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {books.filter(book => book.isAvailable).length}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                <ArrowLeftRight className="w-4 h-4 text-red-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Borrowed</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {books.filter(book => !book.isAvailable).length}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Users className="w-4 h-4 text-purple-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Unique Owners</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {new Set(books.map(book => book.owner?._id).filter(Boolean)).size}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Additional render functions for new tabs
   const renderBorrows = () => (

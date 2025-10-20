@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Loader, Check, X, ArrowRight, Inbox } from 'lucide-react';
+import { Loader, Check, X, ArrowRight, Inbox, CheckCircle, EyeOff, Eye } from 'lucide-react';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import toast from 'react-hot-toast';
 import { borrowAPI, reviewsAPI } from '../utils/api';
 import { formatDate } from '../utils/dateHelpers';
 import ReviewModal from '../components/ReviewModal';
-import BookRequestNotification from '../components/BookRequestNotification';
 import { Link } from 'react-router-dom';
 import { MessageSquare } from 'lucide-react';
 
@@ -15,6 +14,19 @@ const BorrowRequests = () => {
   const [myRequests, setMyRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('received');
+  const [showDeniedRequests, setShowDeniedRequests] = useState(false);
+
+  // Close denied requests dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDeniedRequests && !event.target.closest('.denied-requests-section')) {
+        setShowDeniedRequests(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDeniedRequests]);
 
   const [reviewModal, setReviewModal] = useState({ open: false, borrowRequestId: null, toUserId: null, counterpartName: '' });
 
@@ -25,15 +37,15 @@ const BorrowRequests = () => {
         borrowAPI.getReceivedRequests(),
         borrowAPI.getMyRequests(),
       ]);
-      
+
       // Filter out any requests with missing critical data
-      const validReceivedRequests = (receivedRes.data.requests || []).filter(req => 
+      const validReceivedRequests = (receivedRes.data.requests || []).filter(req =>
         req && req._id && req.book && req.borrower
       );
-      const validMyRequests = (myRes.data.requests || []).filter(req => 
+      const validMyRequests = (myRes.data.requests || []).filter(req =>
         req && req._id && req.book && req.owner
       );
-      
+
       setReceivedRequests(validReceivedRequests);
       setMyRequests(validMyRequests);
 
@@ -83,7 +95,7 @@ const BorrowRequests = () => {
       console.error('Mark as returned error:', error);
     }
   };
-  
+
   const renderStatusBadge = (status) => {
     const statusStyles = {
       pending: { bg: '#fffbeb', text: '#b45309' },
@@ -116,23 +128,25 @@ const BorrowRequests = () => {
         <div className="requests-grid">
           {receivedRequests.filter(req => req.book && req.borrower).map(req => (
             <div key={req._id} className="request-card">
-              <img 
-                src={getFullImageUrl(req.book?.coverImage)} 
-                alt={req.book?.title || 'Book cover'} 
-                className="book-cover"
-                onError={(e) => {
-                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA0MEg2NVY4MEgzNVY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
-                }}
-              />
+              <div className="book-cover-container">
+                <img
+                  src={getFullImageUrl(req.book?.coverImage)}
+                  alt={req.book?.title || 'Book cover'}
+                  className="book-cover"
+                  onError={(e) => {
+                    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA0MEg2NVY4MEgzNVY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
+                  }}
+                />
+              </div>
               <div className="card-content">
                 <div className="card-header">
                   <h3 className="book-title">{req.book?.title || 'Unknown Book'}</h3>
                   {renderStatusBadge(req.status)}
                 </div>
                 <div className="user-info">
-                  <img 
-                    src={req.borrower?.avatar || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K'} 
-                    alt={req.borrower?.name || 'User'} 
+                  <img
+                    src={req.borrower?.avatar || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K'}
+                    alt={req.borrower?.name || 'User'}
                     className="user-avatar"
                     onError={(e) => {
                       e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
@@ -179,73 +193,167 @@ const BorrowRequests = () => {
     }
 
     if (activeTab === 'my') {
-      return myRequests.length > 0 ? (
-        <div className="requests-grid">
-          {myRequests.filter(req => req.book && req.owner).map(req => (
-            <div key={req._id} className="request-card">
-              {req.status === 'approved' && (
-                <BookRequestNotification request={req} type="approved" />
-              )}
-              <img 
-                src={getFullImageUrl(req.book?.coverImage)} 
-                alt={req.book?.title || 'Book cover'} 
-                className="book-cover"
-                onError={(e) => {
-                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA0MEg2NVY4MEgzNVY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
-                }}
-              />
-              <div className="card-content">
-                <div className="card-header">
-                  <h3 className="book-title">{req.book?.title || 'Unknown Book'}</h3>
-                  {renderStatusBadge(req.status)}
+      // Filter out denied requests from main view
+      const activeRequests = myRequests.filter(req => req.book && req.owner && req.status !== 'denied');
+      const deniedRequests = myRequests.filter(req => req.book && req.owner && req.status === 'denied');
+
+      return activeRequests.length > 0 ? (
+        <div>
+          {/* Denied Requests Button */}
+          {deniedRequests.length > 0 && (
+            <div className="denied-requests-section">
+              <button
+                onClick={() => setShowDeniedRequests(!showDeniedRequests)}
+                className="denied-requests-toggle"
+              >
+                <EyeOff size={16} />
+                Denied Requests ({deniedRequests.length})
+                {showDeniedRequests ? <Eye size={14} /> : <EyeOff size={14} />}
+              </button>
+
+              {showDeniedRequests && (
+                <div className="denied-requests-dropdown">
+                  <h4 className="denied-title">Denied Requests</h4>
+                  <div className="denied-requests-list">
+                    {deniedRequests.map(req => (
+                      <div key={req._id} className="denied-request-item">
+                        <img
+                          src={getFullImageUrl(req.book?.coverImage)}
+                          alt={req.book?.title || 'Book cover'}
+                          className="denied-book-cover"
+                          onError={(e) => {
+                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA0MEg2NVY4MEgzNVY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
+                          }}
+                        />
+                        <div className="denied-book-info">
+                          <h5 className="denied-book-title">{req.book?.title || 'Unknown Book'}</h5>
+                          <p className="denied-book-owner">Requested from {req.owner?.name || 'Unknown User'}</p>
+                          <p className="denied-book-date">Denied on: {formatDate(req.updatedAt || req.createdAt)}</p>
+                        </div>
+                        {renderStatusBadge(req.status)}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="user-info">
-                  <img 
-                    src={req.owner?.avatar || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K'} 
-                    alt={req.owner?.name || 'User'} 
-                    className="user-avatar"
+              )}
+            </div>
+          )}
+
+          <div className="requests-grid">
+            {activeRequests.map(req => (
+              <div key={req._id} className={`request-card ${req.status === 'approved' ? 'approved-card' : ''}`}>
+                <div className="book-cover-container">
+                  <img
+                    src={getFullImageUrl(req.book?.coverImage)}
+                    alt={req.book?.title || 'Book cover'}
+                    className="book-cover"
                     onError={(e) => {
-                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
+                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA0MEg2NVY4MEgzNVY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
                     }}
                   />
-                  <p>Requested from {req.owner?.name || 'Unknown User'}.</p>
                 </div>
-                <p className="request-date">Requested on: {formatDate(req.createdAt)}</p>
-                {req.status === 'approved' && (
-                  <div className="card-actions">
-                    <Link to={`/messages?userId=${req.owner._id}`} className="btn message-btn">
-                      <MessageSquare size={16} /> Message {req.owner?.name}
-                    </Link>
-                    <div className="status-info">
-                      <span className="status-text">✅ Approved! Coordinate pickup details</span>
+                <div className="card-content">
+                  {req.status === 'approved' && (
+                    <div className="approval-banner">
+                      <CheckCircle size={16} />
+                      <span>Request Approved! 🎉</span>
                     </div>
+                  )}
+                  <div className="card-header">
+                    <h3 className="book-title">{req.book?.title || 'Unknown Book'}</h3>
+                    {renderStatusBadge(req.status)}
                   </div>
-                )}
-                {req.status === 'borrowed' && (
-                  <div className="card-actions">
-                    <Link to={`/messages?userId=${req.owner._id}`} className="btn message-btn">
-                      <MessageSquare size={16} /> Message {req.owner?.name}
-                    </Link>
-                    <button onClick={() => handleMarkAsReturned(req._id)} className="btn return-btn">
-                      <ArrowRight size={16} /> Return Book
-                    </button>
+                  <div className="user-info">
+                    <img
+                      src={req.owner?.avatar || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K'}
+                      alt={req.owner?.name || 'User'}
+                      className="user-avatar"
+                      onError={(e) => {
+                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
+                      }}
+                    />
+                    <p>Requested from {req.owner?.name || 'Unknown User'}.</p>
                   </div>
-                )}
-                {req.status === 'returned' && (
-                  <div className="card-actions" style={{ marginTop: 8 }}>
-                    <button
-                      className="btn approve-btn"
-                      onClick={() => setReviewModal({ open: true, borrowRequestId: req._id, toUserId: req.owner?._id, counterpartName: req.owner?.name || 'User' })}
-                    >
-                      Leave a Review
-                    </button>
-                  </div>
-                )}
+                  <p className="request-date">Requested on: {formatDate(req.createdAt)}</p>
+                  {req.status === 'approved' && (
+                    <div className="card-actions">
+                      <Link to={`/messages?userId=${req.owner._id}`} className="btn message-btn">
+                        <MessageSquare size={16} /> Message {req.owner?.name}
+                      </Link>
+                      <div className="status-info">
+                        <span className="status-text">✅ Coordinate pickup details through messaging</span>
+                      </div>
+                    </div>
+                  )}
+                  {req.status === 'borrowed' && (
+                    <div className="card-actions">
+                      <Link to={`/messages?userId=${req.owner._id}`} className="btn message-btn">
+                        <MessageSquare size={16} /> Message {req.owner?.name}
+                      </Link>
+                      <button onClick={() => handleMarkAsReturned(req._id)} className="btn return-btn">
+                        <ArrowRight size={16} /> Return Book
+                      </button>
+                    </div>
+                  )}
+                  {req.status === 'returned' && (
+                    <div className="card-actions" style={{ marginTop: 8 }}>
+                      <button
+                        className="btn approve-btn"
+                        onClick={() => setReviewModal({ open: true, borrowRequestId: req._id, toUserId: req.owner?._id, counterpartName: req.owner?.name || 'User' })}
+                      >
+                        Leave a Review
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      ) : <EmptyState message="You haven't made any borrow requests yet. Go explore the community!" />;
+      ) : (
+        <div>
+          {/* Show denied requests button even when no active requests */}
+          {deniedRequests.length > 0 && (
+            <div className="denied-requests-section">
+              <button
+                onClick={() => setShowDeniedRequests(!showDeniedRequests)}
+                className="denied-requests-toggle"
+              >
+                <EyeOff size={16} />
+                Denied Requests ({deniedRequests.length})
+                {showDeniedRequests ? <Eye size={14} /> : <EyeOff size={14} />}
+              </button>
+
+              {showDeniedRequests && (
+                <div className="denied-requests-dropdown">
+                  <h4 className="denied-title">Denied Requests</h4>
+                  <div className="denied-requests-list">
+                    {deniedRequests.map(req => (
+                      <div key={req._id} className="denied-request-item">
+                        <img
+                          src={getFullImageUrl(req.book?.coverImage)}
+                          alt={req.book?.title || 'Book cover'}
+                          className="denied-book-cover"
+                          onError={(e) => {
+                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA0MEg2NVY4MEgzNVY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
+                          }}
+                        />
+                        <div className="denied-book-info">
+                          <h5 className="denied-book-title">{req.book?.title || 'Unknown Book'}</h5>
+                          <p className="denied-book-owner">Requested from {req.owner?.name || 'Unknown User'}</p>
+                          <p className="denied-book-date">Denied on: {formatDate(req.updatedAt || req.createdAt)}</p>
+                        </div>
+                        {renderStatusBadge(req.status)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <EmptyState message="You haven't made any borrow requests yet. Go explore the community!" />
+        </div>
+      );
     }
   };
 
@@ -255,7 +363,7 @@ const BorrowRequests = () => {
         <h1 className="main-title">Borrowing Center</h1>
         <p className="subtitle">Manage requests for your books and track books you want to borrow.</p>
       </div>
-      
+
       <div className="tabs-container">
         <button onClick={() => setActiveTab('received')} className={`tab-btn ${activeTab === 'received' ? 'active' : ''}`}>
           Requests for My Books
@@ -288,10 +396,14 @@ const BorrowRequests = () => {
 };
 
 const StyledWrapper = styled.div`
-  padding: 2rem 3rem;
+  padding: 1rem;
   max-width: 1200px;
   margin: 0 auto;
   font-family: 'Inter', sans-serif;
+
+  @media (min-width: 768px) {
+    padding: 2rem 3rem;
+  }
 
   .page-header {
     margin-bottom: 2rem;
@@ -377,6 +489,10 @@ const StyledWrapper = styled.div`
     @media (min-width: 768px) {
       grid-template-columns: repeat(2, 1fr);
     }
+
+    @media (min-width: 1024px) {
+      gap: 2rem;
+    }
   }
 
   .request-card {
@@ -385,19 +501,51 @@ const StyledWrapper = styled.div`
     border-radius: 1rem;
     overflow: hidden;
     display: flex;
+    align-items: stretch;
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    min-height: 160px;
 
     &:hover {
       transform: translateY(-4px);
       box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07);
     }
+
+    &.approved-card {
+      border-color: #10b981;
+      box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1);
+      
+      &:hover {
+        box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.15);
+      }
+    }
+
+    @media (min-width: 768px) {
+      min-height: 180px;
+    }
+  }
+
+  .book-cover-container {
+    width: 80px;
+    height: 100%;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 0.5rem 0 0 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: #f3f4f6;
+    
+    @media (min-width: 768px) {
+      width: 100px;
+    }
   }
 
   .book-cover {
-    width: 100px;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    flex-shrink: 0;
+    object-position: center;
+    display: block;
+    background-color: #f9fafb;
   }
 
   .card-content {
@@ -405,6 +553,20 @@ const StyledWrapper = styled.div`
     display: flex;
     flex-direction: column;
     flex-grow: 1;
+  }
+
+  .approval-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    color: #065f46;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    border: 1px solid #a7f3d0;
   }
 
   .card-header {
@@ -455,8 +617,14 @@ const StyledWrapper = styled.div`
 
   .card-actions {
     display: flex;
-    gap: 0.75rem;
+    flex-direction: column;
+    gap: 0.5rem;
     margin-top: 1rem;
+    
+    @media (min-width: 640px) {
+      flex-direction: row;
+      gap: 0.75rem;
+    }
     
     .btn {
       flex-grow: 1;
@@ -470,6 +638,12 @@ const StyledWrapper = styled.div`
       border-radius: 0.5rem;
       cursor: pointer;
       transition: background-color 0.2s;
+      text-decoration: none;
+      border: none;
+      
+      @media (min-width: 640px) {
+        padding: 0.7rem 1.2rem;
+      }
     }
     
     .deny-btn {
@@ -557,6 +731,177 @@ const StyledWrapper = styled.div`
     color: #4b5563;
     max-width: 400px;
     margin-top: 0.5rem;
+  }
+
+  /* Denied Requests Section */
+  .denied-requests-section {
+    position: relative;
+    margin-bottom: 2rem;
+  }
+
+  .denied-requests-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border: 1px solid #fca5a5;
+    border-radius: 0.75rem;
+    color: #dc2626;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: auto;
+    width: fit-content;
+
+    &:hover {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(220, 38, 38, 0.15);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+
+  .denied-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 9;
+    display: none;
+
+    @media (max-width: 640px) {
+      display: block;
+    }
+  }
+
+  .denied-requests-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 10;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    min-width: 400px;
+    max-width: 500px;
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 0.5rem;
+
+    @media (max-width: 640px) {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90vw;
+      max-width: 90vw;
+      min-width: unset;
+      z-index: 11;
+    }
+  }
+
+  .denied-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-bottom: 1px solid #fee2e2;
+  }
+
+  .denied-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #dc2626;
+    margin: 0;
+  }
+
+  .denied-close-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    background: #fee2e2;
+    color: #dc2626;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background: #fecaca;
+    }
+
+    @media (max-width: 640px) {
+      display: flex;
+    }
+  }
+
+  .denied-requests-list {
+    padding: 0.5rem;
+  }
+
+  .denied-request-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid #f3f4f6;
+
+    &:hover {
+      background-color: #f9fafb;
+    }
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .denied-book-cover {
+    width: 40px;
+    height: 60px;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 0.25rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+  }
+
+  .denied-book-info {
+    flex-grow: 1;
+    min-width: 0;
+  }
+
+  .denied-book-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 0.25rem 0;
+    line-height: 1.3;
+  }
+
+  .denied-book-owner {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin: 0 0 0.25rem 0;
+  }
+
+  .denied-book-date {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin: 0;
   }
 `;
 

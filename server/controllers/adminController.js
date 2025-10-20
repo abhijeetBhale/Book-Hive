@@ -32,7 +32,11 @@ export const getDashboardOverview = catchAsync(async (req, res, next) => {
       completedBorrowRequests,
       recentUsers,
       recentBooks,
-      systemStats
+      systemStats,
+      topCategories,
+      recentActivity,
+      topBooks,
+      bookSharingActivity
     ] = await Promise.all([
       User.countDocuments().catch(() => 0),
       Book.countDocuments().catch(() => 0),
@@ -45,7 +49,11 @@ export const getDashboardOverview = catchAsync(async (req, res, next) => {
       BorrowRequest.countDocuments({ status: 'returned' }).catch(() => 0),
       User.find().sort({ createdAt: -1 }).limit(5).select('name email createdAt avatar').catch(() => []),
       Book.find().sort({ createdAt: -1 }).limit(5).populate('owner', 'name').select('title author createdAt owner').catch(() => []),
-      getSystemStats().catch(() => ({ dailyActiveUsers: 0, dailyNewUsers: 0, dailyNewBooks: 0, dailyBorrowRequests: 0 }))
+      getSystemStats().catch(() => ({ dailyActiveUsers: 0, dailyNewUsers: 0, dailyNewBooks: 0, dailyBorrowRequests: 0 })),
+      getTopCategories().catch(() => []),
+      getRecentActivity().catch(() => []),
+      getTopBooksData().catch(() => []),
+      getBookSharingActivityData().catch(() => ({ monthly: [], quarterly: [], yearly: [] }))
     ]);
 
     // Calculate growth rates
@@ -78,9 +86,13 @@ export const getDashboardOverview = catchAsync(async (req, res, next) => {
         },
         recentActivity: {
           recentUsers,
-          recentBooks
+          recentBooks,
+          activities: recentActivity
         },
-        systemStats
+        systemStats,
+        topCategories,
+        topBooks,
+        bookSharingActivity
       }
     });
   } catch (error) {
@@ -252,7 +264,8 @@ export const getBooks = catchAsync(async (req, res, next) => {
     search,
     status,
     sortBy = 'createdAt',
-    sortOrder = 'desc'
+    sortOrder = 'desc',
+    all = false
   } = req.query;
 
   let query = {};
@@ -261,11 +274,12 @@ export const getBooks = catchAsync(async (req, res, next) => {
     query.$or = [
       { title: { $regex: search, $options: 'i' } },
       { author: { $regex: search, $options: 'i' } },
-      { isbn: { $regex: search, $options: 'i' } }
+      { isbn: { $regex: search, $options: 'i' } },
+      { category: { $regex: search, $options: 'i' } }
     ];
   }
 
-  if (status) {
+  if (status && status !== 'all') {
     if (status === 'available') {
       query.isAvailable = true;
     } else if (status === 'borrowed') {
@@ -276,25 +290,39 @@ export const getBooks = catchAsync(async (req, res, next) => {
   const sortOptions = {};
   sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
-  const books = await Book.find(query)
-    .populate('owner', 'name email')
+  let booksQuery = Book.find(query)
+    .populate('owner', 'name email avatar')
     .sort(sortOptions)
-    .limit(limit * 1)
-    .skip((page - 1) * limit)
     .lean();
 
+  // If not requesting all books, apply pagination
+  if (!all && limit !== 'all') {
+    booksQuery = booksQuery
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+  }
+
+  const books = await booksQuery;
   const total = await Book.countDocuments(query);
+
+  // Calculate pagination info
+  const pagination = all || limit === 'all' ? {
+    page: 1,
+    limit: total,
+    total,
+    pages: 1
+  } : {
+    page: parseInt(page),
+    limit: parseInt(limit),
+    total,
+    pages: Math.ceil(total / parseInt(limit))
+  };
 
   res.status(200).json({
     status: 'success',
     data: {
       books,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
+      pagination
     }
   });
 });
@@ -760,3 +788,324 @@ export const updateReport = catchAsync(async (req, res, next) => {
     }
   });
 });
+
+// @desc    Get book sharing activity data
+// @route   GET /api/admin/book-sharing-activity
+// @access  Private (Super Admin only)
+export const getBookSharingActivity = catchAsync(async (req, res, next) => {
+  const { period = 'monthly' } = req.query;
+  
+  const data = await getBookSharingActivityData();
+  
+  res.status(200).json({
+    status: 'success',
+    data: data[period] || data.monthly
+  });
+});
+
+// @desc    Get top categories data
+// @route   GET /api/admin/top-categories
+// @access  Private (Super Admin only)
+export const getTopCategoriesData = catchAsync(async (req, res, next) => {
+  const categories = await getTopCategories();
+  
+  res.status(200).json({
+    status: 'success',
+    data: categories
+  });
+});
+
+// Helper function to get top categories with real data
+async function getTopCategories() {
+  try {
+    const categories = await Book.aggregate([
+      {
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 },
+          books: { $push: { title: '$title', author: '$author' } }
+        }
+      },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+
+    const totalBooks = await Book.countDocuments();
+    
+    return categories.map(cat => ({
+      name: cat._id || 'Uncategorized',
+      count: cat.count,
+      percentage: totalBooks > 0 ? Math.round((cat.count / totalBooks) * 100) : 0,
+      books: cat.books.slice(0, 3) // Sample books
+    }));
+  } catch (error) {
+    console.error('Error getting top categories:', error);
+    return [];
+  }
+}
+
+// Helper function to get recent activity with real data
+async function getRecentActivity() {
+  try {
+    const [recentBooks, recentBorrows, recentUsers, recentClubs] = await Promise.all([
+      Book.find().sort({ createdAt: -1 }).limit(3)
+        .populate('owner', 'name')
+        .select('title author createdAt owner'),
+      BorrowRequest.find().sort({ createdAt: -1 }).limit(3)
+        .populate('book', 'title')
+        .populate('borrower', 'name')
+        .select('status createdAt book borrower'),
+      User.find().sort({ createdAt: -1 }).limit(2)
+        .select('name email createdAt'),
+      BookClub.find().sort({ createdAt: -1 }).limit(2)
+        .populate('creator', 'name')
+        .select('name createdAt creator members')
+    ]);
+
+    const activities = [];
+
+    // Add book activities
+    recentBooks.forEach(book => {
+      activities.push({
+        type: 'book_added',
+        title: 'New Book Added',
+        description: `${book.title} by ${book.author}`,
+        user: book.owner?.name || 'Unknown User',
+        timestamp: book.createdAt,
+        icon: 'book',
+        color: 'blue'
+      });
+    });
+
+    // Add borrow activities
+    recentBorrows.forEach(borrow => {
+      activities.push({
+        type: 'borrow_request',
+        title: `Book ${borrow.status === 'pending' ? 'Requested' : borrow.status === 'approved' ? 'Approved' : 'Returned'}`,
+        description: `${borrow.book?.title || 'Unknown Book'}`,
+        user: borrow.borrower?.name || 'Unknown User',
+        timestamp: borrow.createdAt,
+        icon: 'arrow-right',
+        color: borrow.status === 'approved' ? 'green' : borrow.status === 'pending' ? 'yellow' : 'purple'
+      });
+    });
+
+    // Add user activities
+    recentUsers.forEach(user => {
+      activities.push({
+        type: 'user_joined',
+        title: 'New User Joined',
+        description: `${user.name} joined BookHive`,
+        user: user.name,
+        timestamp: user.createdAt,
+        icon: 'user-plus',
+        color: 'green'
+      });
+    });
+
+    // Add club activities
+    recentClubs.forEach(club => {
+      activities.push({
+        type: 'club_created',
+        title: 'New Book Club',
+        description: `${club.name} created`,
+        user: club.creator?.name || 'Unknown User',
+        timestamp: club.createdAt,
+        icon: 'users',
+        color: 'purple'
+      });
+    });
+
+    // Sort by timestamp and return latest 8
+    return activities
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 8);
+
+  } catch (error) {
+    console.error('Error getting recent activity:', error);
+    return [];
+  }
+}
+
+// Helper function to get top books with real data
+async function getTopBooksData() {
+  try {
+    const topBooks = await Book.aggregate([
+      {
+        $lookup: {
+          from: 'borrowrequests',
+          localField: '_id',
+          foreignField: 'book',
+          as: 'borrowRequests'
+        }
+      },
+      {
+        $addFields: {
+          borrowCount: { $size: '$borrowRequests' },
+          completedBorrows: {
+            $size: {
+              $filter: {
+                input: '$borrowRequests',
+                cond: { $eq: ['$$this.status', 'returned'] }
+              }
+            }
+          }
+        }
+      },
+      { $sort: { borrowCount: -1, viewCount: -1 } },
+      { $limit: 10 },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'owner',
+          foreignField: '_id',
+          as: 'owner'
+        }
+      },
+      {
+        $project: {
+          title: 1,
+          author: 1,
+          category: 1,
+          coverImage: 1,
+          borrowCount: 1,
+          completedBorrows: 1,
+          viewCount: 1,
+          rating: 1,
+          isAvailable: 1,
+          'owner.name': 1
+        }
+      }
+    ]);
+
+    return topBooks;
+  } catch (error) {
+    console.error('Error getting top books:', error);
+    return [];
+  }
+}
+
+// Helper function to get book sharing activity data for different periods
+async function getBookSharingActivityData() {
+  try {
+    const now = new Date();
+    
+    // Monthly data (last 12 months)
+    const monthlyData = await BorrowRequest.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: new Date(now.getFullYear() - 1, now.getMonth(), 1) }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          totalRequests: { $sum: 1 },
+          approvedRequests: {
+            $sum: { $cond: [{ $eq: ['$status', 'approved'] }, 1, 0] }
+          },
+          completedRequests: {
+            $sum: { $cond: [{ $eq: ['$status', 'returned'] }, 1, 0] }
+          }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ]);
+
+    // Quarterly data (last 8 quarters)
+    const quarterlyData = await BorrowRequest.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: new Date(now.getFullYear() - 2, 0, 1) }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            quarter: { $ceil: { $divide: [{ $month: '$createdAt' }, 3] } }
+          },
+          totalRequests: { $sum: 1 },
+          approvedRequests: {
+            $sum: { $cond: [{ $eq: ['$status', 'approved'] }, 1, 0] }
+          },
+          completedRequests: {
+            $sum: { $cond: [{ $eq: ['$status', 'returned'] }, 1, 0] }
+          }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.quarter': 1 } }
+    ]);
+
+    // Yearly data (last 5 years)
+    const yearlyData = await BorrowRequest.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: new Date(now.getFullYear() - 5, 0, 1) }
+        }
+      },
+      {
+        $group: {
+          _id: { year: { $year: '$createdAt' } },
+          totalRequests: { $sum: 1 },
+          approvedRequests: {
+            $sum: { $cond: [{ $eq: ['$status', 'approved'] }, 1, 0] }
+          },
+          completedRequests: {
+            $sum: { $cond: [{ $eq: ['$status', 'returned'] }, 1, 0] }
+          }
+        }
+      },
+      { $sort: { '_id.year': 1 } }
+    ]);
+
+    // Also get new books data for the same periods
+    const monthlyBooks = await Book.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: new Date(now.getFullYear() - 1, now.getMonth(), 1) }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          newBooks: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ]);
+
+    return {
+      monthly: monthlyData.map(item => ({
+        period: `${item._id.year}-${String(item._id.month).padStart(2, '0')}`,
+        totalRequests: item.totalRequests,
+        approvedRequests: item.approvedRequests,
+        completedRequests: item.completedRequests,
+        newBooks: monthlyBooks.find(book => 
+          book._id.year === item._id.year && book._id.month === item._id.month
+        )?.newBooks || 0
+      })),
+      quarterly: quarterlyData.map(item => ({
+        period: `${item._id.year}-Q${item._id.quarter}`,
+        totalRequests: item.totalRequests,
+        approvedRequests: item.approvedRequests,
+        completedRequests: item.completedRequests
+      })),
+      yearly: yearlyData.map(item => ({
+        period: item._id.year.toString(),
+        totalRequests: item.totalRequests,
+        approvedRequests: item.approvedRequests,
+        completedRequests: item.completedRequests
+      }))
+    };
+  } catch (error) {
+    console.error('Error getting book sharing activity:', error);
+    return { monthly: [], quarterly: [], yearly: [] };
+  }
+}

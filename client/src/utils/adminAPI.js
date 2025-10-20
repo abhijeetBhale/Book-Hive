@@ -32,6 +32,8 @@ export const adminAPIService = {
   // Dashboard
   getDashboard: () => adminAPI.get('/dashboard'),
   getAnalytics: (period = '30d') => adminAPI.get(`/analytics?period=${period}`),
+  getBookSharingActivity: (period = 'monthly') => adminAPI.get(`/book-sharing-activity?period=${period}`),
+  getTopCategories: () => adminAPI.get('/top-categories'),
 
   // User Management
   getUsers: (params = {}) => adminAPI.get('/users', { params }),

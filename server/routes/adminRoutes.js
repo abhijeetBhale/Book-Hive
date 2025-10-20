@@ -13,7 +13,9 @@ import {
   updateBookClub,
   deleteBookClub,
   getReports,
-  updateReport
+  updateReport,
+  getBookSharingActivity,
+  getTopCategoriesData
 } from '../controllers/adminController.js';
 import { superAdminAuth, auditLogger } from '../middleware/adminAuth.js';
 
@@ -29,37 +31,9 @@ router.use(superAdminAuth);
 
 // Dashboard routes
 router.get('/dashboard', auditLogger('VIEW_DASHBOARD'), getDashboardOverview);
-router.get('/dashboard-simple', auditLogger('VIEW_DASHBOARD_SIMPLE'), (req, res) => {
-  res.json({
-    status: 'success',
-    data: {
-      overview: {
-        totalUsers: 0,
-        totalBooks: 0,
-        totalBorrowRequests: 0,
-        totalClubs: 0,
-        activeUsers: 0,
-        newUsersThisMonth: 0,
-        newBooksThisMonth: 0,
-        activeBorrowRequests: 0,
-        completedBorrowRequests: 0,
-        userGrowthRate: 0,
-        bookGrowthRate: 0
-      },
-      recentActivity: {
-        recentUsers: [],
-        recentBooks: []
-      },
-      systemStats: {
-        dailyActiveUsers: 0,
-        dailyNewUsers: 0,
-        dailyNewBooks: 0,
-        dailyBorrowRequests: 0
-      }
-    }
-  });
-});
 router.get('/analytics', auditLogger('VIEW_ANALYTICS'), getAnalytics);
+router.get('/book-sharing-activity', auditLogger('VIEW_BOOK_SHARING_ACTIVITY'), getBookSharingActivity);
+router.get('/top-categories', auditLogger('VIEW_TOP_CATEGORIES'), getTopCategoriesData);
 
 // User management routes
 router.get('/users', auditLogger('VIEW_USERS'), getUsers);
