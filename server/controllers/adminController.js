@@ -4,6 +4,9 @@ import BorrowRequest from '../models/BorrowRequest.js';
 import BookClub from '../models/BookClub.js';
 import Achievement from '../models/Achievement.js';
 import UserStats from '../models/UserStats.js';
+import Report from '../models/Report.js';
+import Notification from '../models/Notification.js';
+import mongoose from 'mongoose';
 import { catchAsync } from '../utils/catchAsync.js';
 import AppError from '../utils/appError.js';
 
@@ -757,37 +760,198 @@ export const deleteBookClub = catchAsync(async (req, res, next) => {
   });
 });
 
-// @desc    Get reports (placeholder for future implementation)
+// @desc    Get reports
 // @route   GET /api/admin/reports
 // @access  Private (Super Admin only)
 export const getReports = catchAsync(async (req, res, next) => {
-  // Placeholder - implement when you add reports model
+  const { page = 1, limit = 20, search = '', status = 'all' } = req.query;
+  
+  // Build query
+  let query = {};
+  
+  // Status filter
+  if (status !== 'all') {
+    query.status = status;
+  }
+  
+  // Search filter
+  if (search) {
+    query.$or = [
+      { reason: { $regex: search, $options: 'i' } },
+      { description: { $regex: search, $options: 'i' } }
+    ];
+  }
+  
+  // Get reports with pagination
+  const reports = await Report.find(query)
+    .populate('reporterId', 'name email avatar')
+    .populate('reportedUserId', 'name email avatar isActive')
+    .sort({ createdAt: -1 })
+    .limit(limit * 1)
+    .skip((page - 1) * limit);
+  
+  const total = await Report.countDocuments(query);
+  
+  // Transform data for frontend
+  const transformedReports = reports.map(report => ({
+    _id: report._id,
+    reason: report.reason,
+    description: report.description,
+    status: report.status,
+    createdAt: report.createdAt,
+    updatedAt: report.updatedAt,
+    reportedBy: {
+      _id: report.reporterId?._id,
+      name: report.reporterId?.name || 'Deleted User',
+      email: report.reporterId?.email || 'N/A',
+      avatar: report.reporterId?.avatar
+    },
+    reportedUser: {
+      _id: report.reportedUserId?._id,
+      name: report.reportedUserId?.name || 'Deleted User',
+      email: report.reportedUserId?.email || 'N/A',
+      avatar: report.reportedUserId?.avatar,
+      isActive: report.reportedUserId?.isActive
+    }
+  }));
+  
   res.status(200).json({
     status: 'success',
     data: {
-      reports: [],
+      reports: transformedReports,
       pagination: {
-        page: 1,
-        limit: 20,
-        total: 0,
-        pages: 0
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
       }
     }
   });
 });
 
-// @desc    Update report (placeholder for future implementation)
+// @desc    Update report status and take action
 // @route   PUT /api/admin/reports/:id
 // @access  Private (Super Admin only)
 export const updateReport = catchAsync(async (req, res, next) => {
-  // Placeholder - implement when you add reports model
+  const { id } = req.params;
+  const { status, action, actionData } = req.body;
+  
+  const report = await Report.findById(id).populate('reportedUserId');
+  
+  if (!report) {
+    return next(new AppError('Report not found', 404));
+  }
+  
+  // Update report status
+  if (status) {
+    report.status = status;
+  }
+  
+  // Take action on reported user if specified
+  if (action && report.reportedUserId) {
+    const reportedUser = report.reportedUserId;
+    
+    switch (action) {
+      case 'warn':
+        // Create a warning notification for the user
+        await createUserNotification(reportedUser._id, {
+          type: 'warning',
+          title: 'Community Guidelines Warning',
+          message: actionData?.message || 'You have received a warning for violating our community guidelines. Please review our terms of service.',
+          severity: 'warning'
+        });
+        break;
+        
+      case 'ban':
+        // Ban user for specified duration
+        const banDuration = actionData?.duration || 7; // days
+        const banUntil = new Date();
+        banUntil.setDate(banUntil.getDate() + banDuration);
+        
+        reportedUser.banStatus = {
+          isBanned: true,
+          banUntil: banUntil,
+          reason: actionData?.reason || 'Violation of community guidelines',
+          bannedBy: req.user._id
+        };
+        
+        await reportedUser.save();
+        
+        // Create notification
+        await createUserNotification(reportedUser._id, {
+          type: 'ban',
+          title: 'Account Temporarily Suspended',
+          message: `Your account has been suspended until ${banUntil.toLocaleDateString()} for: ${actionData?.reason || 'Violation of community guidelines'}`,
+          severity: 'error'
+        });
+        break;
+        
+      case 'delete':
+        // Deactivate user account
+        reportedUser.isActive = false;
+        reportedUser.deactivatedAt = new Date();
+        reportedUser.deactivatedBy = req.user._id;
+        reportedUser.deactivationReason = actionData?.reason || 'Account deleted due to policy violation';
+        
+        await reportedUser.save();
+        
+        // Create notification
+        await createUserNotification(reportedUser._id, {
+          type: 'account_deleted',
+          title: 'Account Deactivated',
+          message: `Your account has been deactivated for: ${actionData?.reason || 'Policy violation'}`,
+          severity: 'error'
+        });
+        break;
+        
+      case 'dismiss':
+        // No action taken, just update report status
+        break;
+    }
+  }
+  
+  // Add admin action log
+  report.adminActions = report.adminActions || [];
+  report.adminActions.push({
+    action: action || 'status_update',
+    actionBy: req.user._id,
+    actionData: actionData,
+    timestamp: new Date()
+  });
+  
+  await report.save();
+  
   res.status(200).json({
     status: 'success',
     data: {
-      message: 'Report updated successfully'
+      message: 'Report updated successfully',
+      report: report
     }
   });
 });
+
+// Helper function to create user notifications
+const createUserNotification = async (userId, notificationData) => {
+  try {
+    await Notification.create({
+      userId: userId,
+      type: notificationData.type,
+      title: notificationData.title,
+      message: notificationData.message,
+      severity: notificationData.severity,
+      isRead: false,
+      metadata: {
+        actionType: notificationData.type,
+        timestamp: new Date()
+      }
+    });
+    
+    console.log(`Notification created for user ${userId}: ${notificationData.title}`);
+  } catch (error) {
+    console.error('Error creating user notification:', error);
+    // Don't fail the main operation if notification fails
+  }
+};
 
 // @desc    Get book sharing activity data
 // @route   GET /api/admin/book-sharing-activity

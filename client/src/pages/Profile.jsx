@@ -5,7 +5,7 @@ import { authAPI, borrowAPI, messagesAPI, reportAPI, usersAPI } from '../utils/a
 import toast from 'react-hot-toast';
 
 // Import new icons for the password fields
-import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy, Shield, Activity, RefreshCw } from 'lucide-react';
+import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy, Shield, Activity, RefreshCw, Search, CheckCircle, ChevronRight } from 'lucide-react';
 import GamificationSection from '../components/profile/GamificationSection';
 
 const Profile = () => {
@@ -869,32 +869,103 @@ const Profile = () => {
                 <ArrowLeft size={20} /> Back to Security
               </button>
               <h3>Report a User</h3>
-              <p>Help us keep the community safe by reporting inappropriate behavior.</p>
+              <p>Help us keep the community safe by reporting inappropriate behavior or violations.</p>
+            </div>
+
+            {/* Report Guidelines */}
+            <div className="report-guidelines">
+              <div className="guidelines-header">
+                <AlertTriangle className="w-5 h-5 text-orange-500" />
+                <h4>Reporting Guidelines</h4>
+              </div>
+              <div className="guidelines-content">
+                <p>Please only report users for genuine violations of our community standards:</p>
+                <ul>
+                  <li>• Harassment, bullying, or threatening behavior</li>
+                  <li>• Fraudulent activities or scams</li>
+                  <li>• Inappropriate or offensive content</li>
+                  <li>• Fake profiles or impersonation</li>
+                  <li>• Spam or unwanted solicitation</li>
+                </ul>
+                <p className="warning-text">
+                  <strong>Note:</strong> False reports may result in action against your account.
+                </p>
+              </div>
             </div>
 
             <form onSubmit={handleSubmitReport}>
-              <div className="search-section">
-                <h4>Step 1: Find the user you want to report</h4>
+              {/* Step 1: User Search */}
+              <div className="report-step">
+                <div className="step-header">
+                  <div className="step-number">1</div>
+                  <h4>Find the user you want to report</h4>
+                </div>
+                
                 <div className="search-form">
                   <div className="input-field">
-                    <input
-                      type="text"
-                      placeholder="Search by username"
-                      value={searchTerm}
-                      onChange={handleSearchInputChange}
-                    />
-                    {searchLoading && (
-                      <div className="search-loading">Searching...</div>
-                    )}
+                    <label>Search for user</label>
+                    <div className="search-input-wrapper">
+                      <Search className="search-icon" size={20} />
+                      <input
+                        type="text"
+                        placeholder="Enter username or email address"
+                        value={searchTerm}
+                        onChange={handleSearchInputChange}
+                        className="search-input"
+                      />
+                      {searchLoading && (
+                        <div className="search-loading">
+                          <Loader className="animate-spin" size={16} />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {searchResults.length > 0 && (
+                {/* Selected User Display */}
+                {reportData.reportedUserId && (
+                  <div className="selected-user">
+                    <div className="selected-user-header">
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                      <span>Selected User</span>
+                    </div>
+                    {searchResults.find(u => u._id === reportData.reportedUserId) && (
+                      <div className="user-card selected">
+                        <img
+                          src={searchResults.find(u => u._id === reportData.reportedUserId).avatar || 
+                               `https://ui-avatars.com/api/?name=${searchResults.find(u => u._id === reportData.reportedUserId).name}&background=818cf8&color=fff`}
+                          alt={searchResults.find(u => u._id === reportData.reportedUserId).name}
+                          className="user-avatar"
+                        />
+                        <div className="user-info">
+                          <strong>{searchResults.find(u => u._id === reportData.reportedUserId).name}</strong>
+                          <span>{searchResults.find(u => u._id === reportData.reportedUserId).email}</span>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setReportData(prev => ({ ...prev, reportedUserId: '' }));
+                            setSearchTerm('');
+                          }}
+                          className="remove-selection"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Search Results */}
+                {searchResults.length > 0 && !reportData.reportedUserId && (
                   <div className="search-results">
+                    <div className="results-header">
+                      <span>{searchResults.length} user{searchResults.length !== 1 ? 's' : ''} found</span>
+                    </div>
                     {searchResults.map(user => (
                       <div
                         key={user._id}
-                        className="search-result-item"
+                        className="user-card clickable"
                         onClick={() => handleSelectUser(user)}
                       >
                         <img
@@ -906,58 +977,137 @@ const Profile = () => {
                           <strong>{user.name}</strong>
                           <span>{user.email}</span>
                         </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
                       </div>
                     ))}
                   </div>
                 )}
 
                 {searchResults.length === 0 && searchTerm && !searchLoading && (
-                  <p className="no-results">No users found. Try a different search term.</p>
+                  <div className="no-results">
+                    <User className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p>No users found matching "{searchTerm}"</p>
+                    <p className="text-sm">Try searching with a different username or email</p>
+                  </div>
                 )}
               </div>
 
+              {/* Step 2: Report Details */}
               {reportData.reportedUserId && (
-                <div className="report-details">
-                  <h4>Step 2: Provide report details</h4>
-                  <div className="input-field">
-                    <label>Reason for report:</label>
-                    <select
-                      name="reason"
-                      value={reportData.reason}
-                      onChange={handleReportChange}
-                      required
-                    >
-                      <option value="">Select a reason</option>
-                      <option value="inappropriate_behavior">Inappropriate Behavior</option>
-                      <option value="scam">Scam or Fraud</option>
-                      <option value="fake_listing">Fake Book Listing</option>
-                      <option value="harassment">Harassment</option>
-                      <option value="other">Other</option>
-                    </select>
+                <div className="report-step">
+                  <div className="step-header">
+                    <div className="step-number">2</div>
+                    <h4>Provide report details</h4>
                   </div>
+                  
+                  <div className="report-form">
+                    <div className="input-field">
+                      <label>What type of violation is this?</label>
+                      <select
+                        name="reason"
+                        value={reportData.reason}
+                        onChange={handleReportChange}
+                        required
+                        className="report-select"
+                      >
+                        <option value="">Select a violation type</option>
+                        <option value="harassment">Harassment or Bullying</option>
+                        <option value="inappropriate_behavior">Inappropriate Behavior</option>
+                        <option value="scam">Scam or Fraudulent Activity</option>
+                        <option value="fake_listing">Fake Book Listings</option>
+                        <option value="spam">Spam or Unwanted Messages</option>
+                        <option value="impersonation">Fake Profile or Impersonation</option>
+                        <option value="threats">Threats or Violence</option>
+                        <option value="other">Other Violation</option>
+                      </select>
+                    </div>
 
-                  <div className="input-field">
-                    <label>Description:</label>
-                    <textarea
-                      name="description"
-                      placeholder="Please provide details about the issue"
-                      value={reportData.description}
-                      onChange={handleReportChange}
-                      required
-                      rows={5}
-                    />
+                    <div className="input-field">
+                      <label>Detailed description</label>
+                      <textarea
+                        name="description"
+                        placeholder="Please provide specific details about what happened, including dates, messages, or actions that violate our community guidelines..."
+                        value={reportData.description}
+                        onChange={handleReportChange}
+                        required
+                        rows={6}
+                        className="report-textarea"
+                      />
+                      <div className="character-count">
+                        {reportData.description.length}/1000 characters
+                      </div>
+                    </div>
+
+                    {/* Evidence Upload (Future Enhancement) */}
+                    <div className="evidence-section">
+                      <label>Evidence (Optional)</label>
+                      <div className="evidence-upload">
+                        <div className="upload-placeholder">
+                          <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                          <p>Screenshots or other evidence</p>
+                          <p className="text-sm text-gray-500">Coming soon - For now, please describe evidence in detail above</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Submit */}
+              {reportData.reportedUserId && reportData.reason && reportData.description && (
+                <div className="report-step">
+                  <div className="step-header">
+                    <div className="step-number">3</div>
+                    <h4>Review and submit</h4>
+                  </div>
+                  
+                  <div className="report-summary">
+                    <div className="summary-card">
+                      <h5>Report Summary</h5>
+                      <div className="summary-item">
+                        <strong>Reported User:</strong> 
+                        <span>{searchResults.find(u => u._id === reportData.reportedUserId)?.name || 'Selected User'}</span>
+                      </div>
+                      <div className="summary-item">
+                        <strong>Violation Type:</strong> 
+                        <span>{reportData.reason.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                      </div>
+                      <div className="summary-item">
+                        <strong>Description:</strong> 
+                        <span>{reportData.description.substring(0, 100)}{reportData.description.length > 100 ? '...' : ''}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="submission-notice">
+                      <AlertTriangle className="w-5 h-5 text-amber-500" />
+                      <div>
+                        <p><strong>Before you submit:</strong></p>
+                        <p>Our moderation team will review this report within 24-48 hours. You'll be notified of any actions taken.</p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="form-footer">
                     <button type="button" onClick={() => setActiveTab('security')} className="cancel-btn">
+                      <ArrowLeft size={16} />
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="save-btn"
-                      disabled={loading || !reportData.reason || !reportData.description}
+                      className="submit-report-btn"
+                      disabled={loading}
                     >
-                      {loading ? <Loader className="animate-spin" size={16} /> : 'Submit Report'}
+                      {loading ? (
+                        <>
+                          <Loader className="animate-spin" size={16} />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle size={16} />
+                          Submit Report
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1649,6 +1799,354 @@ const StyledWrapper = styled.div`
       &:hover {
         background-color: #fee2e2;
         border-color: #fca5a5;
+      }
+    }
+
+    /* Enhanced Report User Styles */
+    .report-guidelines {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 1px solid #f59e0b;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      
+      .guidelines-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        
+        h4 {
+          font-size: 1.125rem;
+          font-weight: 600;
+          color: #92400e;
+          margin: 0;
+        }
+      }
+      
+      .guidelines-content {
+        color: #92400e;
+        
+        p {
+          margin-bottom: 0.75rem;
+          line-height: 1.5;
+        }
+        
+        ul {
+          margin: 1rem 0;
+          padding-left: 1.25rem;
+          
+          li {
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+          }
+        }
+        
+        .warning-text {
+          background: rgba(146, 64, 14, 0.1);
+          padding: 0.75rem;
+          border-radius: 0.5rem;
+          margin-top: 1rem;
+          font-size: 0.875rem;
+        }
+      }
+    }
+
+    .report-step {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      
+      .step-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        
+        .step-number {
+          width: 2rem;
+          height: 2rem;
+          background: #4f46e5;
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          font-size: 0.875rem;
+        }
+        
+        h4 {
+          font-size: 1.125rem;
+          font-weight: 600;
+          color: #111827;
+          margin: 0;
+        }
+      }
+    }
+
+    .search-input-wrapper {
+      position: relative;
+      
+      .search-icon {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+      }
+      
+      .search-input {
+        width: 100%;
+        padding: 0.75rem 1rem 0.75rem 2.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        transition: all 0.2s;
+        
+        &:focus {
+          outline: none;
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+        }
+      }
+      
+      .search-loading {
+        position: absolute;
+        right: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6b7280;
+      }
+    }
+
+    .selected-user {
+      margin-top: 1rem;
+      
+      .selected-user-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #059669;
+      }
+    }
+
+    .user-card {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      transition: all 0.2s;
+      
+      &.clickable {
+        cursor: pointer;
+        
+        &:hover {
+          background-color: #f9fafb;
+          border-color: #4f46e5;
+        }
+      }
+      
+      &.selected {
+        background-color: #f0fdf4;
+        border-color: #22c55e;
+      }
+      
+      .user-avatar {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-right: 1rem;
+      }
+      
+      .user-info {
+        flex: 1;
+        
+        strong {
+          display: block;
+          font-weight: 600;
+          color: #111827;
+          margin-bottom: 0.25rem;
+        }
+        
+        span {
+          font-size: 0.875rem;
+          color: #6b7280;
+        }
+      }
+      
+      .remove-selection {
+        background: none;
+        border: none;
+        color: #ef4444;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        transition: background-color 0.2s;
+        
+        &:hover {
+          background-color: #fee2e2;
+        }
+      }
+    }
+
+    .search-results {
+      margin-top: 1rem;
+      
+      .results-header {
+        padding: 0.5rem 0;
+        font-size: 0.875rem;
+        color: #6b7280;
+        border-bottom: 1px solid #e5e7eb;
+        margin-bottom: 0.5rem;
+      }
+      
+      .user-card + .user-card {
+        margin-top: 0.5rem;
+      }
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 2rem;
+      color: #6b7280;
+      
+      p {
+        margin: 0.5rem 0;
+        
+        &:first-of-type {
+          font-weight: 500;
+          color: #374151;
+        }
+      }
+    }
+
+    .report-form {
+      .report-select, .report-textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        transition: all 0.2s;
+        
+        &:focus {
+          outline: none;
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+        }
+      }
+      
+      .character-count {
+        text-align: right;
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin-top: 0.5rem;
+      }
+    }
+
+    .evidence-section {
+      .evidence-upload {
+        border: 2px dashed #d1d5db;
+        border-radius: 0.5rem;
+        padding: 2rem;
+        text-align: center;
+        background-color: #f9fafb;
+        
+        .upload-placeholder {
+          color: #6b7280;
+          
+          p {
+            margin: 0.5rem 0;
+            
+            &:first-of-type {
+              font-weight: 500;
+            }
+          }
+        }
+      }
+    }
+
+    .report-summary {
+      .summary-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        
+        h5 {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #1e293b;
+          margin: 0 0 1rem 0;
+        }
+        
+        .summary-item {
+          display: flex;
+          margin-bottom: 0.75rem;
+          
+          strong {
+            min-width: 8rem;
+            color: #475569;
+            font-weight: 500;
+          }
+          
+          span {
+            color: #1e293b;
+          }
+        }
+      }
+      
+      .submission-notice {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+        background: #fffbeb;
+        border: 1px solid #fbbf24;
+        border-radius: 0.5rem;
+        
+        div {
+          p {
+            margin: 0.25rem 0;
+            color: #92400e;
+            font-size: 0.875rem;
+            
+            &:first-child {
+              font-weight: 600;
+            }
+          }
+        }
+      }
+    }
+
+    .submit-report-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      
+      &:hover:not(:disabled) {
+        background: #b91c1c;
+      }
+      
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
     }
     

@@ -6,7 +6,7 @@ import User from '../models/User.js';
 export const createReport = async (req, res) => {
   try {
     const { reportedUserId, reason, description } = req.body;
-    const reporterId = req.user.id;
+    const reporterId = req.user._id;
 
     // Check if reported user exists
     const reportedUser = await User.findById(reportedUserId);
@@ -54,7 +54,7 @@ export const createReport = async (req, res) => {
 // @route   GET /api/reports/my-reports
 export const getMyReports = async (req, res) => {
   try {
-    const reports = await Report.find({ reporterId: req.user.id })
+    const reports = await Report.find({ reporterId: req.user._id })
       .populate('reportedUserId', 'name avatar')
       .sort({ createdAt: -1 });
 

@@ -272,6 +272,8 @@ export const reportAPI = {
   getMyReports: () => api.get("/reports/my-reports"),
 };
 
+
+
 export const testimonialAPI = {
   createTestimonial: (testimonialData) =>
     api.post("/testimonials", testimonialData).then(res => res.data),
@@ -295,6 +297,7 @@ export const notificationsAPI = {
   markRead: () => api.put('/notifications/mark-read').then(res => res.data),
   markAsRead: (notificationIds) => api.put('/notifications/mark-read', { notificationIds }).then(res => res.data),
   markAllAsRead: () => api.put('/notifications/mark-all-read').then(res => res.data),
+  getModerationNotifications: () => api.get('/notifications/moderation'),
   createBookInquiry: ({ toUserId, subject, body }) => api.post('/notifications/book-inquiry', { toUserId, subject, body }),
   listBookInquiries: (params) => api.get('/notifications/book-inquiry', { params }),
   createTest: () => api.post('/notifications/test').then(res => res.data),

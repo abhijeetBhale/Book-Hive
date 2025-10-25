@@ -40,6 +40,9 @@ import {
 import { AuthContext } from '../context/AuthContext';
 import { adminAPIService } from '../utils/adminAPI';
 import { Navigate } from 'react-router-dom';
+import ReportActionModal from '../components/admin/ReportActionModal';
+import ActionSuccessModal from '../components/admin/ActionSuccessModal';
+import ReportDetailsModal from '../components/admin/ReportDetailsModal';
 
 // Import new admin components
 import BookSharingActivity from '../components/admin/BookSharingActivity';
@@ -90,6 +93,23 @@ const AdminDashboard = () => {
     maintenanceMode: false,
     publicRegistration: true,
     autoApproveBooks: true
+  });
+
+  // Modal states for report actions
+  const [reportActionModal, setReportActionModal] = useState({
+    isOpen: false,
+    action: null,
+    report: null
+  });
+  const [successModal, setSuccessModal] = useState({
+    isOpen: false,
+    action: null,
+    report: null,
+    actionData: null
+  });
+  const [detailsModal, setDetailsModal] = useState({
+    isOpen: false,
+    report: null
   });
 
   // Check if user has admin access
@@ -366,6 +386,59 @@ const AdminDashboard = () => {
     }
   };
 
+  // Report action handlers
+  // Report action handlers
+  const handleReportAction = (reportId, action, report) => {
+    setReportActionModal({
+      isOpen: true,
+      action: action,
+      report: { ...report, _id: reportId }
+    });
+  };
+
+  const handleConfirmReportAction = async (actionData) => {
+    const { action, report } = reportActionModal;
+
+    try {
+      await adminAPIService.takeReportAction(report._id, action, actionData);
+
+      // Close action modal and show success modal
+      setReportActionModal({ isOpen: false, action: null, report: null });
+      setSuccessModal({
+        isOpen: true,
+        action: action,
+        report: report,
+        actionData: actionData
+      });
+
+      // Refresh the reports list
+      fetchReports();
+    } catch (error) {
+      console.error('Error taking report action:', error);
+      // You could add an error modal here too
+      alert(`Failed to ${action} user. Please try again.`);
+    }
+  };
+
+  const handleViewReportDetails = (report) => {
+    setDetailsModal({
+      isOpen: true,
+      report: report
+    });
+  };
+
+  const closeReportActionModal = () => {
+    setReportActionModal({ isOpen: false, action: null, report: null });
+  };
+
+  const closeSuccessModal = () => {
+    setSuccessModal({ isOpen: false, action: null, report: null, actionData: null });
+  };
+
+  const closeDetailsModal = () => {
+    setDetailsModal({ isOpen: false, report: null });
+  };
+
   // Redirect if not admin
   if (!hasAdminAccess) {
     return <Navigate to="/" replace />;
@@ -575,8 +648,8 @@ const AdminDashboard = () => {
                         </span>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
+                        <div className="text-sm font-medium text-gray-900">{user.name || 'No name'}</div>
+                        <div className="text-sm text-gray-500">{user.email || 'No email'}</div>
                       </div>
                     </div>
                   </td>
@@ -837,8 +910,8 @@ const AdminDashboard = () => {
                           )}
                         </div>
                         <div className="ml-4 min-w-0">
-                          <div className="text-sm font-medium text-gray-900 truncate">{book.title}</div>
-                          <div className="text-sm text-gray-500 truncate">by {book.author}</div>
+                          <div className="text-sm font-medium text-gray-900 truncate">{book.title || 'Untitled Book'}</div>
+                          <div className="text-sm text-gray-500 truncate">by {book.author || 'Unknown Author'}</div>
                           {book.isbn && (
                             <div className="text-xs text-gray-400">ISBN: {book.isbn}</div>
                           )}
@@ -1107,6 +1180,25 @@ const AdminDashboard = () => {
                 request.borrower?.name?.toLowerCase().includes(filters.search.toLowerCase())
               ).filter(request =>
                 filters.status === 'all' || request.status === filters.status
+              ).length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-12 text-center">
+                    <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Borrow Requests Found</h3>
+                    <p className="text-gray-600">
+                      {filters.search || filters.status !== 'all'
+                        ? 'Try adjusting your search or filters.'
+                        : 'Borrow requests will appear here when users request books.'
+                      }
+                    </p>
+                  </td>
+                </tr>
+              ) : borrowRequests.filter(request =>
+                filters.search === '' ||
+                request.book?.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
+                request.borrower?.name?.toLowerCase().includes(filters.search.toLowerCase())
+              ).filter(request =>
+                filters.status === 'all' || request.status === filters.status
               ).map((request) => (
                 <tr key={request._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -1115,17 +1207,21 @@ const AdminDashboard = () => {
                         <BookOpen className="w-5 h-5 text-blue-600" />
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{request.book.title}</div>
-                        <div className="text-sm text-gray-500">by {request.book.author}</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {request.book?.title || 'Book Deleted'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          by {request.book?.author || 'Unknown Author'}
+                        </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{request.borrower.name}</div>
-                    <div className="text-sm text-gray-500">{request.borrower.email}</div>
+                    <div className="text-sm text-gray-900">{request.borrower?.name || 'Unknown User'}</div>
+                    <div className="text-sm text-gray-500">{request.borrower?.email || 'No email'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{request.owner.name}</div>
+                    <div className="text-sm text-gray-900">{request.owner?.name || 'Unknown Owner'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs rounded-full ${request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -1230,13 +1326,13 @@ const AdminDashboard = () => {
         ).map((club) => (
           <div key={club._id} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">{club.name}</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{club.name || 'Unnamed Club'}</h3>
               <span className={`inline-flex px-2 py-1 text-xs rounded-full ${club.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                 }`}>
                 {club.isActive ? 'Active' : 'Inactive'}
               </span>
             </div>
-            <p className="text-gray-600 mb-4">{club.description}</p>
+            <p className="text-gray-600 mb-4">{club.description || 'No description available'}</p>
             <div className="flex items-center justify-between">
               <div className="flex items-center text-sm text-gray-500">
                 <Users className="w-4 h-4 mr-1" />
@@ -1566,7 +1662,7 @@ const AdminDashboard = () => {
                     report.status === 'resolved' ? 'bg-green-400' :
                       'bg-gray-400'
                     }`}></div>
-                  <h3 className="text-lg font-semibold text-gray-900">{report.reason}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">{report.reason || 'No reason provided'}</h3>
                   <span className={`ml-3 inline-flex px-2 py-1 text-xs rounded-full ${report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                     report.status === 'resolved' ? 'bg-green-100 text-green-800' :
                       'bg-gray-100 text-gray-800'
@@ -1574,21 +1670,51 @@ const AdminDashboard = () => {
                     {report.status}
                   </span>
                 </div>
-                <p className="text-gray-600 mb-3">{report.description}</p>
+                <p className="text-gray-600 mb-3">{report.description || 'No description provided'}</p>
                 <div className="flex items-center text-sm text-gray-500 space-x-4">
-                  <span>Reported by: {report.reportedBy.name}</span>
-                  {report.reportedUser && <span>Against: {report.reportedUser.name}</span>}
+                  <span>Reported by: {report.reportedBy?.name || 'Unknown User'}</span>
+                  {report.reportedUser && <span>Against: {report.reportedUser?.name || 'Unknown User'}</span>}
                   <span>{new Date(report.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
-              <div className="flex space-x-2 ml-4">
-                <button className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200">
-                  Resolve
-                </button>
-                <button className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
-                  Dismiss
-                </button>
-                <button className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200">
+              <div className="flex flex-wrap gap-2 ml-4">
+                {report.status === 'pending' && (
+                  <>
+                    <button
+                      onClick={() => handleReportAction(report._id, 'warn', report)}
+                      className="px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
+                    >
+                      <AlertTriangle className="w-3 h-3 inline mr-1" />
+                      Warn User
+                    </button>
+                    <button
+                      onClick={() => handleReportAction(report._id, 'ban', report)}
+                      className="px-3 py-1 text-sm bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors"
+                    >
+                      <Ban className="w-3 h-3 inline mr-1" />
+                      Ban User
+                    </button>
+                    <button
+                      onClick={() => handleReportAction(report._id, 'delete', report)}
+                      className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3 inline mr-1" />
+                      Delete Account
+                    </button>
+                    <button
+                      onClick={() => handleReportAction(report._id, 'dismiss', report)}
+                      className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      <CheckCircle className="w-3 h-3 inline mr-1" />
+                      Dismiss
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => handleViewReportDetails(report)}
+                  className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                >
+                  <Eye className="w-3 h-3 inline mr-1" />
                   View Details
                 </button>
               </div>
@@ -2250,6 +2376,31 @@ const AdminDashboard = () => {
           {activeTab === 'help' && renderHelp()}
         </div>
       </div>
+
+      {/* Report Action Modal */}
+      <ReportActionModal
+        isOpen={reportActionModal.isOpen}
+        onClose={closeReportActionModal}
+        action={reportActionModal.action}
+        report={reportActionModal.report}
+        onConfirm={handleConfirmReportAction}
+      />
+
+      {/* Success Modal */}
+      <ActionSuccessModal
+        isOpen={successModal.isOpen}
+        onClose={closeSuccessModal}
+        action={successModal.action}
+        report={successModal.report}
+        actionData={successModal.actionData}
+      />
+
+      {/* Report Details Modal */}
+      <ReportDetailsModal
+        isOpen={detailsModal.isOpen}
+        onClose={closeDetailsModal}
+        report={detailsModal.report}
+      />
     </div>
   );
 };

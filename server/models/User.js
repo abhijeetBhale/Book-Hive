@@ -147,6 +147,42 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  // Ban and moderation fields
+  banStatus: {
+    isBanned: {
+      type: Boolean,
+      default: false
+    },
+    banUntil: {
+      type: Date
+    },
+    reason: {
+      type: String
+    },
+    bannedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    banHistory: [{
+      bannedAt: Date,
+      banUntil: Date,
+      reason: String,
+      bannedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      }
+    }]
+  },
+  deactivatedAt: {
+    type: Date
+  },
+  deactivatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  deactivationReason: {
+    type: String
+  },
 }, {
   timestamps: true
 })

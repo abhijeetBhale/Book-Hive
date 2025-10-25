@@ -63,6 +63,48 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    // Check if user account is deactivated
+    if (!user.isActive) {
+      return res.status(403).json({ 
+        message: 'Your account has been deactivated. Please contact support for assistance.',
+        code: 'ACCOUNT_DEACTIVATED'
+      });
+    }
+
+    // Check if user is banned
+    if (user.banStatus?.isBanned) {
+      const now = new Date();
+      const banUntil = new Date(user.banStatus.banUntil);
+      
+      if (banUntil > now) {
+        // User is still banned
+        const daysLeft = Math.ceil((banUntil - now) / (1000 * 60 * 60 * 24));
+        return res.status(403).json({ 
+          message: `Your account is temporarily suspended until ${banUntil.toLocaleDateString()}. Reason: ${user.banStatus.reason || 'Violation of community guidelines'}. Please try again in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}.`,
+          code: 'ACCOUNT_BANNED',
+          banUntil: banUntil,
+          reason: user.banStatus.reason
+        });
+      } else {
+        // Ban has expired, remove ban status
+        user.banStatus.isBanned = false;
+        user.banStatus.banUntil = null;
+        
+        // Add to ban history
+        if (!user.banStatus.banHistory) {
+          user.banStatus.banHistory = [];
+        }
+        user.banStatus.banHistory.push({
+          bannedAt: user.banStatus.bannedAt || new Date(),
+          banUntil: banUntil,
+          reason: user.banStatus.reason,
+          bannedBy: user.banStatus.bannedBy
+        });
+        
+        await user.save();
+      }
+    }
+
     res.json({
       token: generateToken(user._id)
     });

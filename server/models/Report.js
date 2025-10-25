@@ -23,8 +23,32 @@ const reportSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'reviewed', 'resolved'],
+    enum: ['pending', 'reviewed', 'resolved', 'dismissed'],
     default: 'pending'
+  },
+  adminActions: [{
+    action: {
+      type: String,
+      enum: ['warn', 'ban', 'delete', 'dismiss', 'status_update'],
+      required: true
+    },
+    actionBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    actionData: {
+      type: mongoose.Schema.Types.Mixed
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  priority: {
+    type: String,
+    enum: ['low', 'medium', 'high', 'urgent'],
+    default: 'medium'
   }
 }, {
   timestamps: true

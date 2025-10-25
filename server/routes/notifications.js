@@ -12,7 +12,10 @@ import {
   getNotificationStats,
   markAllAsRead,
   clearReadNotifications,
-  updateNotificationPreferences
+  updateNotificationPreferences,
+  getModerationNotifications,
+  getUnreadNotifications,
+  markAsRead
 } from '../controllers/notificationController.js';
 
 const router = express.Router();
@@ -35,8 +38,14 @@ router.get('/stats', protect, getNotificationStats);
 // Get notifications by type
 router.get('/type/:type', protect, getNotificationsByType);
 
+// Get moderation notifications (warnings, bans, etc.)
+router.get('/moderation', protect, getModerationNotifications);
+
+// Get unread notifications
+router.get('/unread', protect, getUnreadNotifications);
+
 // Mark notifications as read
-router.put('/mark-read', protect, markRead);
+router.put('/mark-read', protect, markAsRead);
 
 // Mark all notifications as read
 router.put('/mark-all-read', protect, markAllAsRead);

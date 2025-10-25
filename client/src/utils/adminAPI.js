@@ -56,6 +56,11 @@ export const adminAPIService = {
   // Reports Management
   getReports: (params = {}) => adminAPI.get('/reports', { params }),
   updateReport: (id, data) => adminAPI.put(`/reports/${id}`, data),
+  takeReportAction: (id, action, actionData) => adminAPI.put(`/reports/${id}`, { 
+    status: 'resolved', 
+    action, 
+    actionData 
+  }),
 };
 
 export default adminAPIService;
