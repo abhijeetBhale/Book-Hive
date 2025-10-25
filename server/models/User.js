@@ -100,6 +100,35 @@ const userSchema = new mongoose.Schema({
       default: Date.now
     }
   },
+  // Security settings
+  securitySettings: {
+    twoFactorEnabled: {
+      type: Boolean,
+      default: false
+    },
+    emailNotifications: {
+      type: Boolean,
+      default: true
+    },
+    loginAlerts: {
+      type: Boolean,
+      default: true
+    },
+    sessionTimeout: {
+      type: String,
+      enum: ['15', '30', '60', '120', 'never'],
+      default: '30'
+    },
+    accountVisibility: {
+      type: String,
+      enum: ['public', 'friends', 'private'],
+      default: 'public'
+    },
+    twoFactorSecret: {
+      type: String,
+      select: false // Don't include in queries by default
+    }
+  },
   // Admin fields
   role: {
     type: String,

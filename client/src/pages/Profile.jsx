@@ -5,7 +5,7 @@ import { authAPI, borrowAPI, messagesAPI, reportAPI, usersAPI } from '../utils/a
 import toast from 'react-hot-toast';
 
 // Import new icons for the password fields
-import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy } from 'lucide-react';
+import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy, Shield, Activity, RefreshCw } from 'lucide-react';
 import GamificationSection from '../components/profile/GamificationSection';
 
 const Profile = () => {
@@ -41,6 +41,22 @@ const Profile = () => {
   });
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [passwordFeedback, setPasswordFeedback] = useState([]);
+  
+  // Security settings state
+  const [securitySettings, setSecuritySettings] = useState({
+    twoFactorEnabled: false,
+    emailNotifications: true,
+    loginAlerts: true,
+    sessionTimeout: '30',
+    accountVisibility: 'public'
+  });
+  
+  // Account activity state
+  const [accountActivity, setAccountActivity] = useState([]);
+  const [loadingActivity, setLoadingActivity] = useState(false);
 
   const [notifications, setNotifications] = useState({
     pendingRequests: 0,
@@ -107,8 +123,115 @@ const Profile = () => {
 
   // --- HANDLER FOR PASSWORD FORM ---
   const handlePasswordChange = (e) => {
-    setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setPasswordData({ ...passwordData, [name]: value });
+    
+    // Check password strength for new password
+    if (name === 'newPassword') {
+      checkPasswordStrength(value);
+    }
   };
+
+  // Password strength checker
+  const checkPasswordStrength = (password) => {
+    let strength = 0;
+    const feedback = [];
+    
+    if (password.length >= 8) {
+      strength += 1;
+    } else {
+      feedback.push('At least 8 characters');
+    }
+    
+    if (/[a-z]/.test(password)) {
+      strength += 1;
+    } else {
+      feedback.push('One lowercase letter');
+    }
+    
+    if (/[A-Z]/.test(password)) {
+      strength += 1;
+    } else {
+      feedback.push('One uppercase letter');
+    }
+    
+    if (/\d/.test(password)) {
+      strength += 1;
+    } else {
+      feedback.push('One number');
+    }
+    
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      strength += 1;
+    } else {
+      feedback.push('One special character');
+    }
+    
+    setPasswordStrength(strength);
+    setPasswordFeedback(feedback);
+  };
+
+  // Security settings handler
+  const handleSecuritySettingChange = (setting, value) => {
+    setSecuritySettings(prev => ({ ...prev, [setting]: value }));
+  };
+
+  // Save security settings
+  const handleSaveSecuritySettings = async () => {
+    setLoading(true);
+    try {
+      await authAPI.updateSecuritySettings(securitySettings);
+      toast.success('Security settings updated successfully!');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update security settings.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch account activity
+  const fetchAccountActivity = async () => {
+    setLoadingActivity(true);
+    try {
+      const response = await authAPI.getAccountActivity();
+      const activityData = response.data.activity || [];
+      
+      // Convert timestamp strings to Date objects if needed
+      const processedActivity = activityData.map(activity => ({
+        ...activity,
+        timestamp: new Date(activity.timestamp)
+      }));
+      
+      setAccountActivity(processedActivity);
+    } catch (error) {
+      console.error('Failed to fetch account activity:', error);
+      // Don't show error toast as the API now exists
+      // Just set empty array if there's an error
+      setAccountActivity([]);
+    } finally {
+      setLoadingActivity(false);
+    }
+  };
+
+  // Load security settings from user profile
+  useEffect(() => {
+    if (user && user.securitySettings) {
+      setSecuritySettings({
+        twoFactorEnabled: user.securitySettings.twoFactorEnabled || false,
+        emailNotifications: user.securitySettings.emailNotifications !== false,
+        loginAlerts: user.securitySettings.loginAlerts !== false,
+        sessionTimeout: user.securitySettings.sessionTimeout || '30',
+        accountVisibility: user.securitySettings.accountVisibility || 'public'
+      });
+    }
+  }, [user]);
+
+  // Load account activity on security tab access
+  useEffect(() => {
+    if (activeTab === 'security') {
+      fetchAccountActivity();
+    }
+  }, [activeTab]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -430,13 +553,20 @@ const Profile = () => {
         return (
           <div>
             <div className="section-header">
-              <h3>Security</h3>
-              <p>Update your password and manage your account security.</p>
+              <h3>Security & Privacy</h3>
+              <p>Manage your account security, privacy settings, and monitor account activity.</p>
             </div>
 
             {/* Password Update Section */}
             <div className="security-section">
-              <h4>Change Password</h4>
+              <div className="security-section-header">
+                <Lock size={20} />
+                <h4>Change Password</h4>
+              </div>
+              <p className="security-description">
+                Keep your account secure by using a strong, unique password.
+              </p>
+              
               <form onSubmit={handlePasswordSubmit}>
                 <div className="input-field with-icon">
                   <label htmlFor="currentPassword">Current password</label>
@@ -447,11 +577,13 @@ const Profile = () => {
                     value={passwordData.currentPassword}
                     onChange={handlePasswordChange}
                     required
+                    placeholder="Enter your current password"
                   />
                   <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="icon-btn">
                     {showCurrentPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
+
                 <div className="input-field with-icon">
                   <label htmlFor="newPassword">New password</label>
                   <input
@@ -461,34 +593,265 @@ const Profile = () => {
                     value={passwordData.newPassword}
                     onChange={handlePasswordChange}
                     required
+                    placeholder="Enter a strong new password"
                   />
                   <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="icon-btn">
                     {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
-                <div className="input-field">
+
+                {/* Password Strength Indicator */}
+                {passwordData.newPassword && (
+                  <div className="password-strength">
+                    <div className="strength-bar">
+                      <div 
+                        className={`strength-fill strength-${passwordStrength}`}
+                        style={{ width: `${(passwordStrength / 5) * 100}%` }}
+                      ></div>
+                    </div>
+                    <div className="strength-text">
+                      <span className={`strength-label strength-${passwordStrength}`}>
+                        {passwordStrength === 0 && 'Very Weak'}
+                        {passwordStrength === 1 && 'Weak'}
+                        {passwordStrength === 2 && 'Fair'}
+                        {passwordStrength === 3 && 'Good'}
+                        {passwordStrength === 4 && 'Strong'}
+                        {passwordStrength === 5 && 'Very Strong'}
+                      </span>
+                    </div>
+                    {passwordFeedback.length > 0 && (
+                      <div className="password-feedback">
+                        <p>Password should include:</p>
+                        <ul>
+                          {passwordFeedback.map((item, index) => (
+                            <li key={index}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="input-field with-icon">
                   <label htmlFor="confirmPassword">Confirm new password</label>
                   <input
                     id="confirmPassword"
                     name="confirmPassword"
-                    type={showNewPassword ? 'text' : 'password'}
+                    type={showConfirmPassword ? 'text' : 'password'}
                     value={passwordData.confirmPassword}
                     onChange={handlePasswordChange}
                     required
+                    placeholder="Confirm your new password"
                   />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="icon-btn">
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
+
+                {/* Password Match Indicator */}
+                {passwordData.confirmPassword && (
+                  <div className={`password-match ${passwordData.newPassword === passwordData.confirmPassword ? 'match' : 'no-match'}`}>
+                    {passwordData.newPassword === passwordData.confirmPassword ? (
+                      <span className="match-text">✓ Passwords match</span>
+                    ) : (
+                      <span className="no-match-text">✗ Passwords do not match</span>
+                    )}
+                  </div>
+                )}
+
                 <div className="form-footer">
-                  <button type="submit" className="save-btn" disabled={loading}>
+                  <button 
+                    type="submit" 
+                    className="save-btn" 
+                    disabled={loading || passwordStrength < 3 || passwordData.newPassword !== passwordData.confirmPassword}
+                  >
                     {loading ? <Loader className="animate-spin" size={16} /> : 'Update Password'}
                   </button>
                 </div>
               </form>
             </div>
 
+            {/* Security Settings Section */}
+            <div className="security-section">
+              <div className="security-section-header">
+                <Shield size={20} />
+                <h4>Security Settings</h4>
+              </div>
+              <p className="security-description">
+                Configure additional security measures for your account.
+              </p>
+
+              <div className="security-options">
+                <div className="security-option">
+                  <div className="option-info">
+                    <h5>Two-Factor Authentication</h5>
+                    <p>Add an extra layer of security to your account</p>
+                  </div>
+                  <div className="option-control">
+                    <label className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={securitySettings.twoFactorEnabled}
+                        onChange={(e) => handleSecuritySettingChange('twoFactorEnabled', e.target.checked)}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="security-option">
+                  <div className="option-info">
+                    <h5>Email Notifications</h5>
+                    <p>Get notified about important security events</p>
+                  </div>
+                  <div className="option-control">
+                    <label className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={securitySettings.emailNotifications}
+                        onChange={(e) => handleSecuritySettingChange('emailNotifications', e.target.checked)}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="security-option">
+                  <div className="option-info">
+                    <h5>Login Alerts</h5>
+                    <p>Get alerts when someone logs into your account</p>
+                  </div>
+                  <div className="option-control">
+                    <label className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={securitySettings.loginAlerts}
+                        onChange={(e) => handleSecuritySettingChange('loginAlerts', e.target.checked)}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="security-option">
+                  <div className="option-info">
+                    <h5>Session Timeout</h5>
+                    <p>Automatically log out after inactivity</p>
+                  </div>
+                  <div className="option-control">
+                    <select
+                      value={securitySettings.sessionTimeout}
+                      onChange={(e) => handleSecuritySettingChange('sessionTimeout', e.target.value)}
+                      className="security-select"
+                    >
+                      <option value="15">15 minutes</option>
+                      <option value="30">30 minutes</option>
+                      <option value="60">1 hour</option>
+                      <option value="120">2 hours</option>
+                      <option value="never">Never</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="security-option">
+                  <div className="option-info">
+                    <h5>Account Visibility</h5>
+                    <p>Control who can see your profile</p>
+                  </div>
+                  <div className="option-control">
+                    <select
+                      value={securitySettings.accountVisibility}
+                      onChange={(e) => handleSecuritySettingChange('accountVisibility', e.target.value)}
+                      className="security-select"
+                    >
+                      <option value="public">Public</option>
+                      <option value="friends">Friends Only</option>
+                      <option value="private">Private</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-footer">
+                <button 
+                  className="save-btn"
+                  onClick={handleSaveSecuritySettings}
+                  disabled={loading}
+                >
+                  {loading ? <Loader className="animate-spin" size={16} /> : 'Save Security Settings'}
+                </button>
+              </div>
+            </div>
+
+            {/* Account Activity Section */}
+            <div className="security-section">
+              <div className="security-section-header">
+                <Activity size={20} />
+                <h4>Recent Account Activity</h4>
+              </div>
+              <p className="security-description">
+                Monitor recent logins and account changes for suspicious activity.
+              </p>
+
+              {loadingActivity ? (
+                <div className="activity-loading">
+                  <Loader className="animate-spin" size={20} />
+                  <span>Loading activity...</span>
+                </div>
+              ) : (
+                <div className="activity-list">
+                  {accountActivity.map((activity) => (
+                    <div key={activity.id} className="activity-item">
+                      <div className="activity-icon">
+                        {activity.action === 'Login' && <User size={16} />}
+                        {activity.action === 'Password Changed' && <Lock size={16} />}
+                        {activity.action === 'Profile Updated' && <User size={16} />}
+                      </div>
+                      <div className="activity-details">
+                        <div className="activity-main">
+                          <strong>{activity.action}</strong>
+                          <span className="activity-time">
+                            {activity.timestamp.toLocaleDateString()} at {activity.timestamp.toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <div className="activity-meta">
+                          <span>{activity.device}</span>
+                          <span>•</span>
+                          <span>{activity.location}</span>
+                          <span>•</span>
+                          <span>{activity.ip}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="activity-actions">
+                <button 
+                  className="secondary-btn"
+                  onClick={fetchAccountActivity}
+                  disabled={loadingActivity}
+                >
+                  <RefreshCw size={16} />
+                  Refresh Activity
+                </button>
+                <button className="danger-btn">
+                  <AlertTriangle size={16} />
+                  Report Suspicious Activity
+                </button>
+              </div>
+            </div>
+
             {/* Report User Section */}
             <div className="security-section">
-              <h4>Report a User</h4>
-              <p>If you've encountered inappropriate behavior, please report it to help keep our community safe.</p>
+              <div className="security-section-header">
+                <AlertTriangle size={20} />
+                <h4>Report & Safety</h4>
+              </div>
+              <p className="security-description">
+                Help keep our community safe by reporting inappropriate behavior or content.
+              </p>
               <button
                 className="report-btn"
                 onClick={() => setActiveTab('report-user')}
@@ -947,6 +1310,346 @@ const StyledWrapper = styled.div`
       border: 1px solid #e5e7eb;
       border-radius: 0.5rem;
       margin-bottom: 1.5rem;
+    }
+
+    /* Enhanced Security Tab Styles */
+    .security-section {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .security-section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+      
+      h4 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0;
+      }
+      
+      svg {
+        color: #4f46e5;
+      }
+    }
+
+    .security-description {
+      color: #6b7280;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    /* Password Strength Indicator */
+    .password-strength {
+      margin-top: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .strength-bar {
+      width: 100%;
+      height: 4px;
+      background-color: #e5e7eb;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+
+    .strength-fill {
+      height: 100%;
+      transition: all 0.3s ease;
+      border-radius: 2px;
+      
+      &.strength-0, &.strength-1 { background-color: #ef4444; }
+      &.strength-2 { background-color: #f59e0b; }
+      &.strength-3 { background-color: #eab308; }
+      &.strength-4 { background-color: #22c55e; }
+      &.strength-5 { background-color: #16a34a; }
+    }
+
+    .strength-text {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .strength-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      
+      &.strength-0, &.strength-1 { color: #ef4444; }
+      &.strength-2 { color: #f59e0b; }
+      &.strength-3 { color: #eab308; }
+      &.strength-4 { color: #22c55e; }
+      &.strength-5 { color: #16a34a; }
+    }
+
+    .password-feedback {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      background-color: #fef3c7;
+      border: 1px solid #fbbf24;
+      border-radius: 0.5rem;
+      
+      p {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #92400e;
+        margin: 0 0 0.5rem 0;
+      }
+      
+      ul {
+        margin: 0;
+        padding-left: 1.25rem;
+        
+        li {
+          font-size: 0.875rem;
+          color: #92400e;
+          margin-bottom: 0.25rem;
+        }
+      }
+    }
+
+    /* Password Match Indicator */
+    .password-match {
+      margin-top: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      
+      &.match .match-text {
+        color: #16a34a;
+      }
+      
+      &.no-match .no-match-text {
+        color: #ef4444;
+      }
+    }
+
+    /* Security Options */
+    .security-options {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .security-option {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background-color: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      
+      .option-info {
+        flex: 1;
+        
+        h5 {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #111827;
+          margin: 0 0 0.25rem 0;
+        }
+        
+        p {
+          font-size: 0.875rem;
+          color: #6b7280;
+          margin: 0;
+        }
+      }
+      
+      .option-control {
+        flex-shrink: 0;
+        margin-left: 1rem;
+      }
+    }
+
+    /* Toggle Switch */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      
+      input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #d1d5db;
+        transition: 0.3s;
+        border-radius: 24px;
+        
+        &:before {
+          position: absolute;
+          content: "";
+          height: 18px;
+          width: 18px;
+          left: 3px;
+          bottom: 3px;
+          background-color: white;
+          transition: 0.3s;
+          border-radius: 50%;
+        }
+      }
+      
+      input:checked + .toggle-slider {
+        background-color: #4f46e5;
+      }
+      
+      input:checked + .toggle-slider:before {
+        transform: translateX(20px);
+      }
+    }
+
+    /* Security Select */
+    .security-select {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      background-color: white;
+      font-size: 0.875rem;
+      color: #374151;
+      min-width: 120px;
+      
+      &:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+      }
+    }
+
+    /* Account Activity */
+    .activity-loading {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 2rem;
+      justify-content: center;
+      color: #6b7280;
+    }
+
+    .activity-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1rem;
+      background-color: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      
+      .activity-icon {
+        width: 32px;
+        height: 32px;
+        background-color: #e0e7ff;
+        color: #4f46e5;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      
+      .activity-details {
+        flex: 1;
+        
+        .activity-main {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.25rem;
+          
+          strong {
+            font-weight: 600;
+            color: #111827;
+          }
+          
+          .activity-time {
+            font-size: 0.875rem;
+            color: #6b7280;
+          }
+        }
+        
+        .activity-meta {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.875rem;
+          color: #6b7280;
+        }
+      }
+    }
+
+    .activity-actions {
+      display: flex;
+      gap: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    /* Button Styles */
+    .secondary-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background-color: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      
+      &:hover:not(:disabled) {
+        background-color: #e5e7eb;
+      }
+      
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    .danger-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background-color: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      
+      &:hover {
+        background-color: #fee2e2;
+        border-color: #fca5a5;
+      }
     }
     
     .notification-list {

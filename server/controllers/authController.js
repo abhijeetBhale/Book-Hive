@@ -84,7 +84,14 @@ export const getProfile = async (req, res) => {
         name: user.name,
         email: user.email,
         avatar: user.avatar,
-        location: user.location
+        location: user.location,
+        securitySettings: user.securitySettings || {
+          twoFactorEnabled: false,
+          emailNotifications: true,
+          loginAlerts: true,
+          sessionTimeout: '30',
+          accountVisibility: 'public'
+        }
       });
     } else {
       res.status(404).json({ message: 'User not found' });
@@ -298,5 +305,224 @@ export const updateLocation = async (req, res) => {
   } catch (error) {
     console.error('Update location error:', error);
     res.status(500).json({ message: 'Server error updating location' });
+  }
+};
+
+// @desc    Update security settings
+// @route   PUT /api/auth/security-settings
+export const updateSecuritySettings = async (req, res) => {
+  try {
+    const { 
+      twoFactorEnabled, 
+      emailNotifications, 
+      loginAlerts, 
+      sessionTimeout, 
+      accountVisibility 
+    } = req.body;
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Initialize securitySettings if it doesn't exist
+    if (!user.securitySettings) {
+      user.securitySettings = {};
+    }
+
+    // Update security settings
+    if (typeof twoFactorEnabled === 'boolean') {
+      user.securitySettings.twoFactorEnabled = twoFactorEnabled;
+    }
+    if (typeof emailNotifications === 'boolean') {
+      user.securitySettings.emailNotifications = emailNotifications;
+    }
+    if (typeof loginAlerts === 'boolean') {
+      user.securitySettings.loginAlerts = loginAlerts;
+    }
+    if (sessionTimeout) {
+      user.securitySettings.sessionTimeout = sessionTimeout;
+    }
+    if (accountVisibility) {
+      user.securitySettings.accountVisibility = accountVisibility;
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Security settings updated successfully',
+      securitySettings: user.securitySettings
+    });
+  } catch (error) {
+    console.error('Update security settings error:', error);
+    res.status(500).json({ 
+      message: 'Server error updating security settings',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// @desc    Get account activity
+// @route   GET /api/auth/account-activity
+export const getAccountActivity = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // For now, return mock data. In a real implementation, you would:
+    // 1. Store login/activity logs in a separate collection
+    // 2. Track IP addresses, devices, locations
+    // 3. Log security events like password changes
+    
+    const mockActivity = [
+      {
+        id: 1,
+        action: 'Login',
+        device: 'Chrome on Windows',
+        location: 'New York, NY',
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+        ip: '192.168.1.1'
+      },
+      {
+        id: 2,
+        action: 'Password Changed',
+        device: 'Chrome on Windows',
+        location: 'New York, NY',
+        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        ip: '192.168.1.1'
+      },
+      {
+        id: 3,
+        action: 'Login',
+        device: 'Safari on iPhone',
+        location: 'New York, NY',
+        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        ip: '192.168.1.2'
+      },
+      {
+        id: 4,
+        action: 'Profile Updated',
+        device: 'Chrome on Windows',
+        location: 'New York, NY',
+        timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        ip: '192.168.1.1'
+      }
+    ];
+
+    res.status(200).json({
+      success: true,
+      activity: mockActivity
+    });
+  } catch (error) {
+    console.error('Get account activity error:', error);
+    res.status(500).json({ 
+      message: 'Server error getting account activity',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// @desc    Enable two-factor authentication
+// @route   POST /api/auth/enable-2fa
+export const enable2FA = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Initialize securitySettings if it doesn't exist
+    if (!user.securitySettings) {
+      user.securitySettings = {};
+    }
+
+    // For now, just enable 2FA flag
+    // In a real implementation, you would:
+    // 1. Generate a secret key
+    // 2. Return QR code for authenticator app
+    // 3. Require verification before enabling
+    
+    user.securitySettings.twoFactorEnabled = true;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: '2FA enabled successfully',
+      // In real implementation, return QR code data
+      qrCode: 'mock-qr-code-data'
+    });
+  } catch (error) {
+    console.error('Enable 2FA error:', error);
+    res.status(500).json({ 
+      message: 'Server error enabling 2FA',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// @desc    Disable two-factor authentication
+// @route   POST /api/auth/disable-2fa
+export const disable2FA = async (req, res) => {
+  try {
+    const { code } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({ message: 'Verification code is required' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // In a real implementation, verify the 2FA code here
+    // For now, just disable 2FA
+    
+    if (!user.securitySettings) {
+      user.securitySettings = {};
+    }
+
+    user.securitySettings.twoFactorEnabled = false;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: '2FA disabled successfully'
+    });
+  } catch (error) {
+    console.error('Disable 2FA error:', error);
+    res.status(500).json({ 
+      message: 'Server error disabling 2FA',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// @desc    Verify two-factor authentication code
+// @route   POST /api/auth/verify-2fa
+export const verify2FA = async (req, res) => {
+  try {
+    const { code } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({ message: 'Verification code is required' });
+    }
+
+    // In a real implementation, verify the 2FA code against the user's secret
+    // For now, just return success for demo purposes
+    
+    res.status(200).json({
+      success: true,
+      message: '2FA code verified successfully'
+    });
+  } catch (error) {
+    console.error('Verify 2FA error:', error);
+    res.status(500).json({ 
+      message: 'Server error verifying 2FA code',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };

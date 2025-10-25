@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { 
-  Users, 
-  BookOpen, 
-  ArrowLeftRight, 
-  TrendingUp, 
+import {
+  Users,
+  BookOpen,
+  ArrowLeftRight,
+  TrendingUp,
   AlertTriangle,
   BarChart3,
   Shield,
@@ -34,7 +34,8 @@ import {
   FileText,
   PieChart,
   BarChart,
-  LineChart
+  LineChart,
+  ChevronRight
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { adminAPIService } from '../utils/adminAPI';
@@ -78,9 +79,22 @@ const AdminDashboard = () => {
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
 
+  // Analytics-specific state
+  const [analyticsFilter, setAnalyticsFilter] = useState('7d');
+
+  // Settings-specific state
+  const [settings, setSettings] = useState({
+    emailNotifications: true,
+    userRegistration: true,
+    bookApproval: false,
+    maintenanceMode: false,
+    publicRegistration: true,
+    autoApproveBooks: true
+  });
+
   // Check if user has admin access
   const hasAdminAccess = user && (
-    user.role === 'superadmin' || 
+    user.role === 'superadmin' ||
     user.role === 'admin' ||
     user.email === import.meta.env.VITE_SUPER_ADMIN_EMAIL
   );
@@ -154,14 +168,14 @@ const AdminDashboard = () => {
         ...filters,
         ...customParams
       };
-      
+
       // If limit is 'all', fetch all books
       if (params.limit === 'all') {
         params.all = true;
         delete params.page;
         delete params.limit;
       }
-      
+
       const response = await adminAPIService.getBooks(params);
       setBooks(response.data.data.books);
       setPagination(prev => ({
@@ -265,7 +279,7 @@ const AdminDashboard = () => {
   const handleUserAction = async (userId, action) => {
     try {
       let updateData = {};
-      
+
       switch (action) {
         case 'activate':
           updateData.isActive = true;
@@ -375,7 +389,7 @@ const AdminDashboard = () => {
           <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-red-500" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
           <p className="text-gray-600 mb-4">{error}</p>
-          <button 
+          <button
             onClick={() => window.location.href = '/'}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
@@ -508,7 +522,7 @@ const AdminDashboard = () => {
               />
             </div>
           </div>
-          
+
           <select
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -567,20 +581,18 @@ const AdminDashboard = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      user.role === 'admin' || user.role === 'superadmin'
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
+                    <span className={`inline-flex px-2 py-1 text-xs rounded-full ${user.role === 'admin' || user.role === 'superadmin'
+                      ? 'bg-purple-100 text-purple-800'
+                      : 'bg-gray-100 text-gray-800'
+                      }`}>
                       {user.role || 'user'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      user.isActive !== false
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
+                    <span className={`inline-flex px-2 py-1 text-xs rounded-full ${user.isActive !== false
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                      }`}>
                       {user.isActive !== false ? 'Active' : 'Inactive'}
                     </span>
                   </td>
@@ -642,16 +654,16 @@ const AdminDashboard = () => {
 
     // Filter books based on search and status
     const filteredBooks = books.filter(book => {
-      const matchesSearch = !filters.search || 
+      const matchesSearch = !filters.search ||
         book.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
         book.author?.toLowerCase().includes(filters.search.toLowerCase()) ||
         book.isbn?.toLowerCase().includes(filters.search.toLowerCase()) ||
         book.category?.toLowerCase().includes(filters.search.toLowerCase());
-      
-      const matchesStatus = filters.status === 'all' || 
+
+      const matchesStatus = filters.status === 'all' ||
         (filters.status === 'available' && book.isAvailable) ||
         (filters.status === 'borrowed' && !book.isAvailable);
-      
+
       return matchesSearch && matchesStatus;
     });
 
@@ -659,17 +671,17 @@ const AdminDashboard = () => {
     const sortedBooks = [...filteredBooks].sort((a, b) => {
       let aValue = a[sortBy];
       let bValue = b[sortBy];
-      
+
       if (sortBy === 'owner') {
         aValue = a.owner?.name || '';
         bValue = b.owner?.name || '';
       }
-      
+
       if (typeof aValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();
       }
-      
+
       if (sortOrder === 'asc') {
         return aValue > bValue ? 1 : -1;
       } else {
@@ -704,7 +716,7 @@ const AdminDashboard = () => {
                 />
               </div>
             </div>
-            
+
             {/* Status Filter */}
             <div>
               <select
@@ -770,8 +782,8 @@ const AdminDashboard = () => {
                 Books ({totalBooks} total)
               </h3>
               <div className="flex items-center space-x-2">
-                <RefreshCw 
-                  className="w-4 h-4 text-gray-400 cursor-pointer hover:text-gray-600" 
+                <RefreshCw
+                  className="w-4 h-4 text-gray-400 cursor-pointer hover:text-gray-600"
                   onClick={fetchBooks}
                 />
                 <span className="text-sm text-gray-500">
@@ -780,7 +792,7 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -815,8 +827,8 @@ const AdminDashboard = () => {
                       <div className="flex items-center">
                         <div className="w-12 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded flex items-center justify-center flex-shrink-0">
                           {book.coverImage ? (
-                            <img 
-                              src={book.coverImage} 
+                            <img
+                              src={book.coverImage}
                               alt={book.title}
                               className="w-full h-full object-cover rounded"
                             />
@@ -843,11 +855,10 @@ const AdminDashboard = () => {
                       <div className="text-sm text-gray-500 truncate">{book.owner?.email || 'No email'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        book.isAvailable
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${book.isAvailable
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}>
                         {book.isAvailable ? 'Available' : 'Borrowed'}
                       </span>
                     </td>
@@ -890,8 +901,8 @@ const AdminDashboard = () => {
                       <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No Books Found</h3>
                       <p className="text-gray-600">
-                        {filters.search || filters.status !== 'all' 
-                          ? 'Try adjusting your search or filters.' 
+                        {filters.search || filters.status !== 'all'
+                          ? 'Try adjusting your search or filters.'
                           : 'Books will appear here when users add them to the platform.'
                         }
                       </p>
@@ -917,7 +928,7 @@ const AdminDashboard = () => {
                   >
                     Previous
                   </button>
-                  
+
                   <div className="flex items-center space-x-1">
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                       const pageNum = i + 1;
@@ -925,11 +936,10 @@ const AdminDashboard = () => {
                         <button
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
-                          className={`px-3 py-1 text-sm rounded ${
-                            currentPage === pageNum
-                              ? 'bg-blue-600 text-white'
-                              : 'border border-gray-300 hover:bg-gray-100'
-                          }`}
+                          className={`px-3 py-1 text-sm rounded ${currentPage === pageNum
+                            ? 'bg-blue-600 text-white'
+                            : 'border border-gray-300 hover:bg-gray-100'
+                            }`}
                         >
                           {pageNum}
                         </button>
@@ -940,11 +950,10 @@ const AdminDashboard = () => {
                         <span className="px-2 text-gray-500">...</span>
                         <button
                           onClick={() => setCurrentPage(totalPages)}
-                          className={`px-3 py-1 text-sm rounded ${
-                            currentPage === totalPages
-                              ? 'bg-blue-600 text-white'
-                              : 'border border-gray-300 hover:bg-gray-100'
-                          }`}
+                          className={`px-3 py-1 text-sm rounded ${currentPage === totalPages
+                            ? 'bg-blue-600 text-white'
+                            : 'border border-gray-300 hover:bg-gray-100'
+                            }`}
                         >
                           {totalPages}
                         </button>
@@ -978,7 +987,7 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
@@ -992,7 +1001,7 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
@@ -1006,7 +1015,7 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -1034,7 +1043,7 @@ const AdminDashboard = () => {
           <p className="text-gray-600">Loading borrow requests...</p>
         </div>
       )}
-      
+
       {tabErrors.borrows && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
           <div className="flex items-center">
@@ -1058,7 +1067,7 @@ const AdminDashboard = () => {
               />
             </div>
           </div>
-          
+
           <select
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -1092,8 +1101,8 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {borrowRequests.filter(request => 
-                filters.search === '' || 
+              {borrowRequests.filter(request =>
+                filters.search === '' ||
                 request.book?.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
                 request.borrower?.name?.toLowerCase().includes(filters.search.toLowerCase())
               ).filter(request =>
@@ -1119,13 +1128,12 @@ const AdminDashboard = () => {
                     <div className="text-sm text-gray-900">{request.owner.name}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    <span className={`inline-flex px-2 py-1 text-xs rounded-full ${request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                       request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      request.status === 'borrowed' ? 'bg-blue-100 text-blue-800' :
-                      request.status === 'returned' ? 'bg-gray-100 text-gray-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                        request.status === 'borrowed' ? 'bg-blue-100 text-blue-800' :
+                          request.status === 'returned' ? 'bg-gray-100 text-gray-800' :
+                            'bg-red-100 text-red-800'
+                      }`}>
                       {request.status}
                     </span>
                   </td>
@@ -1138,16 +1146,16 @@ const AdminDashboard = () => {
                     </button>
                     {request.status === 'pending' && (
                       <>
-                        <button 
+                        <button
                           onClick={() => handleBorrowRequestAction(request._id, 'approve')}
-                          className="text-green-600 hover:text-green-900 mr-3" 
+                          className="text-green-600 hover:text-green-900 mr-3"
                           title="Approve"
                         >
                           <CheckCircle className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleBorrowRequestAction(request._id, 'reject')}
-                          className="text-red-600 hover:text-red-900" 
+                          className="text-red-600 hover:text-red-900"
                           title="Reject"
                         >
                           <Ban className="w-4 h-4" />
@@ -1172,7 +1180,7 @@ const AdminDashboard = () => {
           <p className="text-gray-600">Loading book clubs...</p>
         </div>
       )}
-      
+
       {tabErrors.clubs && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
           <div className="flex items-center">
@@ -1196,7 +1204,7 @@ const AdminDashboard = () => {
               />
             </div>
           </div>
-          
+
           <select
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -1211,21 +1219,20 @@ const AdminDashboard = () => {
 
       {/* Book Clubs Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {bookClubs.filter(club => 
-          filters.search === '' || 
+        {bookClubs.filter(club =>
+          filters.search === '' ||
           club.name?.toLowerCase().includes(filters.search.toLowerCase()) ||
           club.description?.toLowerCase().includes(filters.search.toLowerCase())
         ).filter(club =>
-          filters.status === 'all' || 
+          filters.status === 'all' ||
           (filters.status === 'active' && club.isActive) ||
           (filters.status === 'inactive' && !club.isActive)
         ).map((club) => (
           <div key={club._id} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">{club.name}</h3>
-              <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                club.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-              }`}>
+              <span className={`inline-flex px-2 py-1 text-xs rounded-full ${club.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                }`}>
                 {club.isActive ? 'Active' : 'Inactive'}
               </span>
             </div>
@@ -1239,16 +1246,16 @@ const AdminDashboard = () => {
                 <button className="text-blue-600 hover:text-blue-900" title="View Details">
                   <Eye className="w-4 h-4" />
                 </button>
-                <button 
+                <button
                   onClick={() => handleBookClubAction(club._id, club.isActive ? 'deactivate' : 'activate')}
-                  className={`${club.isActive ? 'text-orange-600 hover:text-orange-900' : 'text-green-600 hover:text-green-900'}`} 
+                  className={`${club.isActive ? 'text-orange-600 hover:text-orange-900' : 'text-green-600 hover:text-green-900'}`}
                   title={club.isActive ? 'Deactivate' : 'Activate'}
                 >
                   {club.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
                 </button>
-                <button 
+                <button
                   onClick={() => handleBookClubAction(club._id, 'delete')}
-                  className="text-red-600 hover:text-red-900" 
+                  className="text-red-600 hover:text-red-900"
                   title="Delete"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -1273,8 +1280,6 @@ const AdminDashboard = () => {
   );
 
   const renderAnalytics = () => {
-    const [analyticsFilter, setAnalyticsFilter] = useState('7d');
-    
     if (loading) {
       return (
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 text-center">
@@ -1283,7 +1288,7 @@ const AdminDashboard = () => {
         </div>
       );
     }
-    
+
     return (
       <div className="space-y-6">
         {/* Analytics Header */}
@@ -1295,11 +1300,10 @@ const AdminDashboard = () => {
                 <button
                   key={period}
                   onClick={() => setAnalyticsFilter(period)}
-                  className={`px-3 py-1 text-sm rounded-lg ${
-                    analyticsFilter === period
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                  className={`px-3 py-1 text-sm rounded-lg ${analyticsFilter === period
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-100'
+                    }`}
                 >
                   {period === '7d' ? '7 Days' : period === '30d' ? '30 Days' : period === '90d' ? '90 Days' : '1 Year'}
                 </button>
@@ -1406,6 +1410,95 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Additional Analytics Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* User Activity Chart */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">User Activity Trend</h4>
+            <div className="h-48 bg-gradient-to-t from-blue-50 to-transparent rounded-lg flex items-end justify-center p-4">
+              <div className="text-center">
+                <BarChart3 className="w-12 h-12 text-blue-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">Activity visualization</p>
+                <p className="text-xs text-gray-400">Based on {analyticsFilter} data</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Book Categories Distribution */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Category Distribution</h4>
+            <div className="h-48 bg-gradient-to-t from-purple-50 to-transparent rounded-lg flex items-end justify-center p-4">
+              <div className="text-center">
+                <PieChart className="w-12 h-12 text-purple-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">Category breakdown</p>
+                <p className="text-xs text-gray-400">Top categories by book count</p>
+              </div>
+            </div>
+          </div>
+
+          {/* System Health */}
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">System Health</h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">CPU Usage</span>
+                <div className="flex items-center space-x-2">
+                  <div className="w-16 bg-gray-200 rounded-full h-2">
+                    <div className="bg-green-500 h-2 rounded-full" style={{ width: '35%' }}></div>
+                  </div>
+                  <span className="text-sm font-medium">35%</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Memory</span>
+                <div className="flex items-center space-x-2">
+                  <div className="w-16 bg-gray-200 rounded-full h-2">
+                    <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '68%' }}></div>
+                  </div>
+                  <span className="text-sm font-medium">68%</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Storage</span>
+                <div className="flex items-center space-x-2">
+                  <div className="w-16 bg-gray-200 rounded-full h-2">
+                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: '42%' }}></div>
+                  </div>
+                  <span className="text-sm font-medium">42%</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Network</span>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium text-green-600">Healthy</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Export and Actions */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Analytics Export</h4>
+              <p className="text-sm text-gray-600">Download detailed analytics reports for the selected period</p>
+            </div>
+            <div className="flex space-x-3">
+              <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                Export CSV
+              </button>
+              <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                Export PDF
+              </button>
+              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                Generate Report
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -1418,7 +1511,7 @@ const AdminDashboard = () => {
           <p className="text-gray-600">Loading reports...</p>
         </div>
       )}
-      
+
       {tabErrors.reports && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
           <div className="flex items-center">
@@ -1442,7 +1535,7 @@ const AdminDashboard = () => {
               />
             </div>
           </div>
-          
+
           <select
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -1458,8 +1551,8 @@ const AdminDashboard = () => {
 
       {/* Reports List */}
       <div className="space-y-4">
-        {reports.filter(report => 
-          filters.search === '' || 
+        {reports.filter(report =>
+          filters.search === '' ||
           report.reason?.toLowerCase().includes(filters.search.toLowerCase()) ||
           report.description?.toLowerCase().includes(filters.search.toLowerCase())
         ).filter(report =>
@@ -1469,17 +1562,15 @@ const AdminDashboard = () => {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center mb-2">
-                  <div className={`w-3 h-3 rounded-full mr-3 ${
-                    report.status === 'pending' ? 'bg-yellow-400' :
+                  <div className={`w-3 h-3 rounded-full mr-3 ${report.status === 'pending' ? 'bg-yellow-400' :
                     report.status === 'resolved' ? 'bg-green-400' :
-                    'bg-gray-400'
-                  }`}></div>
+                      'bg-gray-400'
+                    }`}></div>
                   <h3 className="text-lg font-semibold text-gray-900">{report.reason}</h3>
-                  <span className={`ml-3 inline-flex px-2 py-1 text-xs rounded-full ${
-                    report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  <span className={`ml-3 inline-flex px-2 py-1 text-xs rounded-full ${report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                     report.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
+                      'bg-gray-100 text-gray-800'
+                    }`}>
                     {report.status}
                   </span>
                 </div>
@@ -1516,19 +1607,11 @@ const AdminDashboard = () => {
     </div>
   );
 
-  const renderSettings = () => {
-    const [settings, setSettings] = useState({
-      emailNotifications: true,
-      userRegistration: true,
-      bookApproval: false,
-      maintenanceMode: false,
-      publicRegistration: true,
-      autoApproveBooks: true
-    });
+  const handleSettingChange = (setting, value) => {
+    setSettings(prev => ({ ...prev, [setting]: value }));
+  };
 
-    const handleSettingChange = (setting, value) => {
-      setSettings(prev => ({ ...prev, [setting]: value }));
-    };
+  const renderSettings = () => {
 
     return (
       <div className="space-y-6">
@@ -1647,6 +1730,149 @@ const AdminDashboard = () => {
           </div>
         </div>
 
+        {/* Security Settings */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Security Settings</h3>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium text-gray-900">Two-Factor Authentication</h4>
+                <p className="text-sm text-gray-600">Require 2FA for admin accounts</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.twoFactorAuth || false}
+                  onChange={(e) => handleSettingChange('twoFactorAuth', e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium text-gray-900">Session Timeout</h4>
+                <p className="text-sm text-gray-600">Automatic logout after inactivity</p>
+              </div>
+              <select
+                value={settings.sessionTimeout || '30'}
+                onChange={(e) => handleSettingChange('sessionTimeout', e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="60">1 hour</option>
+                <option value="120">2 hours</option>
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium text-gray-900">Password Policy</h4>
+                <p className="text-sm text-gray-600">Enforce strong password requirements</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.strongPasswords || true}
+                  onChange={(e) => handleSettingChange('strongPasswords', e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Moderation */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Content Moderation</h3>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium text-gray-900">Auto-moderate Content</h4>
+                <p className="text-sm text-gray-600">Automatically flag inappropriate content</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.autoModeration || false}
+                  onChange={(e) => handleSettingChange('autoModeration', e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium text-gray-900">Review Queue</h4>
+                <p className="text-sm text-gray-600">Manual review for flagged content</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.reviewQueue || true}
+                  onChange={(e) => handleSettingChange('reviewQueue', e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Backup & Recovery */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Backup & Recovery</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium text-gray-900 mb-3">Automatic Backups</h4>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Frequency:</span>
+                  <select
+                    value={settings.backupFrequency || 'daily'}
+                    onChange={(e) => handleSettingChange('backupFrequency', e.target.value)}
+                    className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="hourly">Hourly</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Retention:</span>
+                  <select
+                    value={settings.backupRetention || '30'}
+                    onChange={(e) => handleSettingChange('backupRetention', e.target.value)}
+                    className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="7">7 days</option>
+                    <option value="30">30 days</option>
+                    <option value="90">90 days</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900 mb-3">Manual Actions</h4>
+              <div className="space-y-2">
+                <button className="w-full px-3 py-2 text-left text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">
+                  Create Backup Now
+                </button>
+                <button className="w-full px-3 py-2 text-left text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors">
+                  Download Latest Backup
+                </button>
+                <button className="w-full px-3 py-2 text-left text-sm bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors">
+                  Restore from Backup
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Save Button */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div className="flex items-center justify-between">
@@ -1654,12 +1880,31 @@ const AdminDashboard = () => {
               <h4 className="font-medium text-gray-900">Save Changes</h4>
               <p className="text-sm text-gray-600">Apply your configuration changes</p>
             </div>
-            <button 
-              onClick={() => alert('Settings saved successfully!')}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Save Settings
-            </button>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  // Reset to default values
+                  setSettings({
+                    emailNotifications: true,
+                    userRegistration: true,
+                    bookApproval: false,
+                    maintenanceMode: false,
+                    publicRegistration: true,
+                    autoApproveBooks: true
+                  });
+                  alert('Settings reset to defaults!');
+                }}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Reset to Defaults
+              </button>
+              <button
+                onClick={() => alert('Settings saved successfully!')}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Save Settings
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1667,25 +1912,147 @@ const AdminDashboard = () => {
   };
 
   const renderHelp = () => (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Help Center</h3>
-      <p className="text-gray-600">Documentation and support resources.</p>
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-          <h4 className="font-medium text-gray-900 mb-2">Admin Guide</h4>
-          <p className="text-sm text-gray-600">Complete guide for platform administration</p>
+    <div className="space-y-6">
+      {/* Help Center Header */}
+      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Help Center</h3>
+            <p className="text-sm text-gray-500">Documentation, guides, and support resources</p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <HelpCircle className="w-4 h-4 text-blue-600" />
+            </div>
+          </div>
         </div>
-        <div className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-          <h4 className="font-medium text-gray-900 mb-2">API Documentation</h4>
-          <p className="text-sm text-gray-600">Technical documentation for developers</p>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow cursor-pointer">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+              <BookOpen className="w-5 h-5 text-blue-600" />
+            </div>
+            <h4 className="font-semibold text-gray-900">Admin Guide</h4>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">Complete guide for platform administration and management</p>
+          <div className="flex items-center text-blue-600 text-sm font-medium">
+            <span>Read Guide</span>
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </div>
         </div>
-        <div className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-          <h4 className="font-medium text-gray-900 mb-2">Support Tickets</h4>
-          <p className="text-sm text-gray-600">Submit and track support requests</p>
+
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow cursor-pointer">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+              <FileText className="w-5 h-5 text-purple-600" />
+            </div>
+            <h4 className="font-semibold text-gray-900">API Documentation</h4>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">Technical documentation for developers and integrations</p>
+          <div className="flex items-center text-purple-600 text-sm font-medium">
+            <span>View Docs</span>
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </div>
         </div>
-        <div className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-          <h4 className="font-medium text-gray-900 mb-2">System Status</h4>
-          <p className="text-sm text-gray-600">Check platform health and uptime</p>
+
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow cursor-pointer">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+              <MessageSquare className="w-5 h-5 text-green-600" />
+            </div>
+            <h4 className="font-semibold text-gray-900">Support Tickets</h4>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">Submit and track support requests and issues</p>
+          <div className="flex items-center text-green-600 text-sm font-medium">
+            <span>Create Ticket</span>
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow cursor-pointer">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+              <Activity className="w-5 h-5 text-orange-600" />
+            </div>
+            <h4 className="font-semibold text-gray-900">System Status</h4>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">Check platform health, uptime, and performance</p>
+          <div className="flex items-center text-orange-600 text-sm font-medium">
+            <span>View Status</span>
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow cursor-pointer">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+            </div>
+            <h4 className="font-semibold text-gray-900">Troubleshooting</h4>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">Common issues and solutions for platform problems</p>
+          <div className="flex items-center text-red-600 text-sm font-medium">
+            <span>Get Help</span>
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow cursor-pointer">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
+              <Settings className="w-5 h-5 text-indigo-600" />
+            </div>
+            <h4 className="font-semibold text-gray-900">Configuration</h4>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">Platform setup and configuration guidelines</p>
+          <div className="flex items-center text-indigo-600 text-sm font-medium">
+            <span>Learn More</span>
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </div>
+        </div>
+      </div>
+
+      {/* FAQ Section */}
+      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <h4 className="text-lg font-semibold text-gray-900 mb-6">Frequently Asked Questions</h4>
+        <div className="space-y-4">
+          <div className="border-b border-gray-100 pb-4">
+            <h5 className="font-medium text-gray-900 mb-2">How do I manage user permissions?</h5>
+            <p className="text-sm text-gray-600">You can manage user permissions through the Users tab. Click on any user to view their profile and modify their role or status.</p>
+          </div>
+          <div className="border-b border-gray-100 pb-4">
+            <h5 className="font-medium text-gray-900 mb-2">How do I approve or reject borrow requests?</h5>
+            <p className="text-sm text-gray-600">Navigate to the Borrow Requests tab where you can see all pending requests. Use the approve or reject buttons to manage each request.</p>
+          </div>
+          <div className="border-b border-gray-100 pb-4">
+            <h5 className="font-medium text-gray-900 mb-2">Can I export platform data?</h5>
+            <p className="text-sm text-gray-600">Yes, you can export user data and other platform information through the Settings tab under Quick Actions.</p>
+          </div>
+          <div className="pb-4">
+            <h5 className="font-medium text-gray-900 mb-2">How do I monitor platform performance?</h5>
+            <p className="text-sm text-gray-600">Use the Analytics tab to view detailed performance metrics, user engagement, and platform statistics.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Support */}
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="font-semibold text-gray-900 mb-2">Need Additional Help?</h4>
+            <p className="text-sm text-gray-600">Contact our support team for personalized assistance</p>
+          </div>
+          <div className="flex space-x-3">
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+              Contact Support
+            </button>
+            <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+              Schedule Call
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1709,14 +2076,13 @@ const AdminDashboard = () => {
         <div className="flex-1 px-4 py-6">
           <div className="space-y-1">
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">MAIN</div>
-            
+
             <button
               onClick={() => setActiveTab('overview')}
-              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === 'overview'
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'overview'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
             >
               <BarChart3 className="w-4 h-4 mr-3" />
               Dashboard
@@ -1724,11 +2090,10 @@ const AdminDashboard = () => {
 
             <button
               onClick={() => setActiveTab('books')}
-              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === 'books'
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'books'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
             >
               <BookOpen className="w-4 h-4 mr-3" />
               Books
@@ -1736,11 +2101,10 @@ const AdminDashboard = () => {
 
             <button
               onClick={() => setActiveTab('users')}
-              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === 'users'
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'users'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
             >
               <Users className="w-4 h-4 mr-3" />
               Users
@@ -1748,11 +2112,10 @@ const AdminDashboard = () => {
 
             <button
               onClick={() => setActiveTab('borrows')}
-              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === 'borrows'
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'borrows'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
             >
               <ArrowLeftRight className="w-4 h-4 mr-3" />
               Borrow Requests
@@ -1760,11 +2123,10 @@ const AdminDashboard = () => {
 
             <button
               onClick={() => setActiveTab('clubs')}
-              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === 'clubs'
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'clubs'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
             >
               <Users className="w-4 h-4 mr-3" />
               Book Clubs
@@ -1772,11 +2134,10 @@ const AdminDashboard = () => {
 
             <button
               onClick={() => setActiveTab('analytics')}
-              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === 'analytics'
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'analytics'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
             >
               <TrendingUp className="w-4 h-4 mr-3" />
               Analytics
@@ -1784,25 +2145,23 @@ const AdminDashboard = () => {
 
             <button
               onClick={() => setActiveTab('reports')}
-              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === 'reports'
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'reports'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
             >
               <FileText className="w-4 h-4 mr-3" />
               Reports
             </button>
 
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 mt-6">SETTINGS</div>
-            
+
             <button
               onClick={() => setActiveTab('settings')}
-              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === 'settings'
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'settings'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
             >
               <Settings className="w-4 h-4 mr-3" />
               Settings
@@ -1810,11 +2169,10 @@ const AdminDashboard = () => {
 
             <button
               onClick={() => setActiveTab('help')}
-              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === 'help'
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'help'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
             >
               <HelpCircle className="w-4 h-4 mr-3" />
               Help Center

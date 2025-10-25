@@ -191,6 +191,11 @@ export const authAPI = {
     }),
   changePassword: (passwordData) => api.put("/auth/change-password", passwordData),
   updateLocation: (location) => api.put("/auth/location", location),
+  updateSecuritySettings: (settings) => api.put("/auth/security-settings", settings),
+  getAccountActivity: () => api.get("/auth/account-activity"),
+  enable2FA: () => api.post("/auth/enable-2fa"),
+  disable2FA: (code) => api.post("/auth/disable-2fa", { code }),
+  verify2FA: (code) => api.post("/auth/verify-2fa", { code }),
 };
 
 export const booksAPI = {

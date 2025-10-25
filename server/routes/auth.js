@@ -2,7 +2,19 @@ import express from 'express';
 import passport from 'passport';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
-import { registerUser, loginUser, getProfile, updateProfile, changePassword, updateLocation } from '../controllers/authController.js';
+import { 
+  registerUser, 
+  loginUser, 
+  getProfile, 
+  updateProfile, 
+  changePassword, 
+  updateLocation,
+  updateSecuritySettings,
+  getAccountActivity,
+  enable2FA,
+  disable2FA,
+  verify2FA
+} from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
 
@@ -99,6 +111,13 @@ router.put('/profile', protect, (req, res, next) => {
 
 router.put('/change-password', protect, changePassword);
 router.put('/location', protect, updateLocation);
+
+// Security-related routes
+router.put('/security-settings', protect, updateSecuritySettings);
+router.get('/account-activity', protect, getAccountActivity);
+router.post('/enable-2fa', protect, enable2FA);
+router.post('/disable-2fa', protect, disable2FA);
+router.post('/verify-2fa', protect, verify2FA);
 
 // Token validation endpoint
 router.get('/validate-token', protect, (req, res) => {
