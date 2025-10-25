@@ -156,8 +156,11 @@ const StyledBookForm = styled.form`
 const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, setSelectedGoogleBook }) => {
   const { register, handleSubmit, watch, setValue, reset } = useForm({
     defaultValues: {
-      isCurrentlyAvailable: true,
-      isAvailableForBorrowing: true,
+      isAvailable: true,
+      forBorrowing: true,
+      forSelling: false,
+      lendingDuration: 14,
+      sellingPrice: '',
       condition: 'Good',
       ...initialData
     }
@@ -222,8 +225,10 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
         isbn: selectedGoogleBook.isbn || '',
         publicationYear: selectedGoogleBook.publicationYear ? String(selectedGoogleBook.publicationYear) : '',
         condition: 'Good',
-        isCurrentlyAvailable: true,
-        isAvailableForBorrowing: true
+        isAvailable: true,
+        forBorrowing: true,
+        forSelling: false,
+        lendingDuration: 14
       };
       console.log('Resetting form with book data:', bookData);
       reset(bookData);
@@ -231,7 +236,13 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
         setImagePreview(selectedGoogleBook.coverImage);
       }
     } else {
-      reset({ isCurrentlyAvailable: true, condition: 'Good' });
+      reset({ 
+        isAvailable: true, 
+        forBorrowing: true,
+        forSelling: false,
+        lendingDuration: 14,
+        condition: 'Good' 
+      });
       setImagePreview(null);
     }
   }, [initialData, selectedGoogleBook, reset]);
@@ -318,7 +329,13 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
   const clearSelection = () => {
     setSelectedGoogleBook(null);
     setImagePreview(null);
-    reset({ isCurrentlyAvailable: true, condition: 'Good' });
+    reset({ 
+      isAvailable: true, 
+      forBorrowing: true,
+      forSelling: false,
+      lendingDuration: 14,
+      condition: 'Good' 
+    });
   };
 
   const startCamera = async () => {
@@ -497,7 +514,67 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
             </div>
           )}
         </div>
-        <div className="checkbox-group"><label className="checkbox-item"><input type="checkbox" {...register('isAvailableForBorrowing')} />Available for borrowing</label><label className="checkbox-item"><input type="checkbox" {...register('isCurrentlyAvailable')} defaultChecked />Currently available</label></div>
+        
+        {/* Lending Duration and Selling Price */}
+        {(watch('forBorrowing') || watch('forSelling')) && (
+          <>
+            {watch('forBorrowing') && (
+              <div className="form-group">
+                <label htmlFor="lendingDuration">Lending Duration (Days)</label>
+                <input 
+                  id="lendingDuration"
+                  type="number" 
+                  min="1" 
+                  max="365"
+                  defaultValue="14"
+                  placeholder="e.g., 14"
+                  {...register('lendingDuration', { 
+                    min: { value: 1, message: 'Minimum 1 day' },
+                    max: { value: 365, message: 'Maximum 365 days' }
+                  })} 
+                />
+                <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  How many days can borrowers keep this book?
+                </p>
+              </div>
+            )}
+            
+            {watch('forSelling') && (
+              <div className="form-group">
+                <label htmlFor="sellingPrice">Selling Price (₹) <span className="required-star">*</span></label>
+                <input 
+                  id="sellingPrice"
+                  type="number" 
+                  step="0.01"
+                  min="0.01"
+                  placeholder="e.g., 15.99"
+                  {...register('sellingPrice', { 
+                    required: watch('forSelling') ? 'Selling price is required when selling' : false,
+                    min: { value: 0.01, message: 'Price must be greater than $0' }
+                  })} 
+                />
+                <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                  BookHive promotes affordable books. Price will be validated against market rates.
+                </p>
+              </div>
+            )}
+          </>
+        )}
+
+        <div className="checkbox-group">
+          <label className="checkbox-item">
+            <input type="checkbox" {...register('forBorrowing')} />
+            Available for borrowing
+          </label>
+          <label className="checkbox-item">
+            <input type="checkbox" {...register('forSelling')} />
+            Available for selling
+          </label>
+          <label className="checkbox-item">
+            <input type="checkbox" {...register('isAvailable')} defaultChecked />
+            Currently available
+          </label>
+        </div>
         <button type="submit" disabled={isSubmitting} className="submit-btn">{submitButtonText}</button>
       </div>
     </StyledBookForm>
@@ -528,8 +605,8 @@ const BookCard = ({ book, onEdit, onDelete }) => {
         <h3 className="book-title">{book.title}</h3>
         <p className="book-author">by {book.author}</p>
         <p className="book-category">{book.category}</p>
-        <span className={`status-badge ${book.isCurrentlyAvailable ? 'available' : 'borrowed'}`}>
-          {book.isCurrentlyAvailable ? 'Available' : 'On Loan'}
+        <span className={`status-badge ${book.isAvailable ? 'available' : 'borrowed'}`}>
+          {book.isAvailable ? 'Available' : 'On Loan'}
         </span>
         <div className="card-footer">
           <button onClick={() => onEdit(book)} className="btn edit-btn"><Edit size={14} /> Edit</button>

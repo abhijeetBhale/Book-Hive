@@ -5,6 +5,7 @@ import {
   getUserDetails,
   updateUser,
   getBooks,
+  getBooksForSale,
   deleteBook,
   getAnalytics,
   getBorrowRequests,
@@ -42,6 +43,7 @@ router.put('/users/:id', auditLogger('UPDATE_USER'), updateUser);
 
 // Book management routes
 router.get('/books', auditLogger('VIEW_BOOKS'), getBooks);
+router.get('/books-for-sale', auditLogger('VIEW_BOOKS_FOR_SALE'), getBooksForSale);
 router.delete('/books/:id', auditLogger('DELETE_BOOK'), deleteBook);
 
 // Borrow requests management routes

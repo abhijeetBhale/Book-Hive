@@ -46,6 +46,18 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           console.log('📸 No Google photo found, using default avatar');
         } else {
           console.log('📸 Using Google profile photo:', avatarUrl);
+          
+          // Validate the Google avatar URL to ensure it's accessible
+          try {
+            const response = await fetch(avatarUrl, { method: 'HEAD' });
+            if (!response.ok) {
+              console.log('📸 Google avatar not accessible, using default');
+              avatarUrl = getDefaultAvatar(profile.displayName, profile.emails[0].value);
+            }
+          } catch (error) {
+            console.log('📸 Error validating Google avatar, using default');
+            avatarUrl = getDefaultAvatar(profile.displayName, profile.emails[0].value);
+          }
         }
 
         let user = await User.findOne({ googleId: profile.id });

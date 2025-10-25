@@ -86,8 +86,13 @@ borrowRequestSchema.pre('save', async function(next) {
     const Book = mongoose.model('Book')
     if (this.status === 'borrowed') {
       await Book.findByIdAndUpdate(this.book, { isAvailable: false });
+      
+      // Get the book's lending duration
+      const book = await Book.findById(this.book);
+      const lendingDays = book?.lendingDuration || 14; // Default to 14 days if not set
+      
       const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + 14); // 14-day loan period
+      dueDate.setDate(dueDate.getDate() + lendingDays);
       this.dueDate = dueDate;
       this.metadata = {
         ...this.metadata,

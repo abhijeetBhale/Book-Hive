@@ -143,6 +143,22 @@ const BorrowRequests = () => {
                   <h3 className="book-title">{req.book?.title || 'Unknown Book'}</h3>
                   {renderStatusBadge(req.status)}
                 </div>
+                {req.book?.forBorrowing && req.book?.lendingDuration && (
+                  <div style={{ 
+                    backgroundColor: '#dbeafe', 
+                    color: '#1d4ed8', 
+                    padding: '0.5rem 0.75rem', 
+                    borderRadius: '0.5rem', 
+                    fontSize: '0.875rem', 
+                    fontWeight: '600',
+                    marginBottom: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    Lending Duration: {req.book.lendingDuration} days
+                  </div>
+                )}
                 <div className="user-info">
                   <img
                     src={req.borrower?.avatar || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K'}
@@ -263,6 +279,22 @@ const BorrowRequests = () => {
                     <h3 className="book-title">{req.book?.title || 'Unknown Book'}</h3>
                     {renderStatusBadge(req.status)}
                   </div>
+                  {req.book?.forBorrowing && req.book?.lendingDuration && (
+                    <div style={{ 
+                      backgroundColor: '#dbeafe', 
+                      color: '#1d4ed8', 
+                      padding: '0.5rem 0.75rem', 
+                      borderRadius: '0.5rem', 
+                      fontSize: '0.875rem', 
+                      fontWeight: '600',
+                      marginBottom: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      Lending Duration: {req.book.lendingDuration} days
+                    </div>
+                  )}
                   <div className="user-info">
                     <img
                       src={req.owner?.avatar || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K'}

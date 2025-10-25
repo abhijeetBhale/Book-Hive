@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authAPI, usersAPI } from '../utils/api';
 import { ensureLocalKeypairAndUpload } from '../utils/crypto';
 import { getCurrentLocation } from '../utils/locationHelpers';
+import avatarCache from '../utils/avatarCache';
 import toast from 'react-hot-toast';
 
 export const AuthContext = createContext(null);
@@ -24,6 +25,14 @@ export const AuthProvider = ({ children }) => {
   const fetchProfile = async () => {
     try {
       const { data } = await authAPI.getProfile();
+      
+      // Preload avatar image for faster display using cache
+      if (data.avatar) {
+        avatarCache.preload(data.avatar).catch(() => {
+          // Silently handle preload errors
+        });
+      }
+      
       // server returns flat user fields; normalize to `user` shape
       setUser({
         _id: data._id,

@@ -106,10 +106,57 @@ const BookCard = ({ book }) => {
     <CardWrapper>
       <ImageWrapper>
         <BookCover src={getFullImageUrl(book.coverImageUrl)} alt={`Cover of ${book.title}`} />
+
+        {/* Availability Badges */}
+        <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {book.forBorrowing && (
+            <div style={{
+              backgroundColor: '#3B82F6',
+              color: 'white',
+              padding: '0.25rem 0.5rem',
+              borderRadius: '0.375rem',
+              fontSize: '0.75rem',
+              fontWeight: '600'
+            }}>
+              {book.lendingDuration || 14} days
+            </div>
+          )}
+          {book.forSelling && (
+            <div style={{
+              backgroundColor: '#10B981',
+              color: 'white',
+              padding: '0.25rem 0.5rem',
+              borderRadius: '0.375rem',
+              fontSize: '0.75rem',
+              fontWeight: '600'
+            }}>
+              ₹{book.sellingPrice?.toFixed(2) || '0.00'}
+            </div>
+          )}
+        </div>
       </ImageWrapper>
       <BookInfo>
         <BookTitle>{book.title}</BookTitle>
         <BookAuthor>by {book.author}</BookAuthor>
+
+        {/* Additional Info */}
+        <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'center', gap: '0.75rem', fontSize: '0.75rem', color: '#6B7280' }}>
+          {book.forBorrowing && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              Borrowing
+            </span>
+          )}
+          {book.forSelling && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              For Sale
+            </span>
+          )}
+          {book.condition && (
+            <span>
+              {book.condition}
+            </span>
+          )}
+        </div>
       </BookInfo>
       {/* This link now correctly points to the new details page */}
       <DetailsButton to={`/books/${book._id}`}>

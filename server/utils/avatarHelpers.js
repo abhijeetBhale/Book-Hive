@@ -13,18 +13,23 @@ export const processGoogleAvatar = (photos) => {
   // Google profile photos come with size parameters like s96-c, s50-c etc.
   // We can modify these to get higher quality images
   if (avatarUrl.includes('googleusercontent.com')) {
-    // Replace any existing size parameter with s400-c for 400px image
-    avatarUrl = avatarUrl.replace(/s\d+-c/, 's400-c');
+    // Replace any existing size parameter with s200-c for 200px image (good balance of quality and speed)
+    avatarUrl = avatarUrl.replace(/s\d+-c/, 's200-c');
     
     // If no size parameter exists, add one
-    if (!avatarUrl.includes('s400-c')) {
+    if (!avatarUrl.includes('s200-c')) {
       // Add size parameter before any existing query parameters
       const urlParts = avatarUrl.split('?');
       if (urlParts.length > 1) {
-        avatarUrl = `${urlParts[0]}=s400-c&${urlParts[1]}`;
+        avatarUrl = `${urlParts[0]}=s200-c&${urlParts[1]}`;
       } else {
-        avatarUrl = `${avatarUrl}=s400-c`;
+        avatarUrl = `${avatarUrl}=s200-c`;
       }
+    }
+    
+    // Add cache-friendly parameters to improve loading speed
+    if (!avatarUrl.includes('cache=')) {
+      avatarUrl += avatarUrl.includes('?') ? '&cache=1' : '?cache=1';
     }
   }
 

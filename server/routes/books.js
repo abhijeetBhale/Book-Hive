@@ -10,7 +10,9 @@ import {
   searchByISBN,
   getBookSuggestions,
   getTrendingBooks,
-  getFilterOptions
+  getFilterOptions,
+  validateBookPrice,
+  getBooksForSale
 } from '../controllers/bookController.js';
 import { protect } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
@@ -24,6 +26,8 @@ router.get('/search/isbn/:isbn', searchByISBN);
 router.get('/suggestions', protect, getBookSuggestions);
 router.get('/trending', getTrendingBooks);
 router.get('/filters', getFilterOptions);
+router.get('/for-sale', getBooksForSale);
+router.post('/validate-price', protect, validateBookPrice);
 
 // Test endpoint
 router.get('/test', (req, res) => {

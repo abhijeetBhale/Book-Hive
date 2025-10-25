@@ -119,6 +119,12 @@ const BookDetailsModal = ({ isOpen, onClose, book, onRequest }) => {
             <div><span>Condition</span><span>{book.condition}</span></div>
             <div><span>Published</span><span>{book.publicationYear || 'N/A'}</span></div>
             <div><span>ISBN</span><span>{book.isbn || 'N/A'}</span></div>
+            {book.forBorrowing && (
+              <div><span>Lending Duration</span><span>{book.lendingDuration || 14} days</span></div>
+            )}
+            {book.forSelling && (
+              <div><span>Price</span><span>₹{book.sellingPrice?.toFixed(2) || '0.00'}</span></div>
+            )}
           </div>
 
           <div className="description">
@@ -127,14 +133,38 @@ const BookDetailsModal = ({ isOpen, onClose, book, onRequest }) => {
           </div>
 
           <div className="modal-footer">
-            <button
-              className="request-btn"
-              onClick={() => onRequest(book._id)}
-              disabled={!book.isAvailable || !book.forBorrowing}
-            >
-              <Send size={18} />
-              {book.isAvailable && book.forBorrowing ? 'Request This Book' : 'Currently Unavailable'}
-            </button>
+            {book.isAvailable && (book.forBorrowing || book.forSelling) ? (
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                {book.forBorrowing && (
+                  <button
+                    className="request-btn"
+                    onClick={() => onRequest(book._id)}
+                    style={{ flex: book.forSelling ? 1 : 'auto' }}
+                  >
+                    <Send size={18} />
+                    Borrow ({book.lendingDuration || 14} days)
+                  </button>
+                )}
+                {book.forSelling && (
+                  <button
+                    className="request-btn"
+                    onClick={() => toast.info('Contact seller functionality coming soon!')}
+                    style={{ 
+                      flex: book.forBorrowing ? 1 : 'auto',
+                      backgroundColor: '#059669'
+                    }}
+                  >
+                    <Send size={18} />
+                    Buy for ₹{book.sellingPrice?.toFixed(2) || '0.00'}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <button className="request-btn" disabled>
+                <Send size={18} />
+                Currently Unavailable
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -169,12 +199,47 @@ const StyledBookCard = styled.div`
 const BookCard = ({ book, onClick }) => {
   return (
     <StyledBookCard onClick={() => onClick(book)}>
-      <img src={getFullImageUrl(book.coverImage)} alt={book.title} className="book-cover" />
+      <div style={{ position: 'relative' }}>
+        <img src={getFullImageUrl(book.coverImage)} alt={book.title} className="book-cover" />
+        
+        {/* Availability Badges */}
+        <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          {book.forBorrowing && (
+            <div style={{ 
+              backgroundColor: '#3B82F6', 
+              color: 'white', 
+              padding: '0.25rem 0.5rem', 
+              borderRadius: '0.375rem', 
+              fontSize: '0.75rem', 
+              fontWeight: '600' 
+            }}>
+              {book.lendingDuration || 14}d
+            </div>
+          )}
+          {book.forSelling && (
+            <div style={{ 
+              backgroundColor: '#10B981', 
+              color: 'white', 
+              padding: '0.25rem 0.5rem', 
+              borderRadius: '0.375rem', 
+              fontSize: '0.75rem', 
+              fontWeight: '600' 
+            }}>
+              ₹{book.sellingPrice?.toFixed(2) || '0.00'}
+            </div>
+          )}
+        </div>
+      </div>
+      
       <div className="card-content">
         <h3 className="book-title">{book.title}</h3>
         <p className="book-author">by {book.author}</p>
         <div className="status-badge">
-          {!book.isAvailable ? 'Currently Borrowed' : book.forBorrowing ? 'Available to Borrow' : 'Not for Borrowing'}
+          {!book.isAvailable ? 'Currently Borrowed' : 
+           book.forBorrowing && book.forSelling ? 'Available to Borrow or Buy' :
+           book.forBorrowing ? 'Available to Borrow' : 
+           book.forSelling ? 'Available to Buy' : 
+           'Not Available'}
         </div>
       </div>
     </StyledBookCard>

@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '../ui/Button';
 import { BOOK_CATEGORIES, BOOK_CONDITIONS } from '../../utils/constants';
 
 const BookForm = ({ onSubmit, initialData = {}, isSubmitting }) => {
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm({
     defaultValues: initialData,
   });
   const [coverPreview, setCoverPreview] = useState(initialData.coverImage || null);
+  const [priceValidation, setPriceValidation] = useState(null);
+  const [isValidatingPrice, setIsValidatingPrice] = useState(false);
+  
+  const watchForBorrowing = watch('forBorrowing');
+  const watchForSelling = watch('forSelling');
+  const watchSellingPrice = watch('sellingPrice');
 
   const handleCoverChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -15,6 +21,48 @@ const BookForm = ({ onSubmit, initialData = {}, isSubmitting }) => {
       setCoverPreview(URL.createObjectURL(file));
     }
   };
+
+  const validatePrice = async () => {
+    const formData = watch();
+    if (!formData.title || !formData.author || !formData.sellingPrice) {
+      return;
+    }
+
+    setIsValidatingPrice(true);
+    try {
+      const response = await fetch('/api/books/validate-price', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          title: formData.title,
+          author: formData.author,
+          isbn: formData.isbn,
+          sellingPrice: parseFloat(formData.sellingPrice),
+          condition: formData.condition
+        })
+      });
+      
+      const result = await response.json();
+      setPriceValidation(result);
+    } catch (error) {
+      console.error('Price validation error:', error);
+      setPriceValidation({
+        error: 'Failed to validate price. Please check manually.'
+      });
+    } finally {
+      setIsValidatingPrice(false);
+    }
+  };
+
+  useEffect(() => {
+    if (watchForSelling && watchSellingPrice && parseFloat(watchSellingPrice) > 0) {
+      const timeoutId = setTimeout(validatePrice, 1000); // Debounce validation
+      return () => clearTimeout(timeoutId);
+    }
+  }, [watchSellingPrice, watchForSelling]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -99,6 +147,92 @@ const BookForm = ({ onSubmit, initialData = {}, isSubmitting }) => {
         {errors.description && <p className="text-red-600 text-sm mt-2 font-medium">{errors.description.message}</p>}
       </div>
 
+      {/* Lending Duration and Selling Price */}
+      {(watchForBorrowing || watchForSelling) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {watchForBorrowing && (
+            <div>
+              <label className="block text-lg font-bold text-gray-900 mb-3">Lending Duration (Days)</label>
+              <input 
+                type="number" 
+                {...register('lendingDuration', { 
+                  min: { value: 1, message: 'Minimum 1 day' },
+                  max: { value: 365, message: 'Maximum 365 days' }
+                })} 
+                min="1" 
+                max="365"
+                defaultValue="14"
+                className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] text-gray-900 font-medium text-lg placeholder-gray-500 transition-all duration-200" 
+                placeholder="e.g., 14"
+              />
+              {errors.lendingDuration && <p className="text-red-600 text-sm mt-2 font-medium">{errors.lendingDuration.message}</p>}
+              <p className="text-sm text-gray-600 mt-2">How many days can borrowers keep this book?</p>
+            </div>
+          )}
+          
+          {watchForSelling && (
+            <div>
+              <label className="block text-lg font-bold text-gray-900 mb-3">Selling Price (₹) *</label>
+              <input 
+                type="number" 
+                step="0.01"
+                {...register('sellingPrice', { 
+                  required: watchForSelling ? 'Selling price is required when selling' : false,
+                  min: { value: 0.01, message: 'Price must be greater than $0' }
+                })} 
+                min="0.01"
+                className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-[#10B981]/20 focus:border-[#10B981] text-gray-900 font-medium text-lg placeholder-gray-500 transition-all duration-200" 
+                placeholder="e.g., 15.99"
+              />
+              {errors.sellingPrice && <p className="text-red-600 text-sm mt-2 font-medium">{errors.sellingPrice.message}</p>}
+              
+              {/* Price Validation */}
+              {watchForSelling && watchSellingPrice && (
+                <div className="mt-3">
+                  {isValidatingPrice && (
+                    <div className="flex items-center text-blue-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                      <span className="text-sm">Validating price...</span>
+                    </div>
+                  )}
+                  
+                  {priceValidation && !isValidatingPrice && (
+                    <div className={`p-3 rounded-xl border ${
+                      priceValidation.error 
+                        ? 'bg-red-50 border-red-200 text-red-700'
+                        : priceValidation.priceComparison?.isReasonable 
+                          ? 'bg-green-50 border-green-200 text-green-700'
+                          : 'bg-yellow-50 border-yellow-200 text-yellow-700'
+                    }`}>
+                      {priceValidation.error ? (
+                        <p className="text-sm font-medium">{priceValidation.error}</p>
+                      ) : (
+                        <div>
+                          <p className="text-sm font-medium">{priceValidation.recommendation?.message}</p>
+                          {priceValidation.recommendation?.suggestion && (
+                            <p className="text-xs mt-1">{priceValidation.recommendation.suggestion}</p>
+                          )}
+                          {priceValidation.priceComparison && (
+                            <p className="text-xs mt-1">
+                              Market price: ₹{priceValidation.priceComparison.marketPrice?.toFixed(2)} | 
+                              Your price: ₹{priceValidation.priceComparison.userPrice}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              <p className="text-sm text-gray-600 mt-2">
+                BookHive promotes affordable books. We'll validate your price against market rates.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-lg font-bold text-gray-900 mb-3">Cover Image</label>
@@ -126,6 +260,18 @@ const BookForm = ({ onSubmit, initialData = {}, isSubmitting }) => {
             />
             <label htmlFor="forBorrowing" className="ml-3 block text-lg font-bold text-gray-900">
               Available for borrowing
+            </label>
+          </div>
+          
+          <div className="flex items-center p-4 bg-gradient-to-r from-[#10B981]/5 to-green-50 rounded-2xl border border-[#10B981]/20">
+            <input
+              type="checkbox"
+              id="forSelling"
+              {...register('forSelling')}
+              className="h-5 w-5 text-[#10B981] focus:ring-4 focus:ring-[#10B981]/20 border-2 border-gray-300 rounded-lg"
+            />
+            <label htmlFor="forSelling" className="ml-3 block text-lg font-bold text-gray-900">
+              Available for selling
             </label>
           </div>
           

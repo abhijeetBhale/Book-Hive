@@ -26,15 +26,18 @@ export const getDashboardOverview = catchAsync(async (req, res, next) => {
     const [
       totalUsers,
       totalBooks,
+      totalBooksForSale,
       totalBorrowRequests,
       totalClubs,
       activeUsers,
       newUsersThisMonth,
       newBooksThisMonth,
+      newBooksForSaleThisMonth,
       activeBorrowRequests,
       completedBorrowRequests,
       recentUsers,
       recentBooks,
+      recentBooksForSale,
       systemStats,
       topCategories,
       recentActivity,
@@ -43,15 +46,18 @@ export const getDashboardOverview = catchAsync(async (req, res, next) => {
     ] = await Promise.all([
       User.countDocuments().catch(() => 0),
       Book.countDocuments().catch(() => 0),
+      Book.countDocuments({ forSelling: true }).catch(() => 0),
       BorrowRequest.countDocuments().catch(() => 0),
       BookClub.countDocuments().catch(() => 0),
       User.countDocuments({ lastActive: { $gte: startOfWeek } }).catch(() => 0),
       User.countDocuments({ createdAt: { $gte: startOfMonth } }).catch(() => 0),
       Book.countDocuments({ createdAt: { $gte: startOfMonth } }).catch(() => 0),
+      Book.countDocuments({ createdAt: { $gte: startOfMonth }, forSelling: true }).catch(() => 0),
       BorrowRequest.countDocuments({ status: { $in: ['pending', 'approved', 'borrowed'] } }).catch(() => 0),
       BorrowRequest.countDocuments({ status: 'returned' }).catch(() => 0),
       User.find().sort({ createdAt: -1 }).limit(5).select('name email createdAt avatar').catch(() => []),
       Book.find().sort({ createdAt: -1 }).limit(5).populate('owner', 'name').select('title author createdAt owner').catch(() => []),
+      Book.find({ forSelling: true }).sort({ createdAt: -1 }).limit(5).populate('owner', 'name').select('title author sellingPrice createdAt owner').catch(() => []),
       getSystemStats().catch(() => ({ dailyActiveUsers: 0, dailyNewUsers: 0, dailyNewBooks: 0, dailyBorrowRequests: 0 })),
       getTopCategories().catch(() => []),
       getRecentActivity().catch(() => []),
@@ -77,11 +83,13 @@ export const getDashboardOverview = catchAsync(async (req, res, next) => {
         overview: {
           totalUsers,
           totalBooks,
+          totalBooksForSale,
           totalBorrowRequests,
           totalClubs,
           activeUsers,
           newUsersThisMonth,
           newBooksThisMonth,
+          newBooksForSaleThisMonth,
           activeBorrowRequests,
           completedBorrowRequests,
           userGrowthRate: Math.round(userGrowthRate * 100) / 100,
@@ -90,6 +98,7 @@ export const getDashboardOverview = catchAsync(async (req, res, next) => {
         recentActivity: {
           recentUsers,
           recentBooks,
+          recentBooksForSale,
           activities: recentActivity
         },
         systemStats,
@@ -964,6 +973,99 @@ export const getBookSharingActivity = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     data: data[period] || data.monthly
+  });
+});
+
+// @desc    Get books for sale with admin filters
+// @route   GET /api/admin/books-for-sale
+// @access  Private (Super Admin only)
+export const getBooksForSale = catchAsync(async (req, res, next) => {
+  const {
+    page = 1,
+    limit = 20,
+    search,
+    priceRange,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    all = false
+  } = req.query;
+
+  let query = { forSelling: true };
+
+  if (search) {
+    query.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { author: { $regex: search, $options: 'i' } },
+      { category: { $regex: search, $options: 'i' } }
+    ];
+  }
+
+  // Price range filter
+  if (priceRange && priceRange !== 'all') {
+    switch (priceRange) {
+      case 'under10':
+        query.sellingPrice = { $lt: 10 };
+        break;
+      case '10to25':
+        query.sellingPrice = { $gte: 10, $lte: 25 };
+        break;
+      case '25to50':
+        query.sellingPrice = { $gte: 25, $lte: 50 };
+        break;
+      case 'over50':
+        query.sellingPrice = { $gt: 50 };
+        break;
+    }
+  }
+
+  const sortOptions = {};
+  sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+  let booksQuery = Book.find(query)
+    .populate('owner', 'name email avatar')
+    .sort(sortOptions)
+    .lean();
+
+  if (!all && limit !== 'all') {
+    booksQuery = booksQuery
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+  }
+
+  const books = await booksQuery;
+  const total = await Book.countDocuments(query);
+
+  // Add price validation status to each book
+  const booksWithValidation = books.map(book => ({
+    ...book,
+    priceStatus: book.priceValidation?.priceComparison?.isReasonable ? 'reasonable' : 'high',
+    marketPrice: book.marketPrice,
+    priceDifference: book.priceValidation?.priceComparison?.percentageDifference
+  }));
+
+  const pagination = all || limit === 'all' ? {
+    page: 1,
+    limit: total,
+    total,
+    pages: 1
+  } : {
+    page: parseInt(page),
+    limit: parseInt(limit),
+    total,
+    pages: Math.ceil(total / parseInt(limit))
+  };
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      books: booksWithValidation,
+      pagination,
+      stats: {
+        totalForSale: total,
+        averagePrice: books.length > 0 ? books.reduce((sum, book) => sum + (book.sellingPrice || 0), 0) / books.length : 0,
+        priceValidated: books.filter(book => book.priceValidation?.isValidated).length
+      }
+    }
   });
 });
 

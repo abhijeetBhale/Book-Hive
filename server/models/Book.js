@@ -77,6 +77,40 @@ const bookSchema = new mongoose.Schema({
     default: true,
     index: true, // Add index for borrowing filtering
   },
+  // Lending duration (in days)
+  lendingDuration: {
+    type: Number,
+    min: 1,
+    max: 365,
+    default: 14, // Default 14 days
+  },
+  // Selling options
+  forSelling: {
+    type: Boolean,
+    default: false,
+    index: true, // Add index for selling filtering
+  },
+  sellingPrice: {
+    type: Number,
+    min: 0,
+    default: null,
+  },
+  marketPrice: {
+    type: Number,
+    min: 0,
+    default: null,
+  },
+  priceValidation: {
+    isValidated: { type: Boolean, default: false },
+    validatedAt: { type: Date },
+    marketSources: [String], // Sources used for price validation
+    priceComparison: {
+      userPrice: Number,
+      marketPrice: Number,
+      percentageDifference: Number,
+      isReasonable: Boolean, // true if user price is <= market price
+    }
+  },
   // Enhanced search fields
   searchText: {
     type: String,

@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import BorrowRequest from '../models/BorrowRequest.js';
 import { uploadToCloudinary } from '../config/cloudinary.js';
 import { awardPoints } from '../services/achievementService.js';
+import PriceValidationService from '../services/priceValidationService.js';
 
 // @desc    Get all books with advanced search and filtering
 // @route   GET /api/books
@@ -87,6 +88,12 @@ export const getAllBooks = async (req, res) => {
 
     if (forBorrowing !== '') {
       query.forBorrowing = forBorrowing === 'true';
+    }
+
+    // Add forSelling filter
+    const { forSelling } = req.query;
+    if (forSelling !== '' && forSelling !== undefined) {
+      query.forSelling = forSelling === 'true';
     }
 
     // ISBN search
@@ -279,6 +286,9 @@ export const createBook = async (req, res) => {
       publicationYear, 
       condition, 
       forBorrowing, 
+      forSelling,
+      lendingDuration,
+      sellingPrice,
       isAvailable,
       isAvailableForBorrowing,
       isCurrentlyAvailable,
@@ -303,6 +313,16 @@ export const createBook = async (req, res) => {
       finalCoverImageUrl = coverImageUrl;
     }
     
+    // Validate selling price if book is for selling
+    let priceValidationResult = null;
+    if (forSelling && sellingPrice) {
+      const priceValidationService = new PriceValidationService();
+      priceValidationResult = await priceValidationService.validateBookPrice(
+        { title, author, isbn },
+        parseFloat(sellingPrice)
+      );
+    }
+
     const book = new Book({
       title,
       author,
@@ -313,9 +333,17 @@ export const createBook = async (req, res) => {
       condition: condition && condition.trim() !== '' ? condition : 'Good', // Default to 'Good' if empty
       // Handle different boolean field names from frontend
       forBorrowing: isAvailableForBorrowing !== undefined ? isAvailableForBorrowing : (forBorrowing !== undefined ? forBorrowing : true),
+      forSelling: forSelling || false,
+      lendingDuration: lendingDuration ? Number(lendingDuration) : 14, // Default 14 days
+      sellingPrice: forSelling && sellingPrice ? Number(sellingPrice) : null,
       isAvailable: isCurrentlyAvailable !== undefined ? isCurrentlyAvailable : (isAvailable !== undefined ? isAvailable : true),
       owner: req.user._id,
-      coverImage: finalCoverImageUrl
+      coverImage: finalCoverImageUrl,
+      // Add price validation data if available
+      ...(priceValidationResult && {
+        marketPrice: priceValidationResult.priceComparison?.marketPrice,
+        priceValidation: priceValidationResult
+      })
     });
     
     const createdBook = await book.save();
@@ -352,6 +380,9 @@ export const updateBook = async (req, res) => {
       publicationYear, 
       condition, 
       forBorrowing, 
+      forSelling,
+      lendingDuration,
+      sellingPrice,
       isAvailable,
       coverImageUrl 
     } = req.body;
@@ -369,7 +400,24 @@ export const updateBook = async (req, res) => {
       book.publicationYear = publicationYear ? Number(publicationYear) : book.publicationYear;
       book.condition = condition || book.condition;
       book.forBorrowing = forBorrowing !== undefined ? forBorrowing : book.forBorrowing;
+      book.forSelling = forSelling !== undefined ? forSelling : book.forSelling;
+      book.lendingDuration = lendingDuration ? Number(lendingDuration) : book.lendingDuration;
+      book.sellingPrice = forSelling && sellingPrice ? Number(sellingPrice) : (forSelling ? book.sellingPrice : null);
       book.isAvailable = isAvailable !== undefined ? isAvailable : book.isAvailable;
+
+      // Re-validate price if selling price changed
+      if (forSelling && sellingPrice && sellingPrice !== book.sellingPrice) {
+        const priceValidationService = new PriceValidationService();
+        const priceValidationResult = await priceValidationService.validateBookPrice(
+          { title: book.title, author: book.author, isbn: book.isbn },
+          parseFloat(sellingPrice)
+        );
+        
+        if (priceValidationResult) {
+          book.marketPrice = priceValidationResult.priceComparison?.marketPrice;
+          book.priceValidation = priceValidationResult;
+        }
+      }
 
       // Handle cover image update - priority: uploaded file > Google Books URL
       if (req.file) {
@@ -634,5 +682,132 @@ export const getFilterOptions = async (req, res) => {
       message: 'Server error getting filter options',
       error: error.message 
     });
+  }
+};
+
+// @desc    Validate book price against market rates
+// @route   POST /api/books/validate-price
+export const validateBookPrice = async (req, res) => {
+  try {
+    const { title, author, isbn, sellingPrice, condition } = req.body;
+
+    if (!title || !author || !sellingPrice) {
+      return res.status(400).json({
+        message: 'Title, author, and selling price are required'
+      });
+    }
+
+    const priceValidationService = new PriceValidationService();
+    const validation = await priceValidationService.validateBookPrice(
+      { title, author, isbn },
+      parseFloat(sellingPrice)
+    );
+
+    // If we have condition info, calculate recommended price
+    if (condition && validation.priceComparison) {
+      const recommendedPrice = priceValidationService.calculateRecommendedPrice(
+        validation.priceComparison.marketPrice,
+        condition,
+        'general' // You could determine category from title/description
+      );
+      
+      validation.recommendedPrice = recommendedPrice;
+    }
+
+    res.json(validation);
+  } catch (error) {
+    console.error('Price validation error:', error);
+    res.status(500).json({
+      message: 'Server error validating price',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get books for sale
+// @route   GET /api/books/for-sale
+export const getBooksForSale = async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 20,
+      search = '',
+      category = '',
+      minPrice = '',
+      maxPrice = '',
+      condition = '',
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, Number(limit) || 20));
+
+    // Build query for books for sale
+    let query = { forSelling: true, isAvailable: true };
+
+    // Text search
+    if (search.trim()) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { author: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Category filter
+    if (category && category !== 'All') {
+      query.category = category;
+    }
+
+    // Price range filter
+    if (minPrice || maxPrice) {
+      query.sellingPrice = {};
+      if (minPrice) query.sellingPrice.$gte = Number(minPrice);
+      if (maxPrice) query.sellingPrice.$lte = Number(maxPrice);
+    }
+
+    // Condition filter
+    if (condition && condition !== 'All') {
+      query.condition = condition;
+    }
+
+    // Build sort object
+    let sort = {};
+    const validSortFields = ['title', 'author', 'createdAt', 'sellingPrice'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const sortDirection = sortOrder === 'asc' ? 1 : -1;
+    sort[sortField] = sortDirection;
+
+    const [books, total] = await Promise.all([
+      Book.find(query)
+        .populate('owner', 'name email avatar location')
+        .sort(sort)
+        .skip((pageNum - 1) * limitNum)
+        .limit(limitNum),
+      Book.countDocuments(query),
+    ]);
+
+    res.json({
+      books,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum) || 1,
+      },
+      filters: {
+        search,
+        category,
+        minPrice,
+        maxPrice,
+        condition,
+        sortBy,
+        sortOrder
+      }
+    });
+  } catch (error) {
+    console.error('Get books for sale error:', error);
+    res.status(500).json({ message: 'Server error getting books for sale', error: error.message });
   }
 };

@@ -42,6 +42,7 @@ export const adminAPIService = {
 
   // Book Management
   getBooks: (params = {}) => adminAPI.get('/books', { params }),
+  getBooksForSale: (params = {}) => adminAPI.get('/books-for-sale', { params }),
   deleteBook: (id) => adminAPI.delete(`/books/${id}`),
 
   // Borrow Requests Management

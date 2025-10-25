@@ -13,6 +13,7 @@ import {
   Star,
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
+import OptimizedAvatar from '../ui/OptimizedAvatar';
 import Button from '../ui/Button';
 import beeIcon from '../../assets/icons8-bee-100.png';
 import LoginButton from '../LoginButton';
@@ -332,11 +333,11 @@ const Navbar = () => {
                   </div>
 
                   <Link to="/profile" className="relative">
-                    <img
-                      key={user.avatar}
-                      src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}&background=4F46E5&color=fff`}
+                    <OptimizedAvatar
+                      src={user.avatar}
+                      name={user.name}
                       alt="avatar"
-                      className="h-10 w-10 rounded-full object-cover"
+                      size="md"
                     />
                     {unreadCount > 0 && (
                       <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" />
@@ -385,11 +386,11 @@ const Navbar = () => {
                     </NavLink>
                   ))}
                   <Link to="/profile" className="relative" onClick={() => setIsOpen(false)}>
-                    <img
-                      key={user.avatar}
-                      src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}&background=4F46E5&color=fff`}
+                    <OptimizedAvatar
+                      src={user.avatar}
+                      name={user.name}
                       alt="avatar"
-                      className="h-10 w-10 rounded-full object-cover"
+                      size="md"
                     />
                     {unreadCount > 0 && (
                       <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" />

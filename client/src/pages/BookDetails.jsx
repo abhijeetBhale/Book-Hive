@@ -217,7 +217,17 @@ const BookDetails = () => {
             <InfoTag>Category: {book.category}</InfoTag>
             <InfoTag>Condition: {book.condition}</InfoTag>
             <InfoTag>Publication Year: {book.publicationYear || 'Unknown'}</InfoTag>
-            <InfoTag>Availability: {book.isCurrentlyAvailable ? 'Available' : 'Not Available'}</InfoTag>
+            <InfoTag>Status: {book.isAvailable ? 'Available' : 'Not Available'}</InfoTag>
+            {book.forBorrowing && (
+              <InfoTag style={{ backgroundColor: '#dbeafe', color: '#1d4ed8' }}>
+                Lending Duration: {book.lendingDuration || 14} days
+              </InfoTag>
+            )}
+            {book.forSelling && (
+              <InfoTag style={{ backgroundColor: '#d1fae5', color: '#059669' }}>
+                For Sale: ₹{book.sellingPrice?.toFixed(2) || '0.00'}
+              </InfoTag>
+            )}
           </div>
 
           <OwnerSection>
@@ -240,10 +250,26 @@ const BookDetails = () => {
             </OwnerCard>
           </OwnerSection>
 
-          {!isOwner && book.isCurrentlyAvailable && (
-            <ActionButton onClick={handleBorrowRequest}>
-              Request to Borrow
-            </ActionButton>
+          {!isOwner && book.isAvailable && (
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+              {book.forBorrowing && (
+                <ActionButton onClick={handleBorrowRequest} style={{ flex: book.forSelling ? 1 : 'auto' }}>
+                  Request to Borrow ({book.lendingDuration || 14} days)
+                </ActionButton>
+              )}
+              {book.forSelling && (
+                <ActionButton 
+                  onClick={() => alert('Contact seller functionality coming soon!')} 
+                  style={{ 
+                    flex: book.forBorrowing ? 1 : 'auto',
+                    backgroundColor: '#059669',
+                    '&:hover': { backgroundColor: '#047857' }
+                  }}
+                >
+                  Buy for ₹{book.sellingPrice?.toFixed(2) || '0.00'}
+                </ActionButton>
+              )}
+            </div>
           )}
         </DetailsContainer>
       </ContentWrapper>
