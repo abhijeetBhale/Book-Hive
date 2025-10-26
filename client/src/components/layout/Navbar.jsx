@@ -10,7 +10,7 @@ import {
   MessageSquare,
   Heart,
   Bell,
-  Star,
+  Trash2,
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import OptimizedAvatar from '../ui/OptimizedAvatar';
@@ -80,7 +80,7 @@ const Navbar = () => {
       setUnreadCount(prev => prev + 1);
       
       // Show toast notification with better styling
-      toast.success(notification.message, {
+      toast.success(notification.message || notification.title, {
         duration: 4000,
         icon: '📚',
         style: {
@@ -129,12 +129,34 @@ const Navbar = () => {
         setUnreadCount(0);
       }
     };
+
+    const fetchRecentNotifications = async () => {
+      if (user) {
+        try {
+          const notifications = await notificationsAPI.getAll({ limit: 5 });
+          console.log('Recent notifications:', notifications);
+          setRealtimeNotifications(notifications || []);
+        } catch (error) {
+          console.error('Error fetching recent notifications:', error);
+          setRealtimeNotifications([]);
+        }
+      }
+    };
+
     fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
+    fetchRecentNotifications();
+    
+    const interval = setInterval(() => {
+      fetchUnread();
+      fetchRecentNotifications();
+    }, 30000);
+    
     const onRead = () => {
       console.log('Notifications read event triggered, refetching count');
       fetchUnread();
+      fetchRecentNotifications();
     };
+    
     window.addEventListener('notifications-read', onRead);
     return () => {
       clearInterval(interval);
@@ -157,36 +179,63 @@ const Navbar = () => {
   }, []);
 
   const handleNotificationClick = async (notification) => {
+    console.log('Notification clicked:', notification._id);
+    
     try {
-      console.log('Marking notification as read:', notification.id);
-      
-      // Mark this notification as read
-      const response = await notificationsAPI.markAsRead([notification.id]);
-      console.log('Mark as read response:', response);
-      
-      // Update local state
-      setUnreadCount(prev => Math.max(0, prev - 1));
-      setRealtimeNotifications(prev => 
-        prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
-      );
-      
-      // Dispatch event to update other components
-      window.dispatchEvent(new Event('notifications-read'));
+      // Mark this notification as read if it's not already read
+      if (!notification.isRead) {
+        const response = await notificationsAPI.markAsRead([notification._id]);
+        console.log('Mark as read response:', response);
+        
+        // Update local state
+        setUnreadCount(prev => Math.max(0, prev - 1));
+        setRealtimeNotifications(prev => 
+          prev.map(n => n._id === notification._id ? { ...n, isRead: true } : n)
+        );
+        
+        // Dispatch event to update other components
+        window.dispatchEvent(new Event('notifications-read'));
+      }
       
       // Close dropdown
       setShowNotificationDropdown(false);
       
       // Navigate to the notification link if available
-      if (notification.link) {
-        window.location.href = notification.link;
+      if (notification.metadata?.link) {
+        window.location.href = notification.metadata.link;
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
+    }
+  };
+
+  const handleDeleteNotification = async (notificationId, event) => {
+    event.stopPropagation(); // Prevent triggering the notification click
+    
+    try {
+      await notificationsAPI.delete(notificationId);
+      
+      // Update local state - remove the notification
+      setRealtimeNotifications(prev => 
+        prev.filter(n => n._id !== notificationId)
+      );
+      
+      // Update unread count if the deleted notification was unread
+      const deletedNotification = realtimeNotifications.find(n => n._id === notificationId);
+      if (deletedNotification && !deletedNotification.isRead) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+      
+      // Dispatch event to update other components
+      window.dispatchEvent(new Event('notifications-read'));
+      
+      toast.success('Notification deleted', {
+        icon: '',
+        duration: 1000
       });
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      toast.error('Failed to delete notification');
     }
   };
 
@@ -247,9 +296,12 @@ const Navbar = () => {
               {user ? (
                 <div className="flex items-center gap-4">
                   {/* Real-time Notification Bell */}
-                  <div className="relative">
+                  <div className="relative" style={{ zIndex: 10000 }}>
                     <button
-                      onClick={() => setShowNotificationCenter(!showNotificationCenter)}
+                      onClick={() => {
+                        setShowNotificationDropdown(!showNotificationDropdown);
+                        setShowNotificationCenter(false);
+                      }}
                       className="relative p-2 text-gray-600 hover:text-primary transition-colors duration-300"
                     >
                       <Bell size={24} />
@@ -262,53 +314,87 @@ const Navbar = () => {
                     
                     {/* Notification Dropdown */}
                     {showNotificationDropdown && (
-                      <div ref={dropdownRef} className="absolute right-0 top-12 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                      <div 
+                        ref={dropdownRef} 
+                        className="absolute right-0 top-12 w-96 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-lg shadow-lg z-[9999]"
+                        style={{ 
+                          position: 'absolute',
+                          zIndex: 9999,
+                          pointerEvents: 'auto'
+                        }}
+                      >
                         <div className="p-3 border-b border-gray-100">
                           <div className="flex items-center justify-between">
                             <h3 className="font-semibold text-gray-900">Notifications</h3>
                             <Link 
-                              to="/profile#notifications" 
-                              className="text-sm text-blue-600 hover:text-blue-800"
-                              onClick={async () => {
+                              to="/profile#notifications"
+                              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                              onClick={() => {
                                 setShowNotificationDropdown(false);
-                                // Mark all notifications as read when viewing all
-                                try {
-                                  await notificationsAPI.markRead();
-                                  setUnreadCount(0);
-                                  window.dispatchEvent(new Event('notifications-read'));
-                                } catch (error) {
-                                  console.error('Error marking all notifications as read:', error);
-                                }
                               }}
                             >
                               View All
                             </Link>
                           </div>
                         </div>
-                        <div className="max-h-96 overflow-y-auto">
+                        <div 
+                          className="max-h-96 overflow-y-auto relative" 
+                          style={{ 
+                            scrollbarWidth: 'thin',
+                            scrollbarColor: '#d1d5db #f3f4f6'
+                          }}
+                        >
+                          {realtimeNotifications.length > 5 && (
+                            <div className="absolute top-0 right-2 text-xs text-gray-400 bg-white px-2 py-1 rounded-b shadow-sm z-10">
+                              Scroll for more
+                            </div>
+                          )}
                           {realtimeNotifications.length > 0 ? (
                             realtimeNotifications.map((notification) => (
                               <div 
-                                key={notification.id} 
-                                className={`p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors ${
-                                  notification.read ? 'opacity-75' : ''
+                                key={notification._id} 
+                                className={`p-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors relative ${
+                                  notification.isRead ? 'opacity-75' : ''
                                 }`}
-                                onClick={() => handleNotificationClick(notification)}
+                                style={{ zIndex: 1 }}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleNotificationClick(notification);
+                                }}
                               >
-                                <div className="flex items-start gap-3">
-                                  <img 
-                                    src={notification.fromUser?.avatar || `https://ui-avatars.com/api/?name=${notification.fromUser?.name}&background=4F46E5&color=fff`}
-                                    alt={notification.fromUser?.name}
-                                    className="w-8 h-8 rounded-full object-cover"
-                                  />
+                                <div className="flex items-start gap-3 group">
+                                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                    <Bell size={16} className="text-blue-600" />
+                                  </div>
                                   <div className="flex-1">
                                     <div className="flex items-start justify-between">
-                                      <p className="text-sm font-medium text-gray-900 pr-2">
-                                        {notification.message}
-                                      </p>
-                                      {!notification.read && (
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
-                                      )}
+                                      <div className="flex-1 pr-2">
+                                        {notification.title && (
+                                          <p className="text-sm font-semibold text-gray-900 mb-1">
+                                            {notification.title}
+                                          </p>
+                                        )}
+                                        <p className="text-sm text-gray-700">
+                                          {notification.message}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {!notification.isRead && (
+                                          <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                                        )}
+                                        <button
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleDeleteNotification(notification._id, e);
+                                          }}
+                                          className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all duration-200 rounded hover:bg-red-50"
+                                          title="Delete notification"
+                                        >
+                                          <Trash2 size={14} />
+                                        </button>
+                                      </div>
                                     </div>
                                     <p className="text-xs text-gray-500 mt-1">
                                       {new Date(notification.createdAt).toLocaleTimeString([], { 
@@ -385,6 +471,23 @@ const Navbar = () => {
                       {link.text}
                     </NavLink>
                   ))}
+                  
+                  {/* Mobile Notification Bell */}
+                  <button
+                    onClick={() => {
+                      setShowNotificationCenter(true);
+                      setIsOpen(false);
+                    }}
+                    className="relative p-2 text-gray-600 hover:text-primary transition-colors duration-300"
+                  >
+                    <Bell size={24} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
                   <Link to="/profile" className="relative" onClick={() => setIsOpen(false)}>
                     <OptimizedAvatar
                       src={user.avatar}
@@ -431,6 +534,8 @@ const Navbar = () => {
         isOpen={showNotificationCenter} 
         onClose={() => setShowNotificationCenter(false)} 
       />
+
+
     </header>
   );
 };

@@ -32,7 +32,15 @@ const notificationSchema = new mongoose.Schema({
     type: Date
   },
   metadata: {
-    type: mongoose.Schema.Types.Mixed
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+  fromUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  link: {
+    type: String
   }
 }, {
   timestamps: true

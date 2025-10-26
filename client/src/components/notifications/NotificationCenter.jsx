@@ -353,7 +353,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
       } else {
         response = await notificationsAPI.getNotificationsByType(activeFilter, { limit: 50 });
       }
-      setNotifications(response.notifications || []);
+      setNotifications(Array.isArray(response) ? response : response.notifications || []);
     } catch (error) {
       console.error('Error loading notifications:', error);
       toast.error('Failed to load notifications');
@@ -365,7 +365,14 @@ const NotificationCenter = ({ isOpen, onClose }) => {
   const loadStats = async () => {
     try {
       const response = await notificationsAPI.getNotificationStats();
-      setStats(response);
+      const statsObj = {};
+      if (Array.isArray(response)) {
+        response.forEach(stat => {
+          statsObj[stat._id] = stat.unread;
+        });
+        statsObj.totalUnread = response.reduce((sum, stat) => sum + stat.unread, 0);
+      }
+      setStats(statsObj);
     } catch (error) {
       console.error('Error loading notification stats:', error);
     }
@@ -373,16 +380,17 @@ const NotificationCenter = ({ isOpen, onClose }) => {
 
   const handleNotificationClick = async (notification) => {
     try {
-      if (!notification.read) {
+      if (!notification.isRead) {
         await notificationsAPI.markAsRead([notification._id]);
         setNotifications(prev => 
-          prev.map(n => n._id === notification._id ? { ...n, read: true } : n)
+          prev.map(n => n._id === notification._id ? { ...n, isRead: true } : n)
         );
       }
 
       // Navigate to the notification link if available
-      if (notification.link) {
-        window.location.href = notification.link;
+      const link = notification.link || notification.metadata?.link;
+      if (link) {
+        window.location.href = link;
       }
     } catch (error) {
       console.error('Error handling notification click:', error);
@@ -393,7 +401,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
     try {
       await notificationsAPI.markAsRead([notificationId]);
       setNotifications(prev => 
-        prev.map(n => n._id === notificationId ? { ...n, read: true } : n)
+        prev.map(n => n._id === notificationId ? { ...n, isRead: true } : n)
       );
       toast.success('Marked as read');
     } catch (error) {
@@ -416,7 +424,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
   const handleMarkAllAsRead = async () => {
     try {
       await notificationsAPI.markAllAsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       toast.success('All notifications marked as read');
     } catch (error) {
       console.error('Error marking all as read:', error);
@@ -427,7 +435,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
   const handleClearRead = async () => {
     try {
       await notificationsAPI.clearReadNotifications();
-      setNotifications(prev => prev.filter(n => !n.read));
+      setNotifications(prev => prev.filter(n => !n.isRead));
       toast.success('Read notifications cleared');
     } catch (error) {
       console.error('Error clearing read notifications:', error);
@@ -492,7 +500,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
           filteredNotifications.map(notification => (
             <NotificationItem
               key={notification._id}
-              read={notification.read}
+              read={notification.isRead}
               onClick={() => handleNotificationClick(notification)}
             >
               <NotificationHeader>
@@ -501,6 +509,11 @@ const NotificationCenter = ({ isOpen, onClose }) => {
                     {getNotificationIcon(notification.type)}
                   </NotificationIcon>
                   <NotificationContent>
+                    {notification.title && (
+                      <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.25rem', color: '#374151' }}>
+                        {notification.title}
+                      </div>
+                    )}
                     <NotificationMessage>
                       {notification.message}
                     </NotificationMessage>
@@ -515,7 +528,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
                   </NotificationContent>
                 </div>
                 <NotificationActions>
-                  {!notification.read && (
+                  {!notification.isRead && (
                     <ActionButton
                       onClick={(e) => {
                         e.stopPropagation();

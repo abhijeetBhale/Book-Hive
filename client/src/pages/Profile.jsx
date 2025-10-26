@@ -66,6 +66,27 @@ const Profile = () => {
     approvedList: []
   });
 
+  // Handle URL hash to set active tab
+  useEffect(() => {
+    const hash = window.location.hash.substring(1); // Remove the # symbol
+    if (hash === 'notifications') {
+      setActiveTab('notifications');
+    }
+  }, []);
+
+  // Also listen for hash changes
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.substring(1);
+      if (hash === 'notifications') {
+        setActiveTab('notifications');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   useEffect(() => {
     const fetchNotifications = async () => {
       try {

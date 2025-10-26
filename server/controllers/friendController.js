@@ -17,7 +17,16 @@ export const sendFriendRequest = async (req, res) => {
 
     const friendship = await Friendship.create({ requester: requesterId, recipient: recipientId, status: 'pending' });
     try {
-      await Notification.create({ user: recipientId, type: 'friend_request', message: 'You have a new friend request', fromUser: requesterId, link: '/friends' });
+      await Notification.create({ 
+        userId: recipientId, 
+        type: 'friend_request', 
+        title: 'New Friend Request',
+        message: 'You have a new friend request', 
+        metadata: { 
+          fromUserId: requesterId, 
+          link: '/friends' 
+        } 
+      });
     } catch {}
     res.status(201).json(friendship);
   } catch (err) {
@@ -62,11 +71,14 @@ export const respondToFriendRequest = async (req, res) => {
       // Create notification for the requester
       try {
         await Notification.create({
-          user: requesterId,
+          userId: requesterId,
           type: 'friend_accepted',
+          title: 'Friend Request Accepted',
           message: `${req.user.name} accepted your friend request`,
-          fromUser: userId,
-          link: '/friends'
+          metadata: {
+            fromUserId: userId,
+            link: '/friends'
+          }
         });
       } catch (notifError) {
         console.error('Failed to create friend accepted notification:', notifError);

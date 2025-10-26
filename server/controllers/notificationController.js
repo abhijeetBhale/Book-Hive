@@ -198,9 +198,14 @@ export const listBookInquiries = async (req, res) => {
 // @access  Private
 export const getAllNotifications = async (req, res) => {
   try {
+    const { limit = 50 } = req.query;
+    
     const notifications = await Notification.find({
       userId: req.user._id
-    }).sort({ createdAt: -1 });
+    })
+    .populate('fromUserId', 'name avatar email')
+    .sort({ createdAt: -1 })
+    .limit(parseInt(limit));
 
     res.status(200).json({
       success: true,
@@ -328,11 +333,15 @@ export const deleteNotification = async (req, res) => {
 export const getNotificationsByType = async (req, res) => {
   try {
     const { type } = req.params;
+    const { limit = 50 } = req.query;
     
     const notifications = await Notification.find({
       userId: req.user._id,
       type: type
-    }).sort({ createdAt: -1 });
+    })
+    .populate('fromUserId', 'name avatar email')
+    .sort({ createdAt: -1 })
+    .limit(parseInt(limit));
 
     res.status(200).json({
       success: true,

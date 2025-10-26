@@ -24,23 +24,21 @@ class NotificationService {
   }) {
     try {
       const notification = await Notification.create({
-        user: userId,
+        userId: userId,
         type,
+        title: message.substring(0, 50), // First 50 chars as title
         message,
-        fromUser: fromUserId,
-        link,
         metadata: {
           ...metadata,
           priority,
-          actionRequired
-        },
-        scheduledFor,
-        isScheduled: !!scheduledFor,
-        deliveryStatus: scheduledFor ? 'pending' : 'sent'
+          actionRequired,
+          fromUserId,
+          link
+        }
       });
 
-      // Populate fromUser for real-time emission
-      await notification.populate('fromUser', 'name email avatar');
+      // Populate user for real-time emission
+      await notification.populate('userId', 'name email avatar');
 
       // If not scheduled, emit immediately
       if (!scheduledFor) {
@@ -58,14 +56,13 @@ class NotificationService {
   emitRealTimeNotification(userId, notification) {
     if (this.io) {
       this.io.to(`user:${userId}`).emit('new_notification', {
-        id: notification._id,
+        _id: notification._id,
         type: notification.type,
+        title: notification.title,
         message: notification.message,
-        fromUser: notification.fromUser,
-        link: notification.link,
         metadata: notification.metadata,
         createdAt: notification.createdAt,
-        read: notification.read
+        isRead: notification.isRead || false
       });
     }
   }
@@ -337,19 +334,17 @@ class NotificationService {
     try {
       const now = new Date();
       const scheduledNotifications = await Notification.find({
-        isScheduled: true,
-        deliveryStatus: 'pending',
-        scheduledFor: { $lte: now }
-      }).populate('fromUser', 'name email avatar');
+        'metadata.scheduledFor': { $lte: now },
+        'metadata.deliveryStatus': 'pending'
+      }).populate('userId', 'name email avatar');
 
       for (const notification of scheduledNotifications) {
         // Update delivery status
-        notification.deliveryStatus = 'sent';
-        notification.isScheduled = false;
+        notification.metadata.deliveryStatus = 'sent';
         await notification.save();
 
         // Emit real-time notification
-        this.emitRealTimeNotification(notification.user, notification);
+        this.emitRealTimeNotification(notification.userId, notification);
       }
 
       if (scheduledNotifications.length > 0) {
@@ -368,7 +363,7 @@ class NotificationService {
 
       const result = await Notification.deleteMany({
         createdAt: { $lt: thirtyDaysAgo },
-        read: true
+        isRead: true
       });
 
       console.log(`Cleaned up ${result.deletedCount} old notifications`);

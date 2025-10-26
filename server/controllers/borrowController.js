@@ -37,11 +37,14 @@ export const requestBook = async (req, res) => {
     // Create a notification for the book owner
     try {
       const notification = await Notification.create({
-        user: book.owner,
+        userId: book.owner,
         type: 'borrow_request',
+        title: 'New Borrow Request',
         message: `${req.user.name} wants to borrow "${book.title}" from you`,
-        fromUser: req.user._id,
-        link: `/borrow-requests`
+        metadata: {
+          fromUserId: req.user._id,
+          link: '/borrow-requests'
+        }
       });
 
       // Emit real-time notification via WebSocket
@@ -156,18 +159,24 @@ export const returnBook = async (req, res) => {
     // Review prompt notifications for both users
     try {
       await Notification.create({
-        user: borrowRequest.owner,
+        userId: borrowRequest.owner,
         type: 'review_prompt',
+        title: 'Review Request',
         message: 'Your book was returned. Please review the borrower.',
-        fromUser: borrowRequest.borrower,
-        link: `/borrow-requests`
+        metadata: {
+          fromUserId: borrowRequest.borrower,
+          link: '/borrow-requests'
+        }
       });
       await Notification.create({
-        user: borrowRequest.borrower,
+        userId: borrowRequest.borrower,
         type: 'review_prompt',
+        title: 'Review Request',
         message: 'You returned a book. Please review the lender.',
-        fromUser: borrowRequest.owner,
-        link: `/borrow-requests`
+        metadata: {
+          fromUserId: borrowRequest.owner,
+          link: '/borrow-requests'
+        }
       });
     } catch (e) {
       console.error('Failed to create review prompt notifications:', e.message);
@@ -278,11 +287,14 @@ export const updateRequestStatus = async (req, res) => {
       // Notify borrower that their request was approved
       try {
         const notification = await Notification.create({
-          user: populatedRequest.borrower._id,
+          userId: populatedRequest.borrower._id,
           type: 'request_approved',
+          title: 'Request Approved',
           message: `Your request to borrow "${populatedRequest.book.title}" was approved! Check your messages to coordinate pickup.`,
-          fromUser: req.user._id,
-          link: '/messages'
+          metadata: {
+            fromUserId: req.user._id,
+            link: '/messages'
+          }
         });
 
         const io = req.app.get('io');
@@ -334,11 +346,14 @@ export const updateRequestStatus = async (req, res) => {
       // Notify borrower that their request was denied
       try {
         const notification = await Notification.create({
-          user: populatedRequest.borrower._id,
+          userId: populatedRequest.borrower._id,
           type: 'request_denied',
+          title: 'Request Declined',
           message: `Your request to borrow "${populatedRequest.book.title}" was declined`,
-          fromUser: req.user._id,
-          link: '/borrow-requests'
+          metadata: {
+            fromUserId: req.user._id,
+            link: '/borrow-requests'
+          }
         });
 
         const io = req.app.get('io');
