@@ -102,7 +102,7 @@
 //     const distance = getDistance(user.location?.coordinates, currentUser?.location?.coordinates);
 //     const rating = user.rating?.value || (Math.random() * 1.5 + 3.5);
 //     const booksCount = (user.booksOwned || []).length;
-    
+
 //     return { 
 //       ...user, 
 //       distance, 
@@ -111,7 +111,7 @@
 //     };
 //   }).sort((a, b) => {
 //     // Priority-based sorting system
-    
+
 //     // 1. FIRST PRIORITY: Distance (closest first)
 //     // Handle null distances - users without location go to the end
 //     if (a.distance === null && b.distance === null) {
@@ -128,19 +128,19 @@
 //       }
 //       // If distances are similar (within 5km), continue to next priority
 //     }
-    
+
 //     // 2. SECOND PRIORITY: Rating (highest first)
 //     const ratingDiff = b.rating - a.rating;
 //     if (Math.abs(ratingDiff) > 0.5) { // Only prioritize if rating difference > 0.5
 //       return ratingDiff;
 //     }
-    
+
 //     // 3. THIRD PRIORITY: Number of books (most books first)
 //     const booksDiff = b.booksCount - a.booksCount;
 //     if (booksDiff !== 0) {
 //       return booksDiff;
 //     }
-    
+
 //     // 4. FINAL FALLBACK: Alphabetical by name
 //     return a.name.localeCompare(b.name);
 //   }).map((user, index) => ({
@@ -217,7 +217,7 @@
 //   }
 //   .main-title { font-size: 2.5rem; font-weight: 800; color: #111827; }
 //   .subtitle { font-size: 1.125rem; color: #4b5563; margin-top: 0.5rem; }
-  
+
 //   .filter-bar {
 //       display: flex;
 //       gap: 1rem;
@@ -268,7 +268,7 @@
 //     display: flex; justify-content: center; align-items: center; height: 500px;
 //     .animate-spin { width: 3rem; height: 3rem; color: #4F46E5; }
 //   }
-  
+
 //   .users-grid {
 //       display: grid;
 //       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -305,7 +305,7 @@
 //   }
 //   .user-name { font-size: 1.25rem; font-weight: 700; color: #1f2937; }
 //   .user-tagline { font-size: 0.9rem; color: #6b7280; margin-bottom: 1.5rem; flex-grow: 1;}
-  
+
 //   .stats-grid {
 //       display: grid;
 //       grid-template-columns: repeat(3, 1fr);
@@ -360,8 +360,8 @@ import React, { useState, useEffect, useContext } from 'react';
 import { usersAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import { useOnlineStatus } from '../context/OnlineStatusContext';
-import { Loader, MapPin, User, Search, BookOpen, LayoutGrid, Star, Award } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Loader, MapPin, User, Search, BookOpen, LayoutGrid, Star, Award, Library, List } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
 
@@ -370,27 +370,27 @@ const UserCard = ({ user, distance, priority, isOnline }) => {
   const booksOwnedCount = (user.booksOwned || []).length;
   // Use the new rating structure, fallback to old structure, then to default
   const rating = user.rating?.overallRating || user.rating?.value || 0;
-  
+
   // Show "New" for users with no ratings instead of 0.0
   const displayRating = rating > 0 ? rating.toFixed(1) : 'New';
-  
+
   // Smart distance formatter to keep text consistent
   const formatDistance = (distInMeters) => {
     if (distInMeters === null) return 'N/A';
-    
+
     // Show meters for distances less than 1000m
     if (distInMeters < 1000) {
       return `${distInMeters}m`;
     }
-    
+
     // Convert to km for distances 1000m and above
     const distInKm = distInMeters / 1000;
-    
+
     // Show as "1.2k km" for very large distances (1000km+)
     if (distInKm >= 1000) {
       return `${(distInKm / 1000).toFixed(1)}k km`;
     }
-    
+
     // Show as "1.2 km" for normal distances (1-999 km)
     return `${distInKm.toFixed(1)} km`;
   };
@@ -434,13 +434,78 @@ const UserCard = ({ user, distance, priority, isOnline }) => {
   );
 };
 
+// --- UserListItem Component for List View ---
+const UserListItem = ({ user, distance, priority, isOnline }) => {
+  const booksOwnedCount = (user.booksOwned || []).length;
+  const rating = user.rating?.overallRating || user.rating?.value || 0;
+  const displayRating = rating > 0 ? rating.toFixed(1) : 'New';
+
+  const formatDistance = (distInMeters) => {
+    if (distInMeters === null) return 'N/A';
+    if (distInMeters < 1000) {
+      return `${distInMeters}m`;
+    }
+    const distInKm = distInMeters / 1000;
+    if (distInKm >= 1000) {
+      return `${(distInKm / 1000).toFixed(1)}k km`;
+    }
+    return `${distInKm.toFixed(1)} km`;
+  };
+
+  return (
+    <Link to={`/users/${user._id}`} className="user-list-item-link">
+      <div className={`user-list-item ${priority <= 3 ? 'priority-high' : priority <= 10 ? 'priority-medium' : 'priority-low'}`}>
+        {priority <= 3 && (
+          <div className="priority-badge-list">
+            <Award color='black' size={16} />
+          </div>
+        )}
+
+        <div className={`avatar-container-list ${isOnline ? 'online' : 'offline'}`}>
+          <img src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}&background=818cf8&color=fff`} alt={user.name} className="avatar-list" />
+        </div>
+
+        <div className="user-info-list">
+          <div className="user-main-info">
+            <h3 className="user-name-list">
+              {user.name}
+              {isOnline && <span className="online-badge-list">Online</span>}
+            </h3>
+            <p className="user-tagline-list">Community Member</p>
+          </div>
+
+          <div className="user-stats-list">
+            <div className="stat-item-list">
+              <BookOpen size={16} className="stat-icon-list" />
+              <span className="stat-label-list">Books:</span>
+              <strong className="stat-value-list">{booksOwnedCount}</strong>
+            </div>
+            <div className="stat-item-list">
+              <Star size={16} className="stat-icon-list" />
+              <span className="stat-label-list">Rating:</span>
+              <strong className="stat-value-list">{displayRating}</strong>
+            </div>
+            <div className="stat-item-list">
+              <MapPin size={16} className="stat-icon-list" />
+              <span className="stat-label-list">Distance:</span>
+              <strong className="stat-value-list">{formatDistance(distance)}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+};
+
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBy, setFilterBy] = useState('all');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const { user: userFromAuth } = useContext(AuthContext);
   const { isUserOnline } = useOnlineStatus();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -473,9 +538,9 @@ const Users = () => {
     const a = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) ** 2;
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distanceInKm = R * c;
-    
+
     if (isNaN(distanceInKm)) return null;
-    
+
     // Return distance in meters for better precision
     const distanceInMeters = Math.round(distanceInKm * 1000);
     return distanceInMeters;
@@ -499,11 +564,11 @@ const Users = () => {
     // Use the new rating structure, fallback to old structure, then to 0
     const rating = user.rating?.overallRating || user.rating?.value || 0;
     const booksCount = (user.booksOwned || []).length;
-    return { 
-      ...user, 
-      distance, 
+    return {
+      ...user,
+      distance,
       rating,
-      booksCount 
+      booksCount
     };
   }).sort((a, b) => {
     // Priority-based sorting system
@@ -575,8 +640,20 @@ const Users = () => {
             <option value="nearby">Nearby</option>
           </select>
         </div>
-        <button className="view-toggle-btn">
-          <LayoutGrid size={20} />
+        <button
+          className="books-tab-btn"
+          onClick={() => navigate('/books')}
+          title="Browse Books"
+        >
+          <Library size={20} />
+          <span>Books</span>
+        </button>
+        <button
+          className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+          onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+          title={viewMode === 'grid' ? 'Switch to List View' : 'Switch to Grid View'}
+        >
+          {viewMode === 'grid' ? <List size={20} /> : <LayoutGrid size={20} />}
         </button>
       </div>
 
@@ -584,9 +661,13 @@ const Users = () => {
         {loading ? (
           <div className="loading-state"><Loader className="animate-spin" /></div>
         ) : filteredUsers.length > 0 ? (
-          <div className="users-grid">
+          <div className={viewMode === 'grid' ? 'users-grid' : 'users-list'}>
             {filteredUsers.map((user) => {
-              return <UserCard key={user._id} user={user} distance={user.distance} priority={user.priority} isOnline={isUserOnline(user._id)} />
+              return viewMode === 'grid' ? (
+                <UserCard key={user._id} user={user} distance={user.distance} priority={user.priority} isOnline={isUserOnline(user._id)} />
+              ) : (
+                <UserListItem key={user._id} user={user} distance={user.distance} priority={user.priority} isOnline={isUserOnline(user._id)} />
+              );
             })}
           </div>
         ) : (
@@ -620,6 +701,12 @@ const StyledWrapper = styled.div`
       padding: 0.75rem;
       border-radius: 1rem;
       box-shadow: 0 4px 15px -1px rgba(0,0,0,0.05);
+      flex-wrap: wrap;
+      
+      @media (max-width: 768px) {
+          gap: 0.5rem;
+          padding: 0.5rem;
+      }
   }
   .search-wrapper { position: relative; flex-grow: 1; }
   .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #9ca3af; }
@@ -646,6 +733,42 @@ const StyledWrapper = styled.div`
       -moz-appearance: none;
       appearance: none;
   }
+  .books-tab-btn {
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      border: 1px solid #4f46e5;
+      background-color: #4f46e5;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      
+      &:hover {
+          background-color: #4338ca;
+          border-color: #4338ca;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+      }
+      
+      span {
+          font-weight: 600;
+      }
+      
+      @media (max-width: 768px) {
+          padding: 0.5rem 0.75rem;
+          font-size: 0.8rem;
+          
+          span {
+              display: none; /* Hide text on mobile, show only icon */
+          }
+      }
+  }
+  
   .view-toggle-btn {
       padding: 0.75rem;
       border-radius: 0.75rem;
@@ -654,6 +777,23 @@ const StyledWrapper = styled.div`
       color: #4b5563;
       cursor: pointer;
       display: flex;
+      transition: all 0.2s ease;
+      
+      &:hover {
+          background-color: #f3f4f6;
+          border-color: #d1d5db;
+      }
+      
+      &.active {
+          background-color: #4f46e5;
+          border-color: #4f46e5;
+          color: white;
+          
+          &:hover {
+              background-color: #4338ca;
+              border-color: #4338ca;
+          }
+      }
   }
 
   .content-area { min-height: 500px; }
@@ -667,6 +807,12 @@ const StyledWrapper = styled.div`
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
       gap: 1.5rem;
       align-items: stretch; /* Ensure all cards stretch to same height */
+  }
+  
+  .users-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
   }
 
   .user-card-link {
@@ -682,16 +828,10 @@ const StyledWrapper = styled.div`
       padding: 1.5rem;
       text-align: center;
       border: 1px solid #e5e7eb;
-      transition: all 0.3s ease;
       display: flex;
       flex-direction: column;
       height: 100%; /* Ensure consistent height */
       min-height: 320px; /* Set minimum height for all cards */
-      &:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 10px 20px -5px rgba(101, 119, 134, 0.1);
-          border-color: #c7d2fe;
-      }
   }
   .priority-badge {
       position: absolute;
@@ -861,6 +1001,153 @@ const StyledWrapper = styled.div`
         0 0 0 6px rgba(34, 197, 94, 0.5),
         0 8px 20px rgba(34, 197, 94, 0.6);
     }
+  }
+  
+  /* List View Styles */
+  .user-list-item-link {
+      text-decoration: none;
+      color: inherit;
+  }
+  
+  .user-list-item {
+      position: relative;
+      background-color: white;
+      border-radius: 1rem;
+      padding: 1rem 1.5rem;
+      border: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      min-height: 80px;
+  }
+  
+  .priority-badge-list {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      background: #ecc92ed4;
+      color: #fff;
+      padding: 0.25rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 1.5rem;
+      width: 1.5rem;
+      z-index: 2;
+  }
+  
+  .avatar-container-list {
+      position: relative;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+      
+      &.online {
+        background: #22c55e;
+        padding: 3px;
+        box-shadow: 
+          0 0 0 2px rgba(34, 197, 94, 0.3),
+          0 3px 10px rgba(34, 197, 94, 0.4);
+      }
+      
+      &.offline {
+        background: #6b7280;
+        padding: 3px;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+      }
+      
+      .avatar-list {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 2px solid white;
+      }
+  }
+  
+  .user-info-list {
+      flex: 1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      
+      @media (max-width: 768px) {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.5rem;
+      }
+  }
+  
+  .user-main-info {
+      flex: 1;
+  }
+  
+  .user-name-list {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #1f2937;
+      margin: 0 0 0.25rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      
+      .online-badge-list {
+        font-size: 0.6rem;
+        background: #22c55e;
+        color: white;
+        padding: 0.15rem 0.4rem;
+        border-radius: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+  }
+  
+  .user-tagline-list {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin: 0;
+  }
+  
+  .user-stats-list {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+      
+      @media (max-width: 768px) {
+          gap: 1rem;
+          flex-wrap: wrap;
+      }
+  }
+  
+  .stat-item-list {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.875rem;
+      
+      .stat-icon-list {
+          color: #4f46e5;
+          flex-shrink: 0;
+      }
+      
+      .stat-label-list {
+          color: #6b7280;
+          font-weight: 500;
+      }
+      
+      .stat-value-list {
+          color: #374151;
+          font-weight: 600;
+      }
   }
 `;
 
