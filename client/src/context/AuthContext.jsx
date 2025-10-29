@@ -40,6 +40,7 @@ export const AuthProvider = ({ children }) => {
         email: data.email,
         avatar: data.avatar,
         location: data.location,
+        role: data.role || 'user', // Include role for admin access checks
       });
     } catch (error) {
       console.error('Failed to fetch profile', error);

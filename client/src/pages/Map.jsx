@@ -1,31 +1,15 @@
 import { useState, useEffect, useMemo, useContext } from 'react';
 import styled from 'styled-components';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { usersAPI, borrowAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import { useOnlineStatus } from '../context/OnlineStatusContext';
 import toast from 'react-hot-toast';
 import MapView from '../components/map/MapView';
 import { Loader, MapPin, Search, Calendar, UserCheck, Sliders, ChevronLeft, ChevronRight, Star } from 'lucide-react';
-import { Calendar as BigCalendar, dateFnsLocalizer } from 'react-big-calendar';
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
-import startOfWeek from 'date-fns/startOfWeek';
-import getDay from 'date-fns/getDay';
-import enUS from 'date-fns/locale/en-US';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-const locales = {
-  'en-US': enUS,
-};
 
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek,
-  getDay,
-  locales,
-});
+
 
 // Utility function to calculate distance between two coordinates using Haversine formula
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -45,16 +29,17 @@ const Map = () => {
   const { user: currentUser } = useContext(AuthContext);
   const { isUserOnline, onlineCount } = useOnlineStatus();
   const location = useLocation();
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState([]);
-  const [activeView, setActiveView] = useState('map');
+
   const [showFilters, setShowFilters] = useState(false);
   const [distanceFilter, setDistanceFilter] = useState(0); // Default 10km
   const [ratingFilter, setRatingFilter] = useState(0); // Default 0 (no filter)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [calendarEvents, setCalendarEvents] = useState([]);
+
   const [userToShowPopup, setUserToShowPopup] = useState(null);
 
   // Handle user popup from navigation state
@@ -129,28 +114,7 @@ const Map = () => {
     }
   }, [distanceFilter, ratingFilter, currentUser]);
 
-  useEffect(() => {
-    const fetchBorrowRequests = async () => {
-      if (activeView === 'calendar') {
-        try {
-          const { data } = await borrowAPI.getAllBorrowRequests();
-          const events = data.map(request => ({
-            title: `${request.book.title} - ${request.status}`,
-            start: new Date(request.requestDate),
-            end: new Date(request.returnDate),
-            allDay: true,
-            resource: request,
-          }));
-          setCalendarEvents(events);
-        } catch (error) {
-          console.error('Failed to load borrow requests:', error);
-          toast.error('Failed to load borrow requests for the calendar.');
-        }
-      }
-    };
 
-    fetchBorrowRequests();
-  }, [activeView]);
 
   const handleUserSelection = (userId) => {
     setSelectedUserIds(prev =>
@@ -177,17 +141,7 @@ const Map = () => {
     return selectedAndSearchedUsers;
   }, [users, selectedUserIds, searchTerm]);
 
-  const CalendarView = () => (
-    <div className="calendar-container">
-      <BigCalendar
-        localizer={localizer}
-        events={calendarEvents}
-        startAccessor="start"
-        endAccessor="end"
-        style={{ height: '100%' }}
-      />
-    </div>
-  );
+
 
   return (
     <StyledWrapper>
@@ -321,38 +275,33 @@ const Map = () => {
           </div>
           <div className="controls">
             <button
-              className={`control-btn ${activeView === 'calendar' ? 'active' : ''}`}
-              onClick={() => setActiveView('calendar')}
+              className="control-btn"
+              onClick={() => navigate('/calendar')}
             >
               <Calendar size={16} /> Calendar
             </button>
             <button
-              className={`control-btn ${activeView === 'map' ? 'active' : ''}`}
-              onClick={() => setActiveView('map')}
+              className="control-btn active"
             >
               <MapPin size={16} /> Map
             </button>
           </div>
         </div>
         <div className="map-container">
-          {activeView === 'map' ? (
-            loading ? (
-              <div className="loader-container"><Loader className="animate-spin h-12 w-12" /></div>
-            ) : users.length === 0 ? (
-              <div className="empty-state">
-                <MapPin className="h-16 w-16" />
-                <h3>No Users Found</h3>
-                {!currentUser?.location?.coordinates ? (
-                  <p>Please set your location in your profile to see nearby users and use distance filtering.</p>
-                ) : (
-                  <p>No users found within your selected distance and rating criteria. Try adjusting your filters.</p>
-                )}
-              </div>
-            ) : (
-              <MapView key="main-map" userGroups={[usersForMap]} userToShowPopup={userToShowPopup} />
-            )
+          {loading ? (
+            <div className="loader-container"><Loader className="animate-spin h-12 w-12" /></div>
+          ) : users.length === 0 ? (
+            <div className="empty-state">
+              <MapPin className="h-16 w-16" />
+              <h3>No Users Found</h3>
+              {!currentUser?.location?.coordinates ? (
+                <p>Please set your location in your profile to see nearby users and use distance filtering.</p>
+              ) : (
+                <p>No users found within your selected distance and rating criteria. Try adjusting your filters.</p>
+              )}
+            </div>
           ) : (
-            <CalendarView />
+            <MapView key="main-map" userGroups={[usersForMap]} userToShowPopup={userToShowPopup} />
           )}
         </div>
       </div>

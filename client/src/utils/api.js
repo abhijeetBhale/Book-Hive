@@ -232,6 +232,7 @@ export const borrowAPI = {
   createRequest: (bookId) => api.post(`/borrow/request/${bookId}`),
   getMyRequests: () => api.get("/borrow/my-requests"),
   getReceivedRequests: () => api.get("/borrow/received-requests"),
+  getAllBorrowRequests: () => api.get("/borrow/all-requests"),
   updateRequest: (requestId, status) =>
     api.put(`/borrow/${requestId}`, { status }),
   deleteRequest: (requestId) => api.delete(`/borrow/${requestId}`),

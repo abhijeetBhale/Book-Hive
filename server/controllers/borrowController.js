@@ -4,6 +4,7 @@ import Notification from '../models/Notification.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import { awardPoints, updateUserStatsAndAchievements } from '../services/achievementService.js';
+import { sendOverdueReminders } from '../services/reminderService.js';
 
 // @desc    Request to borrow a book
 // @route   POST /api/borrow/request/:bookId
@@ -426,10 +427,18 @@ export const markAsBorrowed = async (req, res) => {
       return res.status(400).json({ message: 'Request must be approved first' });
     }
 
-    await BorrowRequest.findByIdAndUpdate(req.params.requestId, {
-      status: 'borrowed',
-      borrowedDate: new Date()
-    });
+    // Update the request status and let the pre-save hook handle the rest
+    const updatedRequest = await BorrowRequest.findById(req.params.requestId);
+    updatedRequest.status = 'borrowed';
+    updatedRequest.borrowedDate = new Date();
+    
+    // Ensure metadata is properly set
+    if (!updatedRequest.metadata) {
+      updatedRequest.metadata = {};
+    }
+    updatedRequest.metadata.handoverDate = new Date();
+    
+    await updatedRequest.save();
 
     // Award points and update stats for both users
     await Promise.all([
@@ -495,6 +504,44 @@ export const markAsReturned = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// @desc    Get all borrow requests for calendar view
+// @route   GET /api/borrow/all-requests
+export const getAllBorrowRequests = async (req, res) => {
+  try {
+    const requests = await BorrowRequest.find({
+      $or: [
+        { borrower: req.user._id },
+        { owner: req.user._id }
+      ],
+      status: { $in: ['approved', 'borrowed'] }
+    })
+      .populate('book', 'title coverImage lendingDuration')
+      .populate('borrower', 'name avatar')
+      .populate('owner', 'name avatar')
+      .sort({ createdAt: -1 });
+
+    res.json(requests);
+  } catch (error) {
+    console.error('Get all borrow requests error:', error);
+    res.status(500).json({ message: 'Server error getting borrow requests' });
+  }
+};
+
+// @desc    Test reminder notifications (for development)
+// @route   POST /api/borrow/test-reminders
+export const testReminders = async (req, res) => {
+  try {
+    const io = req.app.get('io');
+    await sendOverdueReminders(io);
+    res.json({ message: 'Reminder service executed successfully' });
+  } catch (error) {
+    console.error('Test reminders error:', error);
+    res.status(500).json({ message: 'Server error testing reminders' });
+  }
+};
+
+
 
 // @desc    Delete a borrow request (owner or borrower can delete)
 // @route   DELETE /api/borrow/:requestId

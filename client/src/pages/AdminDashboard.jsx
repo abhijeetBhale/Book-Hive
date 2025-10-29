@@ -113,21 +113,24 @@ const AdminDashboard = () => {
     report: null
   });
 
-  // Check if user has admin access
+  // Check if user has admin access - let server validate
   const hasAdminAccess = user && (
     user.role === 'superadmin' ||
     user.role === 'admin' ||
-    user.email === import.meta.env.VITE_SUPER_ADMIN_EMAIL
+    user.email === import.meta.env.VITE_SUPER_ADMIN_EMAIL ||
+    user.email === 'abhijeetbhale7@gmail.com' // Fallback for super admin
   );
 
   useEffect(() => {
-    if (hasAdminAccess) {
+    // Always try to fetch dashboard data if user exists, let server handle auth
+    if (user) {
       fetchDashboardData();
     }
-  }, [hasAdminAccess]);
+  }, [user]);
 
   useEffect(() => {
-    if (hasAdminAccess) {
+    // Let server handle auth validation for each request
+    if (user) {
       switch (activeTab) {
         case 'users':
           fetchUsers();
@@ -154,7 +157,7 @@ const AdminDashboard = () => {
           break;
       }
     }
-  }, [hasAdminAccess, activeTab, filters, pagination.page]);
+  }, [user, activeTab, filters, pagination.page]);
 
   // Reset to first page when books filters change
   useEffect(() => {
@@ -169,7 +172,13 @@ const AdminDashboard = () => {
       setError(null);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      setError('Failed to load dashboard data');
+      if (error.response?.status === 403) {
+        setError('Access denied. You do not have admin privileges.');
+      } else if (error.response?.status === 401) {
+        setError('Authentication required. Please log in again.');
+      } else {
+        setError('Failed to load dashboard data. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -1506,7 +1515,7 @@ const AdminDashboard = () => {
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-600">Avg Price</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  ₹{booksForSale.length > 0 
+                  ₹{booksForSale.length > 0
                     ? (booksForSale.reduce((sum, book) => sum + (book.sellingPrice || 0), 0) / booksForSale.length).toFixed(2)
                     : '0.00'
                   }

@@ -13,6 +13,7 @@ import Friends from './pages/Friends';
 import BorrowRequests from './pages/BorrowRequests';
 import Profile from './pages/Profile';
 import Map from './pages/Map';
+import Calendar from './pages/Calendar';
 import ForgotPassword from './pages/ForgotPassword';
 import AuthCallback from './pages/AuthCallback';
 import AdminDashboard from './pages/AdminDashboard';
@@ -128,6 +129,7 @@ function App() {
                   <Route path="/borrow-requests" element={<ProtectedRoute><BorrowRequests /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                   <Route path="/map" element={<ProtectedRoute><Map /></ProtectedRoute>} />
+                  <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
                 </Routes>
               </Layout>
             } />

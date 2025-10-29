@@ -127,6 +127,7 @@ export const getProfile = async (req, res) => {
         email: user.email,
         avatar: user.avatar,
         location: user.location,
+        role: user.role || 'user', // Include role for admin access checks
         securitySettings: user.securitySettings || {
           twoFactorEnabled: false,
           emailNotifications: true,

@@ -8,7 +8,9 @@ import {
   updateRequestStatus,
   markAsBorrowed,
   markAsReturned,
-  deleteRequest
+  deleteRequest,
+  getAllBorrowRequests,
+  testReminders
 } from '../controllers/borrowController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -17,6 +19,8 @@ const router = express.Router();
 router.post('/request/:bookId', protect, requestBook);
 router.get('/received-requests', protect, getReceivedRequests);
 router.get('/my-requests', protect, getMyRequests);
+router.get('/all-requests', protect, getAllBorrowRequests);
+router.post('/test-reminders', protect, testReminders);
 router.put('/:requestId', protect, updateRequestStatus);
 router.put('/:requestId/borrowed', protect, markAsBorrowed);
 router.put('/:requestId/returned', protect, markAsReturned);

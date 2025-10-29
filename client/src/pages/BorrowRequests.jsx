@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Loader, Check, X, ArrowRight, Inbox, CheckCircle, EyeOff, Eye } from 'lucide-react';
+import { Loader, Check, X, ArrowRight, Inbox, CheckCircle, EyeOff, Eye, Trash2 } from 'lucide-react';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import toast from 'react-hot-toast';
 import { borrowAPI, reviewsAPI } from '../utils/api';
@@ -96,6 +96,17 @@ const BorrowRequests = () => {
     }
   };
 
+  const handleDeleteRequest = async (requestId) => {
+    try {
+      await borrowAPI.deleteRequest(requestId);
+      toast.success('Request deleted successfully');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to delete request');
+      console.error('Delete request error:', error);
+    }
+  };
+
   const renderStatusBadge = (status) => {
     const statusStyles = {
       pending: { bg: '#fffbeb', text: '#b45309' },
@@ -144,12 +155,12 @@ const BorrowRequests = () => {
                   {renderStatusBadge(req.status)}
                 </div>
                 {req.book?.forBorrowing && req.book?.lendingDuration && (
-                  <div style={{ 
-                    backgroundColor: '#dbeafe', 
-                    color: '#1d4ed8', 
-                    padding: '0.5rem 0.75rem', 
-                    borderRadius: '0.5rem', 
-                    fontSize: '0.875rem', 
+                  <div style={{
+                    backgroundColor: '#dbeafe',
+                    color: '#1d4ed8',
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem',
                     fontWeight: '600',
                     marginBottom: '0.75rem',
                     display: 'flex',
@@ -246,7 +257,16 @@ const BorrowRequests = () => {
                           <p className="denied-book-owner">Requested from {req.owner?.name || 'Unknown User'}</p>
                           <p className="denied-book-date">Denied on: {formatDate(req.updatedAt || req.createdAt)}</p>
                         </div>
-                        {renderStatusBadge(req.status)}
+                        <div className="denied-actions">
+                          {renderStatusBadge(req.status)}
+                          <button
+                            onClick={() => handleDeleteRequest(req._id)}
+                            className="delete-btn"
+                            title="Delete this request"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -280,12 +300,12 @@ const BorrowRequests = () => {
                     {renderStatusBadge(req.status)}
                   </div>
                   {req.book?.forBorrowing && req.book?.lendingDuration && (
-                    <div style={{ 
-                      backgroundColor: '#dbeafe', 
-                      color: '#1d4ed8', 
-                      padding: '0.5rem 0.75rem', 
-                      borderRadius: '0.5rem', 
-                      fontSize: '0.875rem', 
+                    <div style={{
+                      backgroundColor: '#dbeafe',
+                      color: '#1d4ed8',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
                       fontWeight: '600',
                       marginBottom: '0.75rem',
                       display: 'flex',
@@ -375,7 +395,16 @@ const BorrowRequests = () => {
                           <p className="denied-book-owner">Requested from {req.owner?.name || 'Unknown User'}</p>
                           <p className="denied-book-date">Denied on: {formatDate(req.updatedAt || req.createdAt)}</p>
                         </div>
-                        {renderStatusBadge(req.status)}
+                        <div className="denied-actions">
+                          {renderStatusBadge(req.status)}
+                          <button
+                            onClick={() => handleDeleteRequest(req._id)}
+                            className="delete-btn"
+                            title="Delete this request"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -934,6 +963,36 @@ const StyledWrapper = styled.div`
     font-size: 0.75rem;
     color: #9ca3af;
     margin: 0;
+  }
+
+  .denied-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    background: #fee2e2;
+    color: #dc2626;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: #fecaca;
+      transform: scale(1.05);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
   }
 `;
 

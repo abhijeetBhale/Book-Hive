@@ -28,6 +28,7 @@ const Profile = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null); // Store selected user info
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -44,7 +45,7 @@ const Profile = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [passwordFeedback, setPasswordFeedback] = useState([]);
-  
+
   // Security settings state
   const [securitySettings, setSecuritySettings] = useState({
     twoFactorEnabled: false,
@@ -53,7 +54,7 @@ const Profile = () => {
     sessionTimeout: '30',
     accountVisibility: 'public'
   });
-  
+
   // Account activity state
   const [accountActivity, setAccountActivity] = useState([]);
   const [loadingActivity, setLoadingActivity] = useState(false);
@@ -146,7 +147,7 @@ const Profile = () => {
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswordData({ ...passwordData, [name]: value });
-    
+
     // Check password strength for new password
     if (name === 'newPassword') {
       checkPasswordStrength(value);
@@ -157,37 +158,37 @@ const Profile = () => {
   const checkPasswordStrength = (password) => {
     let strength = 0;
     const feedback = [];
-    
+
     if (password.length >= 8) {
       strength += 1;
     } else {
       feedback.push('At least 8 characters');
     }
-    
+
     if (/[a-z]/.test(password)) {
       strength += 1;
     } else {
       feedback.push('One lowercase letter');
     }
-    
+
     if (/[A-Z]/.test(password)) {
       strength += 1;
     } else {
       feedback.push('One uppercase letter');
     }
-    
+
     if (/\d/.test(password)) {
       strength += 1;
     } else {
       feedback.push('One number');
     }
-    
+
     if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
       strength += 1;
     } else {
       feedback.push('One special character');
     }
-    
+
     setPasswordStrength(strength);
     setPasswordFeedback(feedback);
   };
@@ -216,13 +217,13 @@ const Profile = () => {
     try {
       const response = await authAPI.getAccountActivity();
       const activityData = response.data.activity || [];
-      
+
       // Convert timestamp strings to Date objects if needed
       const processedActivity = activityData.map(activity => ({
         ...activity,
         timestamp: new Date(activity.timestamp)
       }));
-      
+
       setAccountActivity(processedActivity);
     } catch (error) {
       console.error('Failed to fetch account activity:', error);
@@ -372,6 +373,12 @@ const Profile = () => {
     const value = e.target.value;
     setSearchTerm(value);
 
+    // If user starts typing after selecting someone, clear the selection
+    if (reportData.reportedUserId && value !== selectedUser?.name) {
+      setReportData(prev => ({ ...prev, reportedUserId: '' }));
+      setSelectedUser(null);
+    }
+
     // Clear previous timeout
     if (searchTimeout) {
       clearTimeout(searchTimeout);
@@ -385,13 +392,14 @@ const Profile = () => {
     setSearchTimeout(newTimeout);
   };
 
-  const handleSelectUser = (selectedUser) => {
+  const handleSelectUser = (user) => {
     setReportData(prev => ({
       ...prev,
-      reportedUserId: selectedUser._id
+      reportedUserId: user._id
     }));
+    setSelectedUser(user); // Store the selected user
     setSearchResults([]);
-    setSearchTerm(selectedUser.name);
+    setSearchTerm(user.name);
   };
 
   const handleReportChange = (e) => {
@@ -406,6 +414,7 @@ const Profile = () => {
       await reportAPI.createReport(reportData);
       toast.success("Report submitted successfully. Our team will review it shortly.");
       setReportData({ reportedUserId: '', reason: '', description: '' });
+      setSelectedUser(null);
       setSearchTerm('');
       setActiveTab('security');
     } catch (error) {
@@ -553,18 +562,18 @@ const Profile = () => {
               ))}
               <h4 className="mt-8">Book Inquiries</h4>
               <div className="messages-scroll">
-              {notifications.messages.length > 0 ? notifications.messages.map(msg => (
-                <div className="notification-item" key={msg.id}>
-                  <img src={msg.avatar} alt={msg.from} className="item-avatar" />
-                  <div className="item-content">
-                    <strong>Book inquiry from {msg.from}</strong>
-                    <p>"{msg.text}"</p>
+                {notifications.messages.length > 0 ? notifications.messages.map(msg => (
+                  <div className="notification-item" key={msg.id}>
+                    <img src={msg.avatar} alt={msg.from} className="item-avatar" />
+                    <div className="item-content">
+                      <strong>Book inquiry from {msg.from}</strong>
+                      <p>"{msg.text}"</p>
+                    </div>
+                    <button onClick={() => handleDeleteMessage(msg.id)} className="delete-notification-btn" aria-label={`Delete inquiry from ${msg.from}`}>
+                      <Trash2 size={18} />
+                    </button>
                   </div>
-                  <button onClick={() => handleDeleteMessage(msg.id)} className="delete-notification-btn" aria-label={`Delete inquiry from ${msg.from}`}>
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              )) : <p className="text-gray-500">No book inquiries yet.</p>}
+                )) : <p className="text-gray-500">No book inquiries yet.</p>}
               </div>
             </div>
           </div>
@@ -587,7 +596,7 @@ const Profile = () => {
               <p className="security-description">
                 Keep your account secure by using a strong, unique password.
               </p>
-              
+
               <form onSubmit={handlePasswordSubmit}>
                 <div className="input-field with-icon">
                   <label htmlFor="currentPassword">Current password</label>
@@ -625,7 +634,7 @@ const Profile = () => {
                 {passwordData.newPassword && (
                   <div className="password-strength">
                     <div className="strength-bar">
-                      <div 
+                      <div
                         className={`strength-fill strength-${passwordStrength}`}
                         style={{ width: `${(passwordStrength / 5) * 100}%` }}
                       ></div>
@@ -681,9 +690,9 @@ const Profile = () => {
                 )}
 
                 <div className="form-footer">
-                  <button 
-                    type="submit" 
-                    className="save-btn" 
+                  <button
+                    type="submit"
+                    className="save-btn"
                     disabled={loading || passwordStrength < 3 || passwordData.newPassword !== passwordData.confirmPassword}
                   >
                     {loading ? <Loader className="animate-spin" size={16} /> : 'Update Password'}
@@ -794,7 +803,7 @@ const Profile = () => {
               </div>
 
               <div className="form-footer">
-                <button 
+                <button
                   className="save-btn"
                   onClick={handleSaveSecuritySettings}
                   disabled={loading}
@@ -849,7 +858,7 @@ const Profile = () => {
               )}
 
               <div className="activity-actions">
-                <button 
+                <button
                   className="secondary-btn"
                   onClick={fetchAccountActivity}
                   disabled={loadingActivity}
@@ -921,7 +930,7 @@ const Profile = () => {
                   <div className="step-number">1</div>
                   <h4>Find the user you want to report</h4>
                 </div>
-                
+
                 <div className="search-form">
                   <div className="input-field">
                     <label>Search for user</label>
@@ -944,36 +953,35 @@ const Profile = () => {
                 </div>
 
                 {/* Selected User Display */}
-                {reportData.reportedUserId && (
+                {reportData.reportedUserId && selectedUser && (
                   <div className="selected-user">
                     <div className="selected-user-header">
                       <CheckCircle className="w-5 h-5 text-green-500" />
                       <span>Selected User</span>
                     </div>
-                    {searchResults.find(u => u._id === reportData.reportedUserId) && (
-                      <div className="user-card selected">
-                        <img
-                          src={searchResults.find(u => u._id === reportData.reportedUserId).avatar || 
-                               `https://ui-avatars.com/api/?name=${searchResults.find(u => u._id === reportData.reportedUserId).name}&background=818cf8&color=fff`}
-                          alt={searchResults.find(u => u._id === reportData.reportedUserId).name}
-                          className="user-avatar"
-                        />
-                        <div className="user-info">
-                          <strong>{searchResults.find(u => u._id === reportData.reportedUserId).name}</strong>
-                          <span>{searchResults.find(u => u._id === reportData.reportedUserId).email}</span>
-                        </div>
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            setReportData(prev => ({ ...prev, reportedUserId: '' }));
-                            setSearchTerm('');
-                          }}
-                          className="remove-selection"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                    <div className="user-card selected">
+                      <img
+                        src={selectedUser.avatar ||
+                          `https://ui-avatars.com/api/?name=${selectedUser.name}&background=818cf8&color=fff`}
+                        alt={selectedUser.name}
+                        className="user-avatar"
+                      />
+                      <div className="user-info">
+                        <strong>{selectedUser.name}</strong>
+                        <span>{selectedUser.email}</span>
                       </div>
-                    )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReportData(prev => ({ ...prev, reportedUserId: '' }));
+                          setSelectedUser(null);
+                          setSearchTerm('');
+                        }}
+                        className="remove-selection"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -1004,11 +1012,20 @@ const Profile = () => {
                   </div>
                 )}
 
-                {searchResults.length === 0 && searchTerm && !searchLoading && (
+                {/* Loading State */}
+                {searchLoading && searchTerm && (
+                  <div className="search-loading">
+                    <div className="loading-spinner"></div>
+                    <p>Searching for users...</p>
+                  </div>
+                )}
+
+                {/* No Results */}
+                {searchResults.length === 0 && searchTerm && !searchLoading && !reportData.reportedUserId && (
                   <div className="no-results">
                     <User className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                     <p>No users found matching "{searchTerm}"</p>
-                    <p className="text-sm">Try searching with a different username or email</p>
+                    <p className="text-sm">Try searching with a different username or email address</p>
                   </div>
                 )}
               </div>
@@ -1020,7 +1037,7 @@ const Profile = () => {
                     <div className="step-number">2</div>
                     <h4>Provide report details</h4>
                   </div>
-                  
+
                   <div className="report-form">
                     <div className="input-field">
                       <label>What type of violation is this?</label>
@@ -1081,24 +1098,24 @@ const Profile = () => {
                     <div className="step-number">3</div>
                     <h4>Review and submit</h4>
                   </div>
-                  
+
                   <div className="report-summary">
                     <div className="summary-card">
                       <h5>Report Summary</h5>
                       <div className="summary-item">
-                        <strong>Reported User:</strong> 
-                        <span>{searchResults.find(u => u._id === reportData.reportedUserId)?.name || 'Selected User'}</span>
+                        <strong>Reported User:</strong>
+                        <span>{selectedUser?.name || 'Selected User'}</span>
                       </div>
                       <div className="summary-item">
-                        <strong>Violation Type:</strong> 
+                        <strong>Violation Type:</strong>
                         <span>{reportData.reason.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
                       </div>
                       <div className="summary-item">
-                        <strong>Description:</strong> 
+                        <strong>Description:</strong>
                         <span>{reportData.description.substring(0, 100)}{reportData.description.length > 100 ? '...' : ''}</span>
                       </div>
                     </div>
-                    
+
                     <div className="submission-notice">
                       <AlertTriangle className="w-5 h-5 text-amber-500" />
                       <div>
@@ -1143,9 +1160,9 @@ const Profile = () => {
               <h3>Reading Journey</h3>
               <p>Track your achievements, join clubs, and compete with fellow readers.</p>
             </div>
-            <GamificationSection 
-              activeSubTab={activeSubTab} 
-              setActiveSubTab={setActiveSubTab} 
+            <GamificationSection
+              activeSubTab={activeSubTab}
+              setActiveSubTab={setActiveSubTab}
             />
           </div>
         );
@@ -2031,6 +2048,27 @@ const StyledWrapper = styled.div`
       
       .user-card + .user-card {
         margin-top: 0.5rem;
+      }
+    }
+
+    .search-loading {
+      text-align: center;
+      padding: 2rem;
+      color: #6b7280;
+      
+      .loading-spinner {
+        width: 2rem;
+        height: 2rem;
+        border: 2px solid #e5e7eb;
+        border-top: 2px solid #4f46e5;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
     }
 

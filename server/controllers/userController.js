@@ -64,19 +64,27 @@ export const getUserBooks = async (req, res) => {
 // @route   GET /api/users/search
 export const searchUsers = async (req, res) => {
   try {
-    const keyword = req.query.keyword
-      ? {
-          name: {
-            $regex: req.query.keyword,
-            $options: 'i'
-          }
-        }
-      : {};
+    const searchTerm = req.query.keyword;
+    
+    let searchQuery = {};
+    
+    if (searchTerm) {
+      // Search in both name and email fields
+      searchQuery = {
+        $or: [
+          { name: { $regex: searchTerm, $options: 'i' } },
+          { email: { $regex: searchTerm, $options: 'i' } }
+        ]
+      };
+    }
     
     const users = await User.find({ 
-      ...keyword,
-      _id: { $ne: req.user.id } // Exclude current user from search results
-    }).select('name email avatar _id');
+      ...searchQuery,
+      _id: { $ne: req.user._id }, // Exclude current user from search results (fixed: use _id instead of id)
+      isActive: { $ne: false } // Only show active users
+    }).select('name email avatar _id isActive')
+      .limit(20) // Limit results for performance
+      .sort({ name: 1 }); // Sort by name alphabetically
     
     res.json(users);
   } catch (error) {

@@ -101,6 +101,7 @@ app.use((req, res) => {
 
 // Schedule reminder service (daily at 9 AM)
 cron.schedule('0 9 * * *', async () => {
+  console.log('Running daily reminder service...');
   await sendOverdueReminders();
 });
 
@@ -191,6 +192,13 @@ io.on('connection', (socket) => {
     }
     io.emit('presence:update', Array.from(onlineUsers.keys()));
   });
+});
+
+// Enhanced reminder service with socket.io integration
+// Run hourly checks during business hours (9 AM to 6 PM)
+cron.schedule('0 9-18 * * *', async () => {
+  console.log('Running hourly reminder check with real-time notifications...');
+  await sendOverdueReminders(io);
 });
 
 // Handle unhandled promise rejections
