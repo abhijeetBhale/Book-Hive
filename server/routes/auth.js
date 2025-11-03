@@ -2,12 +2,12 @@ import express from 'express';
 import passport from 'passport';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
-import { 
-  registerUser, 
-  loginUser, 
-  getProfile, 
-  updateProfile, 
-  changePassword, 
+import {
+  registerUser,
+  loginUser,
+  getProfile,
+  updateProfile,
+  changePassword,
   updateLocation,
   updateSecuritySettings,
   getAccountActivity,
@@ -62,39 +62,39 @@ router.get('/profile', protect, getProfile);
 // Enhanced multer error handling middleware
 const handleMulterError = (err, req, res, next) => {
   console.error('Multer Error:', err);
-  
+
   if (err instanceof multer.MulterError) {
     switch (err.code) {
       case 'LIMIT_FILE_SIZE':
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'File too large. Maximum size is 10MB.' 
+          message: 'File too large. Maximum size is 10MB.'
         });
       case 'LIMIT_FILE_COUNT':
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'Too many files. Only one file allowed.' 
+          message: 'Too many files. Only one file allowed.'
         });
       case 'LIMIT_UNEXPECTED_FILE':
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'Unexpected file field. Expected field name: avatar' 
+          message: 'Unexpected file field. Expected field name: avatar'
         });
       default:
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: `Upload error: ${err.message}` 
+          message: `Upload error: ${err.message}`
         });
     }
   }
-  
+
   if (err && err.message && err.message.includes('File type not supported')) {
-    return res.status(400).json({ 
+    return res.status(400).json({
       success: false,
-      message: err.message 
+      message: err.message
     });
   }
-  
+
   // Pass other errors to the global error handler
   next(err);
 };

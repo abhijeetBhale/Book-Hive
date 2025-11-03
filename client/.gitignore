@@ -18,6 +18,9 @@ dist-ssr
 .env.*
 !.env.example
 
+# Keep .npmrc for build configuration
+!.npmrc
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
