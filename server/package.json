@@ -4,8 +4,11 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node index.js",
     "dev": "nodemon server.js",
+    "build": "echo 'Build complete'",
+    "vercel-build": "echo 'Vercel build complete'",
+    "deploy": "vercel --prod",
     "seed:demo": "node scripts/seedDemoUsers.js",
     "cleanup:demo": "node scripts/cleanupDemoUsers.js",
     "seed:run": "node scripts/runSeed.js",
@@ -14,7 +17,8 @@
     "test:demo": "node scripts/testDemoLogin.js",
     "fix:all": "node scripts/fixAllDemoPasswords.js",
     "test:admin": "node scripts/testAdminEndpoints.js",
-    "update:covers": "node scripts/updateBookCovers.js"
+    "update:covers": "node scripts/updateBookCovers.js",
+    "init:gamification": "node scripts/initializeGamification.js"
   },
   "keywords": [],
   "author": "",

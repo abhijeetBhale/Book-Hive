@@ -293,19 +293,19 @@ export const reviewsAPI = {
 };
 
 export const notificationsAPI = {
-  getUnreadCount: () => api.get('/notifications/count').then(res => res.data.data),
-  getAll: (params) => api.get('/notifications', { params }).then(res => res.data.data),
+  getUnreadCount: () => api.get('/notifications/count').then(res => res.data?.data || res.data),
+  getAll: (params) => api.get('/notifications', { params }).then(res => res.data?.data || res.data),
   markRead: () => api.put('/notifications/mark-read').then(res => res.data),
   markAsRead: (notificationIds) => api.put('/notifications/mark-read', { notificationIds }).then(res => res.data),
   markAllAsRead: () => api.put('/notifications/mark-all-read').then(res => res.data),
-  getModerationNotifications: () => api.get('/notifications/moderation').then(res => res.data.data),
+  getModerationNotifications: () => api.get('/notifications/moderation').then(res => res.data?.data || res.data),
   createBookInquiry: ({ toUserId, subject, body }) => api.post('/notifications/book-inquiry', { toUserId, subject, body }).then(res => res.data),
-  listBookInquiries: (params) => api.get('/notifications/book-inquiry', { params }).then(res => res.data.data),
+  listBookInquiries: (params) => api.get('/notifications/book-inquiry', { params }).then(res => res.data?.data || res.data),
 
   delete: (id) => api.delete(`/notifications/${id}`).then(res => res.data),
   // New notification endpoints
-  getNotificationsByType: (type, params) => api.get(`/notifications/type/${type}`, { params }).then(res => res.data.data),
-  getNotificationStats: () => api.get('/notifications/stats').then(res => res.data.data),
+  getNotificationsByType: (type, params) => api.get(`/notifications/type/${type}`, { params }).then(res => res.data?.data || res.data),
+  getNotificationStats: () => api.get('/notifications/stats').then(res => res.data?.data || res.data),
   clearReadNotifications: () => api.delete('/notifications/clear-read').then(res => res.data),
   updatePreferences: (preferences) => api.put('/notifications/preferences', { preferences }).then(res => res.data),
 };

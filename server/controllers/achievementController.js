@@ -3,6 +3,7 @@ import UserAchievement from '../models/UserAchievement.js';
 import UserStats from '../models/UserStats.js';
 import { catchAsync } from '../utils/catchAsync.js';
 import AppError from '../utils/appError.js';
+import { getOrCreateUserStats } from '../services/userStatsService.js';
 
 // @desc    Get all achievements
 // @route   GET /api/achievements
@@ -185,13 +186,13 @@ export const getUserStats = catchAsync(async (req, res, next) => {
     return next(new AppError('User ID is required', 400));
   }
 
-  const userStats = await UserStats.findOne({ user: userId })
+  // Get or create user stats
+  let userStats = await getOrCreateUserStats(userId);
+  
+  // Populate user data
+  userStats = await UserStats.findById(userStats._id)
     .populate('user', 'name avatar location createdAt')
     .lean();
-
-  if (!userStats) {
-    return next(new AppError('User stats not found', 404));
-  }
 
   // Get recent achievements
   const recentAchievements = await UserAchievement.find({

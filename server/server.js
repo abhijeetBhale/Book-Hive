@@ -29,6 +29,7 @@ import achievementRoutes from './routes/achievementRoutes.js';
 import challengeRoutes from './routes/challengeRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import { initializeDefaultAchievements } from './services/achievementService.js';
+import { initializeAllUserStats } from './services/userStatsService.js';
 import NotificationService from './services/notificationService.js';
 
 
@@ -38,9 +39,10 @@ const PORT = process.env.PORT || 5000;
 // Connect to database
 connectDatabase();
 
-// Initialize achievements after database connection
+// Initialize achievements and user stats after database connection
 setTimeout(async () => {
   await initializeDefaultAchievements();
+  await initializeAllUserStats();
 }, 2000);
 
 // Security middleware

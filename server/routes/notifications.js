@@ -5,7 +5,6 @@ import {
   listBookInquiries,
   getAllNotifications,
   getUnreadCount,
-  markRead,
   createTestNotification,
   deleteNotification,
   getNotificationsByType,

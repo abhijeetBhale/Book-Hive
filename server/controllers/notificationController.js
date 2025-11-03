@@ -48,17 +48,37 @@ export const getModerationNotifications = async (req, res) => {
   }
 };
 
-// @desc    Mark specific notifications as read
+// @desc    Mark specific notifications as read or all if no IDs provided
 // @route   PUT /api/notifications/mark-read
 // @access  Private
 export const markAsRead = async (req, res) => {
   try {
-    const { notificationIds } = req.body;
+    const { notificationIds } = req.body || {};
 
-    if (!notificationIds || !Array.isArray(notificationIds)) {
+    // If no notificationIds provided, mark all notifications as read
+    if (!notificationIds || notificationIds.length === 0) {
+      await Notification.updateMany(
+        {
+          userId: req.user._id,
+          isRead: false
+        },
+        {
+          isRead: true,
+          readAt: new Date()
+        }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: 'All notifications marked as read'
+      });
+    }
+
+    // If notificationIds provided, mark specific notifications as read
+    if (!Array.isArray(notificationIds)) {
       return res.status(400).json({
         success: false,
-        message: 'Notification IDs array is required'
+        message: 'Notification IDs must be an array'
       });
     }
 
@@ -243,34 +263,7 @@ export const getUnreadCount = async (req, res) => {
   }
 };
 
-// @desc    Mark notifications as read (legacy function)
-// @route   PUT /api/notifications/mark-read
-// @access  Private
-export const markRead = async (req, res) => {
-  try {
-    await Notification.updateMany(
-      {
-        userId: req.user._id,
-        isRead: false
-      },
-      {
-        isRead: true,
-        readAt: new Date()
-      }
-    );
 
-    res.status(200).json({
-      success: true,
-      message: 'Notifications marked as read'
-    });
-  } catch (error) {
-    console.error('Mark notifications as read error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Server error marking notifications as read' 
-    });
-  }
-};
 
 // @desc    Create test notification
 // @route   POST /api/notifications/test

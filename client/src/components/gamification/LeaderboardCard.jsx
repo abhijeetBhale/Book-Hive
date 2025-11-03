@@ -22,9 +22,10 @@ const LeaderboardCard = ({ className = '' }) => {
     try {
       setLoading(true);
       const response = await achievementsAPI.getLeaderboard({ metric, limit: 10 });
-      setLeaderboard(response.data.data.leaderboard);
+      setLeaderboard(response.data?.data?.leaderboard || []);
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
+      setLeaderboard([]);
     } finally {
       setLoading(false);
     }
@@ -116,7 +117,7 @@ const LeaderboardCard = ({ className = '' }) => {
             <p>No leaderboard data available</p>
           </div>
         ) : (
-          leaderboard.map((entry, index) => (
+          leaderboard.filter(entry => entry && entry.user).map((entry, index) => (
             <div
               key={entry.user._id}
               className={`flex items-center space-x-4 p-3 rounded-lg border transition-all hover:shadow-sm ${getRankBg(entry.rank)}`}
@@ -129,14 +130,14 @@ const LeaderboardCard = ({ className = '' }) => {
               {/* User Info */}
               <div className="flex items-center space-x-3 flex-1 min-w-0">
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                  {entry.user.name?.charAt(0)?.toUpperCase() || '?'}
+                  {entry.user?.name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-800 truncate">
-                    {entry.user.name || 'Anonymous User'}
+                    {entry.user?.name || 'Anonymous User'}
                   </p>
                   <p className="text-sm text-gray-500">
-                    Level {entry.level}
+                    Level {entry.level || 1}
                   </p>
                 </div>
               </div>
@@ -144,7 +145,7 @@ const LeaderboardCard = ({ className = '' }) => {
               {/* Score */}
               <div className="flex-shrink-0 text-right">
                 <p className="font-bold text-gray-800">
-                  {entry.value.toLocaleString()}
+                  {(entry.value || 0).toLocaleString()}
                 </p>
                 <p className="text-xs text-gray-500">
                   {metrics.find(m => m.value === metric)?.label}

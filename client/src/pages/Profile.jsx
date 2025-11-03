@@ -93,15 +93,15 @@ const Profile = () => {
       try {
         const [receivedRequests, inquiryNotes] = await Promise.all([
           borrowAPI.getReceivedRequests(),
-          (await import('../utils/api')).notificationsAPI.listBookInquiries({ limit: 20 })
+          (await import('../utils/api')).notificationsAPI.listBookInquiries({ limit: 20 }).catch(() => ({ data: { data: { notifications: [] } } }))
         ]);
 
-        const pendingList = receivedRequests.data.requests.filter(r => r.status === 'pending');
-        const approvedList = receivedRequests.data.requests.filter(r => r.status === 'approved');
+        const pendingList = receivedRequests.data?.requests?.filter(r => r.status === 'pending') || [];
+        const approvedList = receivedRequests.data?.requests?.filter(r => r.status === 'approved') || [];
         const pendingCount = pendingList.length;
         const approvedCount = approvedList.length;
 
-        const messages = (inquiryNotes.data.notifications || []).map(n => ({
+        const messages = (inquiryNotes.data?.data?.notifications || inquiryNotes.data?.notifications || []).map(n => ({
           id: n._id,
           from: n.fromUser?.name || 'User',
           text: n.message,
@@ -124,6 +124,7 @@ const Profile = () => {
           window.dispatchEvent(new Event('notifications-read'));
         } catch (error) {
           console.error('Profile: Error marking notifications as read:', error);
+          // Don't show error to user as this is not critical functionality
         }
       } catch (error) {
         console.error("Failed to fetch notifications:", error);
@@ -579,6 +580,8 @@ const Profile = () => {
           </div>
         );
       // --- JSX FOR NEW SECURITY TAB ---
+      case 'gamification':
+        return <GamificationSection activeSubTab={activeSubTab} setActiveSubTab={setActiveSubTab} />;
       case 'security':
         return (
           <div>
@@ -1151,19 +1154,6 @@ const Profile = () => {
                 </div>
               )}
             </form>
-          </div>
-        );
-      case 'gamification':
-        return (
-          <div>
-            <div className="section-header">
-              <h3>Reading Journey</h3>
-              <p>Track your achievements, join clubs, and compete with fellow readers.</p>
-            </div>
-            <GamificationSection
-              activeSubTab={activeSubTab}
-              setActiveSubTab={setActiveSubTab}
-            />
           </div>
         );
       default:
