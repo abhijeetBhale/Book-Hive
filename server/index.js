@@ -178,13 +178,13 @@ export default async function handler(req, res) {
 
     // Connect to database
     await connectDB();
-    
+
     // Handle the request
     return app(req, res);
   } catch (error) {
     console.error('Serverless function error:', error);
     console.error('Error stack:', error.stack);
-    
+
     // Return proper error response
     if (!res.headersSent) {
       return res.status(500).json({
