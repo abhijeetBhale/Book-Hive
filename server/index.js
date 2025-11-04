@@ -2,10 +2,15 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import hpp from 'hpp';
+import passport from 'passport';
 import mongoose from 'mongoose';
 
-// Import middleware
+// Import middleware and config
 import errorHandler from './middleware/errorHandler.js';
+import './config/cloudinary.js';
+import './config/passport-setup.js';
 
 // Import essential routes
 import authRoutes from './routes/auth.js';
@@ -134,6 +139,19 @@ app.get('/api/test', (req, res) => {
     mongoUri: process.env.MONGODB_URI ? 'Set' : 'Not set',
     jwtSecret: process.env.JWT_SECRET ? 'Set' : 'Not set',
     cloudinaryName: process.env.CLOUDINARY_CLOUD_NAME ? 'Set' : 'Not set',
+    googleClientId: process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Not set',
+    googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'Not set',
+    clientUrl: process.env.CLIENT_URL,
+  });
+});
+
+// Google OAuth test endpoint
+app.get('/api/auth/test-google', (req, res) => {
+  res.status(200).json({
+    message: 'Google OAuth test endpoint',
+    googleConfigured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+    callbackUrl: '/api/auth/google/callback',
+    clientUrl: process.env.CLIENT_URL,
   });
 });
 

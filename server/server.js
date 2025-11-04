@@ -12,7 +12,7 @@ import messageRoutes from './routes/messages.js';
 import errorHandler from './middleware/errorHandler.js';
 import connectDatabase from './config/database.js';
 import './config/cloudinary.js';
-import './config/passport-setup.js'; 
+import './config/passport-setup.js';
 import authRoutes from './routes/auth.js';
 import bookRoutes from './routes/books.js';
 import bookSearchRoutes from './routes/bookSearch.js';
@@ -146,17 +146,17 @@ const onlineUsers = new Map();
 io.use((socket, next) => {
   try {
     const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(' ')[1];
-    console.log('WebSocket auth attempt:', { 
-      hasToken: !!token, 
+    console.log('WebSocket auth attempt:', {
+      hasToken: !!token,
       authHeader: socket.handshake.auth,
-      headers: socket.handshake.headers?.authorization 
+      headers: socket.handshake.headers?.authorization
     });
-    
+
     if (!token) {
       console.log('WebSocket connection rejected: no token');
       return next(new Error('Not authorized, no token'));
     }
-    
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     socket.data.userId = decoded.userId;
     console.log('WebSocket connection authorized for user:', decoded.userId);
@@ -170,7 +170,7 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
   const userId = socket.data.userId;
   console.log(`WebSocket user connected: ${userId} (socket: ${socket.id})`);
-  
+
   if (!onlineUsers.has(userId)) onlineUsers.set(userId, new Set());
   onlineUsers.get(userId).add(socket.id);
 
