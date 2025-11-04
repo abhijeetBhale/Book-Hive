@@ -36,14 +36,20 @@ import NotificationService from './services/notificationService.js';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Connect to database
-connectDatabase();
+// Connect to database and initialize
+const initializeApp = async () => {
+  try {
+    await connectDatabase();
+    console.log('🔄 Initializing achievements and user stats...');
+    await initializeDefaultAchievements();
+    await initializeAllUserStats();
+    console.log('✅ App initialization completed');
+  } catch (error) {
+    console.error('❌ App initialization failed:', error);
+  }
+};
 
-// Initialize achievements and user stats after database connection
-setTimeout(async () => {
-  await initializeDefaultAchievements();
-  await initializeAllUserStats();
-}, 2000);
+initializeApp();
 
 // Security middleware
 app.use(helmet());
