@@ -12,15 +12,32 @@ import errorHandler from './middleware/errorHandler.js';
 import './config/cloudinary.js';
 import './config/passport-setup.js';
 
-// Import essential routes
+// Import services for initialization
+import { initializeDefaultAchievements } from './services/achievementService.js';
+import { initializeAllUserStats } from './services/userStatsService.js';
+
+// Import ALL routes (restored to original)
 import authRoutes from './routes/auth.js';
 import bookRoutes from './routes/books.js';
+import bookSearchRoutes from './routes/bookSearch.js';
+import borrowRoutes from './routes/borrow.js';
 import userRoutes from './routes/users.js';
+import friendRoutes from './routes/friends.js';
+import messageRoutes from './routes/messages.js';
+import reportRoutes from './routes/reportRoutes.js';
+import testimonialRoutes from './routes/testimonials.js';
+import reviewRoutes from './routes/reviews.js';
+import notificationRoutes from './routes/notifications.js';
+import bookClubRoutes from './routes/bookClubRoutes.js';
+import achievementRoutes from './routes/achievementRoutes.js';
+import challengeRoutes from './routes/challengeRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 const app = express();
 
 // Database connection with serverless optimization
 let isConnected = false;
+let isInitialized = false;
 
 const connectDB = async () => {
   if (isConnected && mongoose.connection.readyState === 1) {
@@ -45,6 +62,20 @@ const connectDB = async () => {
     const connection = await mongoose.connect(process.env.MONGODB_URI, options);
     isConnected = true;
     console.log('✅ MongoDB Connected for serverless');
+    
+    // Initialize achievements and user stats (only once)
+    if (!isInitialized) {
+      try {
+        await initializeDefaultAchievements();
+        await initializeAllUserStats();
+        isInitialized = true;
+        console.log('✅ App initialization completed');
+      } catch (initError) {
+        console.error('❌ Initialization error:', initError.message);
+        // Don't fail the connection if initialization fails
+      }
+    }
+    
     return connection;
   } catch (error) {
     console.error('❌ Database connection error:', error);
@@ -155,10 +186,22 @@ app.get('/api/auth/test-google', (req, res) => {
   });
 });
 
-// Essential API Routes
+// API Routes (restored to original)
 app.use('/api/auth', authRoutes);
 app.use('/api/books', bookRoutes);
+app.use('/api/book-search', bookSearchRoutes);
+app.use('/api/borrow', borrowRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/friends', friendRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/testimonials', testimonialRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/clubs', bookClubRoutes);
+app.use('/api/achievements', achievementRoutes);
+app.use('/api/challenges', challengeRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
