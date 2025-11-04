@@ -2,33 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-import hpp from 'hpp';
-import passport from 'passport';
 import mongoose from 'mongoose';
-
-// Import middleware and config
-import errorHandler from './middleware/errorHandler.js';
-
-// Import config with error handling
-try {
-  await import('./config/cloudinary.js');
-  console.log('✅ Cloudinary config loaded');
-} catch (error) {
-  console.error('❌ Cloudinary config error:', error.message);
-}
-
-try {
-  await import('./config/passport-setup.js');
-  console.log('✅ Passport config loaded');
-} catch (error) {
-  console.error('❌ Passport config error:', error.message);
-}
-
-// Import routes (we'll add them back one by one to debug)
-import authRoutes from './routes/auth.js';
-import bookRoutes from './routes/books.js';
-import userRoutes from './routes/users.js';
 
 const app = express();
 
@@ -80,8 +54,6 @@ app.use(helmet({
   },
 }));
 
-app.use(hpp());
-
 // CORS configuration
 app.use(cors({
   origin: [
@@ -97,26 +69,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Increased for production
-  message: {
-    error: 'Too many requests from this IP, please try again later.',
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => req.path === '/api/health',
-});
-
-app.use(limiter);
-
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Initialize Passport
-app.use(passport.initialize());
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -143,13 +98,17 @@ app.get('/', (req, res) => {
   });
 });
 
-// API Routes (simplified for debugging)
-app.use('/api/auth', authRoutes);
-app.use('/api/books', bookRoutes);
-app.use('/api/users', userRoutes);
-
-// Error handling middleware
-app.use(errorHandler);
+// Test endpoint
+app.get('/api/test', (req, res) => {
+  res.status(200).json({
+    message: 'API is working!',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    mongoUri: process.env.MONGODB_URI ? 'Set' : 'Not set',
+    jwtSecret: process.env.JWT_SECRET ? 'Set' : 'Not set',
+    cloudinaryName: process.env.CLOUDINARY_CLOUD_NAME ? 'Set' : 'Not set',
+  });
+});
 
 // 404 handler
 app.use((req, res) => {
@@ -158,6 +117,16 @@ app.use((req, res) => {
     path: req.path,
     method: req.method,
     message: 'The requested endpoint does not exist',
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
+    timestamp: new Date().toISOString(),
   });
 });
 
