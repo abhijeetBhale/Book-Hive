@@ -7,6 +7,11 @@ import mongoose from 'mongoose';
 // Import middleware
 import errorHandler from './middleware/errorHandler.js';
 
+// Import essential routes
+import authRoutes from './routes/auth.js';
+import bookRoutes from './routes/books.js';
+import userRoutes from './routes/users.js';
+
 const app = express();
 
 // Database connection with serverless optimization
@@ -131,6 +136,11 @@ app.get('/api/test', (req, res) => {
     cloudinaryName: process.env.CLOUDINARY_CLOUD_NAME ? 'Set' : 'Not set',
   });
 });
+
+// Essential API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/books', bookRoutes);
+app.use('/api/users', userRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
