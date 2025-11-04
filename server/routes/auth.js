@@ -29,12 +29,51 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
   router.get(
     '/google/callback',
-    passport.authenticate('google', { session: false, failureRedirect: `${process.env.CLIENT_URL}/login` }),
-    (req, res) => {
-      const token = jwt.sign({ userId: req.user._id }, process.env.JWT_SECRET, {
-        expiresIn: '7d',
-      });
-      res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
+    (req, res, next) => {
+      console.log('🔍 Google OAuth callback received');
+      console.log('   Query params:', req.query);
+      console.log('   Headers:', req.headers);
+      
+      passport.authenticate('google', { session: false }, (err, user, info) => {
+        console.log('🔍 Passport authenticate result:');
+        console.log('   Error:', err);
+        console.log('   User:', user ? 'User found' : 'No user');
+        console.log('   Info:', info);
+        
+        if (err) {
+          console.error('❌ Google OAuth Error:', err);
+          return res.status(500).json({
+            success: false,
+            message: 'Google OAuth authentication failed',
+            error: err.message,
+            details: 'Check server logs for more information'
+          });
+        }
+        
+        if (!user) {
+          console.error('❌ Google OAuth: No user returned');
+          return res.status(401).json({
+            success: false,
+            message: 'Google OAuth authentication failed - no user data received',
+            details: 'This usually means there\'s a configuration issue with Google Console'
+          });
+        }
+        
+        try {
+          const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+            expiresIn: '7d',
+          });
+          console.log('✅ Google OAuth Success for user:', user.email);
+          res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
+        } catch (tokenError) {
+          console.error('❌ JWT Token Error:', tokenError);
+          res.status(500).json({
+            success: false,
+            message: 'Failed to create authentication token',
+            error: tokenError.message
+          });
+        }
+      })(req, res, next);
     }
   );
 } else {
