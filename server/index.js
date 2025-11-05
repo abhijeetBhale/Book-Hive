@@ -104,6 +104,7 @@ app.use(hpp());
 app.use(cors({
   origin: [
     process.env.CLIENT_URL,
+    'https://book-hive-frontend.onrender.com',
     'https://bookhive-frontend.vercel.app',
     'https://bookhive-client.vercel.app',
     'http://localhost:3000',

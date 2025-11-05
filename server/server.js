@@ -58,6 +58,8 @@ app.use(
   cors({
     origin: [
       process.env.CLIENT_URL || 'http://localhost:3000',
+      'https://book-hive-frontend.onrender.com',
+      'http://localhost:3000',
       'http://localhost:5173',
     ],
     credentials: true
@@ -123,6 +125,7 @@ const io = new SocketIOServer(server, {
   cors: {
     origin: [
       process.env.CLIENT_URL || 'http://localhost:3000',
+      'https://book-hive-frontend.onrender.com',
       'http://localhost:3000',
       'http://localhost:5173',
       'http://localhost:5174', // Add Vite dev server port
