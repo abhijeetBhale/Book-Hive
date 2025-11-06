@@ -66,15 +66,33 @@ app.use(
   })
 );
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000,
-  message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
+// Rate limiting - TEMPORARILY DISABLED for debugging 429 errors
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 2000, // Very high limit for production
+//   message: {
+//     error: 'Too many requests from this IP, please try again later.',
+//   },
+//   standardHeaders: true,
+//   legacyHeaders: false,
+//   skip: (req) => {
+//     // Skip rate limiting for critical endpoints
+//     return req.path === '/api/health' || 
+//            req.path === '/api/cors-test' ||
+//            req.path.startsWith('/api/auth/') ||
+//            req.path.startsWith('/api/users/') ||
+//            req.path.startsWith('/api/testimonials');
+//   },
+// });
+// app.use('/api/', limiter);
+
+console.log('⚠️ Rate limiting is DISABLED for debugging purposes');
+
+// Add request logging middleware to debug 429 errors
+app.use((req, res, next) => {
+  console.log(`📝 ${new Date().toISOString()} - ${req.method} ${req.path} from ${req.ip}`);
+  next();
 });
-app.use('/api/', limiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
