@@ -113,7 +113,10 @@ export const AuthProvider = ({ children }) => {
     try {
       const location = await getCurrentLocation();
       await authAPI.updateLocation(location);
-      toast.success("Location updated successfully!");
+      // Only show location toast for manual registration, not Google auth
+      if (window.location.pathname !== '/auth/callback') {
+        toast.success("Location updated successfully!");
+      }
     } catch (error) {
       console.log("Could not get user location:", error.message);
       // Don't show error toast for location - it's optional

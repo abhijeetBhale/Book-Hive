@@ -18,22 +18,25 @@ const AuthCallback = () => {
     const handleAuth = async () => {
       if (isProcessing) return; // Prevent duplicate execution
       isProcessing = true;
-      
+
       if (token) {
         try {
           // Import session manager
           const { default: sessionManager } = await import('../utils/sessionManager');
-          
+
           // 1. Save the token received from the backend
           sessionManager.setToken(token);
           // 2. Refresh the user's profile to update the app's state
           await fetchProfile();
-          // 3. Automatically request user's location for Google auth users
+          // 3. Automatically request user's location for Google auth users (silently)
           await requestUserLocation();
-          // 4. Redirect to the homepage, now logged in
+          // 4. Show single success toast for Google login
+          toast.success("Welcome to BookHive! You're now logged in.");
+          // 5. Redirect to the homepage, now logged in
           navigate('/');
         } catch (error) {
           console.error('Auth callback error:', error);
+          toast.error("Login failed. Please try again.");
           navigate('/login');
         }
       } else {
@@ -63,7 +66,8 @@ const AuthCallback = () => {
         };
 
         await authAPI.updateLocation(location);
-        toast.success("Location updated successfully!");
+        // Remove individual location success toast to avoid multiple notifications
+        console.log("Location updated successfully (silent)");
       } catch (error) {
         console.log("Could not get user location:", error);
         // Don't show error toast for location - it's optional
@@ -71,7 +75,7 @@ const AuthCallback = () => {
     };
 
     handleAuth();
-    
+
     // Cleanup function
     return () => {
       isProcessing = false;

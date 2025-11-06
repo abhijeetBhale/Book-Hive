@@ -5,7 +5,7 @@ import { importPrivateKeyFromIndexedDB, encryptMessage, decryptMessage } from '.
 import { useSearchParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { io } from 'socket.io-client';
-import { Search, Phone, Video, MoreHorizontal, Send, Paperclip, Smile, Check, CheckCheck, Trash2, Palette, X, Image, File } from 'lucide-react';
+import { Search, Phone, Video, MoreHorizontal, Send, Paperclip, Smile, Check, CheckCheck, Trash2, Palette, X, Image, File, ArrowLeft } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 
 // Modern Messages Page Design
@@ -17,6 +17,11 @@ const Wrapper = styled.div`
   margin: 0;
   padding: 0;
   overflow: hidden;
+
+  /* Mobile responsive layout */
+  @media (max-width: 768px) {
+    height: calc(100vh - 60px);
+  }
 `;
 
 const Sidebar = styled.div`
@@ -26,6 +31,16 @@ const Sidebar = styled.div`
   display: flex;
   flex-direction: column;
   overflow: hidden;
+
+  /* Mobile responsive sidebar */
+  @media (max-width: 768px) {
+    width: 100%;
+    position: ${props => props.$showOnMobile ? 'relative' : 'absolute'};
+    left: ${props => props.$showOnMobile ? '0' : '-100%'};
+    z-index: 10;
+    transition: left 0.3s ease;
+    height: 100%;
+  }
 `;
 
 const SidebarHeader = styled.div`
@@ -211,6 +226,16 @@ const ChatArea = styled.div`
   display: flex;
   flex-direction: column;
   background: white;
+
+  /* Mobile responsive chat area */
+  @media (max-width: 768px) {
+    width: 100%;
+    position: ${props => props.$showOnMobile ? 'relative' : 'absolute'};
+    right: ${props => props.$showOnMobile ? '0' : '-100%'};
+    z-index: 5;
+    transition: right 0.3s ease;
+    height: 100%;
+  }
 `;
 
 const ChatHeader = styled.div`
@@ -225,6 +250,28 @@ const ChatHeader = styled.div`
     display: flex;
     align-items: center;
     gap: 12px;
+  }
+
+  .mobile-back-btn {
+    background: none;
+    border: none;
+    color: #4299e1;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+    margin-right: 8px;
+
+    &:hover {
+      background-color: #f7fafc;
+    }
+
+    @media (min-width: 769px) {
+      display: none;
+    }
   }
   
   .chat-avatar {
@@ -494,6 +541,27 @@ const EmptyState = styled.div`
   
   .empty-subtitle {
     font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  .mobile-show-conversations {
+    background: #4299e1;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background: #3182ce;
+    }
+
+    @media (min-width: 769px) {
+      display: none;
+    }
   }
 `;
 
@@ -997,6 +1065,22 @@ const MessagesPage = () => {
   const [showComingSoon, setShowComingSoon] = useState(false);
   const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('chatTheme') || 'default');
 
+  // Mobile responsive state
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [showSidebar, setShowSidebar] = useState(!isMobile);
+
+  // Handle window resize for mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      setShowSidebar(!mobile || !active); // Show sidebar on mobile only when no chat is active
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [active]);
+
   // File sharing state
   const [showFileModal, setShowFileModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -1068,23 +1152,52 @@ const MessagesPage = () => {
       const preselectId = searchParams.get('userId');
       const storedId = localStorage.getItem('lastActiveUserId');
       const targetId = preselectId || storedId;
-      if (targetId) {
-        const { data: conv } = await messagesAPI.getConversationWith(targetId);
-        if (conv) setActive(conv); else if (preselectId) {
-          try {
-            const { data: userRes } = await usersAPI.getUserProfile(preselectId);
-            const otherUser = userRes.user;
-            setActive({
-              _id: `new-${preselectId}`, participants: [
-                { _id: currentUser?._id, name: currentUser?.name, email: currentUser?.email, avatar: currentUser?.avatar },
-                otherUser
-              ], messages: []
-            });
-          } catch { setActive(null); }
+      
+      // On mobile, don't auto-select conversations - let user choose
+      if (isMobile) {
+        if (preselectId) {
+          // Only auto-select if specifically requested via URL
+          const { data: conv } = await messagesAPI.getConversationWith(preselectId);
+          if (conv) {
+            setActive(conv);
+            setShowSidebar(false);
+          } else {
+            try {
+              const { data: userRes } = await usersAPI.getUserProfile(preselectId);
+              const otherUser = userRes.user;
+              setActive({
+                _id: `new-${preselectId}`, participants: [
+                  { _id: currentUser?._id, name: currentUser?.name, email: currentUser?.email, avatar: currentUser?.avatar },
+                  otherUser
+                ], messages: []
+              });
+              setShowSidebar(false);
+            } catch { setActive(null); }
+          }
+        } else {
+          setActive(null); // Don't auto-select on mobile
+          setShowSidebar(true); // Show conversation list
+        }
+      } else {
+        // Desktop behavior - auto-select conversations
+        if (targetId) {
+          const { data: conv } = await messagesAPI.getConversationWith(targetId);
+          if (conv) setActive(conv); else if (preselectId) {
+            try {
+              const { data: userRes } = await usersAPI.getUserProfile(preselectId);
+              const otherUser = userRes.user;
+              setActive({
+                _id: `new-${preselectId}`, participants: [
+                  { _id: currentUser?._id, name: currentUser?.name, email: currentUser?.email, avatar: currentUser?.avatar },
+                  otherUser
+                ], messages: []
+              });
+            } catch { setActive(null); }
+          } else if (data?.length) setActive(data[0]);
         } else if (data?.length) setActive(data[0]);
-      } else if (data?.length) setActive(data[0]);
+      }
     })();
-  }, [searchParams, currentUser?._id]);
+  }, [searchParams, currentUser?._id, isMobile]);
 
   const other = active?.participants?.find(p => p._id !== currentUser?._id) || active?.participants?.[0];
 
@@ -1537,7 +1650,7 @@ const MessagesPage = () => {
 
   return (
     <Wrapper>
-      <Sidebar>
+      <Sidebar $showOnMobile={showSidebar}>
         <SidebarHeader>
           <div className="user-info">
             <img
@@ -1603,6 +1716,12 @@ const MessagesPage = () => {
                     localStorage.setItem('lastActiveUserId', peer._id);
                     const { data } = await messagesAPI.getConversationWith(peer._id);
                     setActive(data || c);
+                    
+                    // On mobile, hide sidebar when chat is selected
+                    if (isMobile) {
+                      setShowSidebar(false);
+                    }
+                    
                     try {
                       const list = await messagesAPI.getConversations();
                       setConversations(list.data);
@@ -1638,11 +1757,20 @@ const MessagesPage = () => {
         </ConversationsList>
       </Sidebar>
 
-      <ChatArea>
+      <ChatArea $showOnMobile={!showSidebar || !isMobile}>
         {other ? (
           <>
             <ChatHeader>
               <div className="chat-user-info">
+                {isMobile && (
+                  <button 
+                    className="mobile-back-btn"
+                    onClick={() => setShowSidebar(true)}
+                    title="Back to conversations"
+                  >
+                    <ArrowLeft size={20} />
+                  </button>
+                )}
                 <img
                   className="chat-avatar"
                   src={other?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(other?.name || 'User')}&background=EEF2FF&color=111827`}
@@ -1852,8 +1980,23 @@ const MessagesPage = () => {
         ) : (
           <EmptyState>
             <div className="empty-icon">💬</div>
-            <div className="empty-title">Select a conversation</div>
-            <div className="empty-subtitle">Choose from your existing conversations or start a new one</div>
+            <div className="empty-title">
+              {isMobile ? 'Welcome to Messages' : 'Select a conversation'}
+            </div>
+            <div className="empty-subtitle">
+              {isMobile 
+                ? 'Tap the menu to see your conversations and start chatting' 
+                : 'Choose from your existing conversations or start a new one'
+              }
+            </div>
+            {isMobile && (
+              <button 
+                className="mobile-show-conversations"
+                onClick={() => setShowSidebar(true)}
+              >
+                View Conversations
+              </button>
+            )}
           </EmptyState>
         )}
       </ChatArea>

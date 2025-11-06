@@ -1214,6 +1214,13 @@ const StyledWrapper = styled.div`
   border-radius: 1rem;
   font-family: 'Inter', sans-serif;
   overflow: hidden;
+
+  /* Mobile responsive layout */
+  @media (max-width: 768px) {
+    flex-direction: column;
+    margin: 1rem;
+    border-radius: 0.5rem;
+  }
   
   .sidebar {
     width: 280px;
@@ -1242,6 +1249,33 @@ const StyledWrapper = styled.div`
         &.active { background-color: #f3f4f6; color: #111827; }
       }
     }
+
+    /* Mobile responsive sidebar */
+    @media (max-width: 768px) {
+      width: 100%;
+      padding: 1rem;
+      border-right: none;
+      border-bottom: 1px solid #e5e7eb;
+
+      nav {
+        flex-direction: row;
+        overflow-x: auto;
+        gap: 0.25rem;
+        padding-bottom: 0.5rem;
+
+        a {
+          flex-shrink: 0;
+          padding: 0.5rem 0.75rem;
+          font-size: 0.875rem;
+          white-space: nowrap;
+
+          svg {
+            width: 16px;
+            height: 16px;
+          }
+        }
+      }
+    }
   }
 
   .notification-link {
@@ -1263,6 +1297,11 @@ const StyledWrapper = styled.div`
     flex: 1;
     padding: 3rem;
     background-color: #f9fafb;
+
+    /* Mobile responsive main content */
+    @media (max-width: 768px) {
+      padding: 1.5rem 1rem;
+    }
     
     /* Report User Styles */
     .security-password-section {
@@ -1302,6 +1341,14 @@ const StyledWrapper = styled.div`
     
     .avatar-section {
         display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2.5rem;
+
+        /* Mobile responsive avatar section */
+        @media (max-width: 768px) {
+          flex-direction: column;
+          text-align: center;
+          gap: 1rem;
+          margin-bottom: 2rem;
+        }
     }
     .avatar-uploader {
         position: relative; cursor: pointer; border-radius: 50%;
@@ -1356,9 +1403,22 @@ const StyledWrapper = styled.div`
     .form-footer {
         display: flex; justify-content: flex-end; gap: 1rem;
         padding-top: 1.5rem; border-top: 1px solid #e5e7eb; margin-top: 2rem;
+
+        /* Mobile responsive form footer */
+        @media (max-width: 768px) {
+          flex-direction: column;
+          gap: 0.75rem;
+        }
         .cancel-btn, .save-btn {
             padding: 0.6rem 1.25rem; border-radius: 0.5rem; font-weight: 600;
             cursor: pointer; border: 1px solid transparent; transition: all 0.2s;
+
+            /* Mobile responsive buttons */
+            @media (max-width: 768px) {
+              width: 100%;
+              padding: 0.75rem 1rem;
+              justify-content: center;
+            }
         }
         .cancel-btn {
             background: white; border-color: #d1d5db; color: #111827;
@@ -1613,6 +1673,11 @@ const StyledWrapper = styled.div`
       display: flex;
       flex-direction: column;
       gap: 1rem;
+
+      /* Mobile responsive security options */
+      @media (max-width: 768px) {
+        gap: 0.75rem;
+      }
     }
 
     .security-option {
@@ -1623,6 +1688,19 @@ const StyledWrapper = styled.div`
       background-color: #f9fafb;
       border: 1px solid #e5e7eb;
       border-radius: 0.5rem;
+
+      /* Mobile responsive security options */
+      @media (max-width: 768px) {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.75rem;
+
+        .option-control {
+          margin-left: 0 !important;
+          align-self: flex-end;
+        }
+      }
       
       .option-info {
         flex: 1;
@@ -2201,6 +2279,11 @@ const StyledWrapper = styled.div`
     
     .notification-list {
         display: flex; flex-direction: column; gap: 1.5rem;
+
+        /* Mobile responsive notification list */
+        @media (max-width: 768px) {
+          gap: 1rem;
+        }
         .messages-scroll { max-height: 260px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 0 0.25rem; }
         h4 {
             font-size: 1rem; font-weight: 700; color: #111827;
@@ -2213,6 +2296,12 @@ const StyledWrapper = styled.div`
         align-items: center;
         gap: 1rem; 
         padding: 1rem 0;
+
+            /* Mobile responsive notification items */
+            @media (max-width: 768px) {
+              padding: 0.75rem 0;
+              gap: 0.75rem;
+            }
             .item-icon {
                 width: 40px; height: 40px; border-radius: 50%; display: flex;
                 align-items: center; justify-content: center; flex-shrink: 0;
