@@ -154,11 +154,14 @@ const api = axios.create({
   },
 });
 
+// Import session manager
+import sessionManager from './sessionManager';
+
 // Request interceptor to add the auth token to every secure request
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
+    const token = sessionManager.getToken();
+    if (token && sessionManager.isTokenValid()) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -171,9 +174,20 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // If the token is invalid or expired, log the user out automatically
-      localStorage.removeItem("token");
-      window.location.href = "/login";
+      // Only redirect to login if we're not already on login/register pages
+      const currentPath = window.location.pathname;
+      const isAuthPage = currentPath === '/login' || 
+                        currentPath === '/register' || 
+                        currentPath === '/auth/callback' ||
+                        currentPath === '/';
+      
+      sessionManager.removeToken();
+      
+      if (!isAuthPage) {
+        // Store the current path to redirect back after login
+        localStorage.setItem('redirectAfterLogin', currentPath);
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

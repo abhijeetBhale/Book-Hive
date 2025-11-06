@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: book-hive-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        value: https://book-hive-frontend.onrender.com
+      - key: MONGODB_URI
+        sync: false  # Set this in Render dashboard for security
+      - key: JWT_SECRET
+        sync: false  # Set this in Render dashboard for security
+      - key: GOOGLE_CLIENT_ID
+        sync: false  # Set this in Render dashboard for security
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false  # Set this in Render dashboard for security

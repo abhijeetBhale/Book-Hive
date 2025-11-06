@@ -21,8 +21,11 @@ const AuthCallback = () => {
       
       if (token) {
         try {
+          // Import session manager
+          const { default: sessionManager } = await import('../utils/sessionManager');
+          
           // 1. Save the token received from the backend
-          localStorage.setItem('token', token);
+          sessionManager.setToken(token);
           // 2. Refresh the user's profile to update the app's state
           await fetchProfile();
           // 3. Automatically request user's location for Google auth users

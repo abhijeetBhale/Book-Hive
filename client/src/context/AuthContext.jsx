@@ -4,6 +4,7 @@ import { authAPI, usersAPI } from '../utils/api';
 import { ensureLocalKeypairAndUpload } from '../utils/crypto';
 import { getCurrentLocation } from '../utils/locationHelpers';
 import avatarCache from '../utils/avatarCache';
+import sessionManager from '../utils/sessionManager';
 import toast from 'react-hot-toast';
 
 export const AuthContext = createContext(null);
@@ -14,16 +15,36 @@ export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
+    const token = sessionManager.getToken();
+    if (token && sessionManager.isTokenValid()) {
       fetchProfile();
     } else {
+      if (token) {
+        // Token exists but is invalid/expired
+        sessionManager.removeToken();
+      }
       setLoading(false);
     }
-  }, []);
+
+    // Listen for session expiration events
+    const handleSessionExpired = () => {
+      setUser(null);
+      toast.error('Your session has expired. Please login again.');
+      navigate('/login');
+    };
+
+    window.addEventListener('sessionExpired', handleSessionExpired);
+    return () => window.removeEventListener('sessionExpired', handleSessionExpired);
+  }, [navigate]);
   
   const fetchProfile = async () => {
     try {
+      const token = sessionManager.getToken();
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
       const { data } = await authAPI.getProfile();
       
       // Preload avatar image for faster display using cache
@@ -45,7 +66,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Failed to fetch profile', error);
       if (error?.response?.status === 401) {
-        localStorage.removeItem('token');
+        sessionManager.removeToken();
+        setUser(null);
       }
     } finally {
       setLoading(false);
@@ -55,13 +77,17 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const { data } = await authAPI.login(credentials);
-      localStorage.setItem('token', data.token);
+      sessionManager.setToken(data.token);
       // fetch latest profile to populate navbar/profile
       await fetchProfile();
       // Ensure E2EE key pair exists and public key is uploaded
       try { await ensureLocalKeypairAndUpload(usersAPI); } catch {}
       toast.success('Login successful!');
-      navigate('/');
+      
+      // Redirect to the page user was trying to access, or home
+      const redirectPath = localStorage.getItem('redirectAfterLogin') || '/';
+      localStorage.removeItem('redirectAfterLogin');
+      navigate(redirectPath);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed.');
       throw error;
@@ -71,7 +97,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
      try {
       const { data } = await authAPI.register(userData);
-      localStorage.setItem('token', data.token);
+      sessionManager.setToken(data.token);
       await fetchProfile();
       // Automatically request location after successful registration
       await requestUserLocation();
@@ -95,7 +121,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-      localStorage.removeItem('token');
+      sessionManager.removeToken();
       setUser(null);
       toast.success('Logged out successfully.');
       navigate('/login');

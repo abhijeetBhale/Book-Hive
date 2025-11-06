@@ -100,32 +100,69 @@ app.use(helmet({
 
 app.use(hpp());
 
-// CORS configuration
+// CORS configuration - Simplified and reliable
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'https://book-hive-frontend.onrender.com',
+  'https://bookhive-frontend.vercel.app',
+  'https://bookhive-client.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5173',
+];
+
+console.log('🔧 CORS allowed origins:', allowedOrigins);
+
 app.use(cors({
-  origin: [
-    process.env.CLIENT_URL,
-    'https://book-hive-frontend.onrender.com',
-    'https://bookhive-frontend.vercel.app',
-    'https://bookhive-client.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5173',
-  ],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      console.log('✅ CORS allowed for origin:', origin);
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked origin:', origin);
+      callback(null, false); // Don't throw error, just deny
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Origin',
+    'X-Requested-With', 
+    'Content-Type',
+    'Accept',
+    'Authorization'
+  ],
+  optionsSuccessStatus: 200
 }));
 
-// Rate limiting
+// Handle preflight requests explicitly
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, X-HTTP-Method-Override');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  res.sendStatus(200);
+});
+
+// Rate limiting - More lenient for production
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Increased for production
+  max: 1000, // Much higher limit for production
   message: {
     error: 'Too many requests from this IP, please try again later.',
   },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.path === '/api/health',
+  skip: (req) => {
+    // Skip rate limiting for health checks and auth endpoints
+    return req.path === '/api/health' || 
+           req.path === '/api/cors-test' ||
+           req.path.startsWith('/api/auth/google');
+  },
 });
 
 app.use(limiter);
@@ -136,6 +173,17 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Initialize Passport
 app.use(passport.initialize());
+
+// CORS debug endpoint
+app.get('/api/cors-test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'CORS is working!',
+    origin: req.headers.origin,
+    clientUrl: process.env.CLIENT_URL,
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

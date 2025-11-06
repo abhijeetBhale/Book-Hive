@@ -1314,7 +1314,7 @@ const StyledWrapper = styled.div`
     max-width: 500px;
     margin: 0 auto;
     background-color: #f4f1ec; 
-    background: url('/src/assets/static-map.png') center center/cover no-repeat;
+    background: url('/static-map.png') center center/cover no-repeat;
     border-radius: 2rem;
     border: 1px solid #e5e7eb;
     box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.15);
