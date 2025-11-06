@@ -18,7 +18,7 @@ import {
   Heart,
   Shield,
   ArrowRight,
-  PlusCircle,
+  Eye,
   Globe,
   Star,
   Quote,
@@ -321,9 +321,9 @@ const Home = () => {
                   Browse Community
                   <ArrowRight className="arrow-icon" />
                 </Link>
-                <Link to="/my-books" className="btn secondary-btn group">
-                  <PlusCircle className="btn-icon" />
-                  Add Your Books
+                <Link to="/books" className="btn secondary-btn group">
+                  <Eye className="btn-icon" />
+                  View Books
                 </Link>
               </>
             ) : (
