@@ -1,12 +1,17 @@
-import React from 'react';
+import { Link } from 'react-router-dom';
 import styled from 'styled-components';
+import { ArrowLeft } from 'lucide-react';
 
 const TermsOfService = () => {
   return (
     <StyledWrapper>
       <div className="content-container">
+        <Link to="/" className="back-link">
+          <ArrowLeft size={20} />
+          Back to Home
+        </Link>
         <h1 className="main-title">Terms of Service for BookHive</h1>
-        <p className="last-updated">Last Updated: September 2, 2025</p>
+        <p className="last-updated">Last Updated: January 2025</p>
         
         <section>
           <h2>1. Acceptance of Terms</h2>
@@ -39,22 +44,57 @@ const TermsOfService = () => {
           </ul>
         </section>
         
-         <section>
-          <h2>5. Termination</h2>
-          <p>We may terminate or suspend your account immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms. Upon termination, your right to use the Service will immediately cease.</p>
+        <section>
+          <h2>5. Intellectual Property</h2>
+          <p>The Service and its original content, features, and functionality are and will remain the exclusive property of BookHive and its licensors. The Service is protected by copyright, trademark, and other laws of both India and foreign countries. Our trademarks and trade dress may not be used in connection with any product or service without the prior written consent of BookHive.</p>
+        </section>
+
+        <section>
+          <h2>6. Privacy</h2>
+          <p>Your use of the Service is also governed by our Privacy Policy. Please review our <Link to="/privacy" style={{color: '#4F46E5', textDecoration: 'underline'}}>Privacy Policy</Link>, which also governs the Service and informs users of our data collection practices.</p>
+        </section>
+
+        <section>
+          <h2>7. Limitation of Liability</h2>
+          <p>In no event shall BookHive, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.</p>
+        </section>
+
+        <section>
+          <h2>8. Disclaimer</h2>
+          <p>Your use of the Service is at your sole risk. The Service is provided on an "AS IS" and "AS AVAILABLE" basis. The Service is provided without warranties of any kind, whether express or implied, including, but not limited to, implied warranties of merchantability, fitness for a particular purpose, non-infringement or course of performance.</p>
+        </section>
+
+        <section>
+          <h2>9. Governing Law</h2>
+          <p>These Terms shall be governed and construed in accordance with the laws of India, without regard to its conflict of law provisions. Our failure to enforce any right or provision of these Terms will not be considered a waiver of those rights.</p>
+        </section>
+
+        <section>
+          <h2>10. Changes to Terms</h2>
+          <p>We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will try to provide at least 30 days' notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.</p>
+        </section>
+
+        <section>
+          <h2>11. Contact Us</h2>
+          <p>If you have any questions about these Terms, please contact us at:</p>
+          <ul>
+            <li><strong>Email:</strong> elontomars7@gmail.com</li>
+            <li><strong>Phone:</strong> +91 9171119237</li>
+            <li><strong>Address:</strong> BookHive HQ, Indore, Madhya Pradesh</li>
+          </ul>
         </section>
       </div>
     </StyledWrapper>
   );
 };
 
-// Styles are identical to Privacy Policy for consistency
 const StyledWrapper = styled.div`
   padding: 6rem 2rem 4rem 2rem;
   background-color: #f9fafb;
   font-family: 'Inter', sans-serif;
   color: #374151;
   line-height: 1.8;
+  min-height: 100vh;
 
   .content-container {
     max-width: 800px;
@@ -64,6 +104,25 @@ const StyledWrapper = styled.div`
     border-radius: 1rem;
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     border: 1px solid #e5e7eb;
+
+    @media (max-width: 768px) {
+      padding: 2rem 1.5rem;
+    }
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6b7280;
+    text-decoration: none;
+    font-size: 0.875rem;
+    margin-bottom: 2rem;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #4F46E5;
+    }
   }
 
   .main-title {

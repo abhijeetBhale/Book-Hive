@@ -1,12 +1,17 @@
-import React from 'react';
+import { Link } from 'react-router-dom';
 import styled from 'styled-components';
+import { ArrowLeft } from 'lucide-react';
 
 const PrivacyPolicy = () => {
   return (
     <StyledWrapper>
       <div className="content-container">
+        <Link to="/" className="back-link">
+          <ArrowLeft size={20} />
+          Back to Home
+        </Link>
         <h1 className="main-title">Privacy Policy for BookHive</h1>
-        <p className="last-updated">Last Updated: September 2, 2025</p>
+        <p className="last-updated">Last Updated: January 2025</p>
         
         <section>
           <h2>1. Introduction</h2>
@@ -40,9 +45,45 @@ const PrivacyPolicy = () => {
           <p>We use administrative, technical, and physical security measures to help protect your personal information. While we have taken reasonable steps to secure the personal information you provide to us, please be aware that despite our efforts, no security measures are perfect or impenetrable, and no method of data transmission can be guaranteed against any interception or other type of misuse.</p>
         </section>
 
-         <section>
-          <h2>5. Contact Us</h2>
-          <p>If you have questions or comments about this Privacy Policy, please contact us at: support@bookhive.app</p>
+        <section>
+          <h2>5. Sharing Your Information</h2>
+          <p>We do not sell, trade, or rent your personal identification information to others. We may share generic aggregated demographic information not linked to any personal identification information regarding visitors and users with our business partners and trusted affiliates for the purposes outlined above.</p>
+        </section>
+
+        <section>
+          <h2>6. Third-Party Services</h2>
+          <p>We may use third-party service providers to help us operate our business and the application or administer activities on our behalf, such as sending out newsletters or surveys. We may share your information with these third parties for those limited purposes provided that you have given us your permission.</p>
+        </section>
+
+        <section>
+          <h2>7. Your Rights</h2>
+          <p>You have the right to:</p>
+          <ul>
+            <li>Access, update, or delete your personal information at any time through your account settings.</li>
+            <li>Opt-out of receiving promotional communications from us.</li>
+            <li>Request a copy of the data we hold about you.</li>
+            <li>Request that we delete your account and associated data.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>8. Children's Privacy</h2>
+          <p>Our Service is not intended for children under the age of 13. We do not knowingly collect personally identifiable information from children under 13. If you are a parent or guardian and you are aware that your child has provided us with personal information, please contact us.</p>
+        </section>
+
+        <section>
+          <h2>9. Changes to This Privacy Policy</h2>
+          <p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date. You are advised to review this Privacy Policy periodically for any changes.</p>
+        </section>
+
+        <section>
+          <h2>10. Contact Us</h2>
+          <p>If you have questions or comments about this Privacy Policy, please contact us at:</p>
+          <ul>
+            <li><strong>Email:</strong> elontomars7@gmail.com</li>
+            <li><strong>Phone:</strong> +91 9171119237</li>
+            <li><strong>Address:</strong> BookHive HQ, Indore, Madhya Pradesh</li>
+          </ul>
         </section>
       </div>
     </StyledWrapper>
@@ -55,6 +96,7 @@ const StyledWrapper = styled.div`
   font-family: 'Inter', sans-serif;
   color: #374151;
   line-height: 1.8;
+  min-height: 100vh;
 
   .content-container {
     max-width: 800px;
@@ -64,6 +106,25 @@ const StyledWrapper = styled.div`
     border-radius: 1rem;
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     border: 1px solid #e5e7eb;
+
+    @media (max-width: 768px) {
+      padding: 2rem 1.5rem;
+    }
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6b7280;
+    text-decoration: none;
+    font-size: 0.875rem;
+    margin-bottom: 2rem;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #4F46E5;
+    }
   }
 
   .main-title {

@@ -28,6 +28,7 @@ import bookClubRoutes from './routes/bookClubRoutes.js';
 import achievementRoutes from './routes/achievementRoutes.js';
 import challengeRoutes from './routes/challengeRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import contactRoutes from './routes/contact.js';
 import { initializeDefaultAchievements } from './services/achievementService.js';
 import { initializeAllUserStats } from './services/userStatsService.js';
 import NotificationService from './services/notificationService.js';
@@ -117,6 +118,7 @@ app.use('/api/clubs', bookClubRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/challenges', challengeRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/contact', contactRoutes);
 
 
 // Error handler

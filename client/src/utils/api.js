@@ -324,6 +324,10 @@ export const notificationsAPI = {
   updatePreferences: (preferences) => api.put('/notifications/preferences', { preferences }).then(res => res.data),
 };
 
+export const contactAPI = {
+  submitContactForm: (contactData) => api.post('/contact', contactData).then(res => res.data),
+};
+
 
 
 // The problematic line has been removed from here.

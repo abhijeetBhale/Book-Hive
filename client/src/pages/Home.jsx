@@ -23,6 +23,7 @@ import {
   Star,
   Quote,
   X,
+  MessageCircle,
 } from 'lucide-react';
 import { AvatarCircles } from '../components/ui/avatar-circles';
 
@@ -207,6 +208,8 @@ const Home = () => {
       throw error; // Re-throw to let the modal handle the error
     }
   };
+
+
 
   const recentlyAddedBooks = [
     { title: 'The Midnight Library', author: 'Matt Haig', coverUrl: 'https://books.google.co.in/books/publisher/content?id=M53SDwAAQBAJ&pg=PP1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U2Lz0_4XfWJHNkQEVOk6UwFhlc96g&w=1280' },
@@ -632,17 +635,29 @@ const Home = () => {
           <p className="cta-subtitle">Start sharing your love for books, discover new reads, and connect with fellow readers in your area.</p>
           <div className="button-group">
             {user ? (
-              <Link to="/users" className="btn cta-btn group">
-                <Globe className="btn-icon" />
-                Explore Community
-                <ArrowRight className="arrow-icon" />
-              </Link>
+              <>
+                <Link to="/users" className="btn cta-btn group">
+                  <Globe className="btn-icon" />
+                  Explore Community
+                  <ArrowRight className="arrow-icon" />
+                </Link>
+                <Link to="/contact" className="btn cta-btn-secondary group">
+                  <MessageCircle className="btn-icon" />
+                  Get in Touch
+                </Link>
+              </>
             ) : (
-              <Link to="/register" className="btn cta-btn group">
-                <BookOpen className="btn-icon" />
-                Get Started Today
-                <ArrowRight className="arrow-icon" />
-              </Link>
+              <>
+                <Link to="/register" className="btn cta-btn group">
+                  <BookOpen className="btn-icon" />
+                  Get Started Today
+                  <ArrowRight className="arrow-icon" />
+                </Link>
+                <Link to="/contact" className="btn cta-btn-secondary group">
+                  <MessageCircle className="btn-icon" />
+                  Get in Touch
+                </Link>
+              </>
             )}
           </div>
         </div>
@@ -1496,11 +1511,31 @@ const StyledWrapper = styled.div`
     .cta-content { position: relative; text-align: center; }
     .cta-title { font-size: 3rem; font-weight: 900; color: white; margin-bottom: 2rem; }
     .cta-subtitle { font-size: 1.25rem; color: rgba(255, 255, 255, 0.9); margin-bottom: 3rem; font-weight: 500; }
+    
+    .button-group {
+      gap: 2rem;
+      
+      @media (max-width: 640px) {
+        gap: 1.5rem;
+      }
+    }
+    
     .cta-btn {
       background-color: white;
       color: #4F46E5;
       --shadow-color: rgba(255, 255, 255, 0.25);
       &:hover { background-color: #f9fafb; }
+    }
+    
+    .cta-btn-secondary {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      --shadow-color: rgba(255, 255, 255, 0.15);
+      &:hover { 
+        background-color: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.5);
+      }
     }
   }
   

@@ -17,6 +17,9 @@ import Calendar from './pages/Calendar';
 import ForgotPassword from './pages/ForgotPassword';
 import AuthCallback from './pages/AuthCallback';
 import AdminDashboard from './pages/AdminDashboard';
+import Contact from './pages/Contact';
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import { OnlineStatusProvider } from './context/OnlineStatusContext';
@@ -115,6 +118,9 @@ function App() {
                   <Route path="/register" element={<Register />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
                   
                   <Route path="/books" element={<ProtectedRoute><Books /></ProtectedRoute>} />
                   <Route path="/books/:id" element={<ProtectedRoute><BookDetails /></ProtectedRoute>} />
