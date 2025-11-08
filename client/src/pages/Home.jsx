@@ -26,6 +26,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { AvatarCircles } from '../components/ui/avatar-circles';
+import { AuroraText } from '../components/ui/aurora-text';
 
 // Authentication Modal Component
 const AuthModal = ({ isOpen, onClose }) => {
@@ -301,11 +302,11 @@ const Home = () => {
           <h1 className="main-heading">
             {user ? (
               <>
-                Welcome back, <span className="highlight-text">{user.name ? user.name.split(' ')[0] : 'Reader'}</span>
+                Welcome back, <AuroraText>{user.name ? user.name.split(' ')[0] : 'Reader'}</AuroraText>
               </>
             ) : (
               <>
-                Welcome to <span className="highlight-text">BookHive</span>
+                Welcome to <AuroraText>BookHive</AuroraText>
               </>
             )}
           </h1>
