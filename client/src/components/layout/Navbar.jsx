@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
   Menu,
   X,
@@ -13,6 +13,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
+import { useNotificationBadges } from '../../context/NotificationBadgeContext';
 import OptimizedAvatar from '../ui/OptimizedAvatar';
 import Button from '../ui/Button';
 import beeIcon from '../../assets/icons8-bee-100.png';
@@ -26,6 +27,8 @@ import NotificationCenter from '../notifications/NotificationCenter';
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout } = useContext(AuthContext);
+  const { badges, clearBadge } = useNotificationBadges();
+  const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [realtimeNotifications, setRealtimeNotifications] = useState([]);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
@@ -245,13 +248,21 @@ const Navbar = () => {
     }`;
 
   const navLinks = [
-    { to: '/users', text: 'Community', icon: <Users size={24} /> },
-    { to: '/map', text: 'Map', icon: <Map size={24} /> },
-    { to: '/my-books', text: 'My Books', icon: <BookMarked size={24} /> },
-    { to: '/borrow-requests', text: 'Requests', icon: <ArrowLeftRight size={24} /> },
-    { to: '/messages', text: 'Messages', icon: <MessageSquare size={24} /> },
-    { to: '/friends', text: 'Friends', icon: <Heart size={24} /> },
+    { to: '/users', text: 'Community', icon: <Users size={24} />, badgeKey: 'community' },
+    { to: '/map', text: 'Map', icon: <Map size={24} />, badgeKey: 'map' },
+    { to: '/my-books', text: 'My Books', icon: <BookMarked size={24} />, badgeKey: 'myBooks' },
+    { to: '/borrow-requests', text: 'Requests', icon: <ArrowLeftRight size={24} />, badgeKey: 'requests' },
+    { to: '/messages', text: 'Messages', icon: <MessageSquare size={24} />, badgeKey: 'messages' },
+    { to: '/friends', text: 'Friends', icon: <Heart size={24} />, badgeKey: 'friends' },
   ];
+
+  // Clear badge when navigating to a page
+  useEffect(() => {
+    const currentLink = navLinks.find(link => location.pathname === link.to);
+    if (currentLink && currentLink.badgeKey) {
+      clearBadge(currentLink.badgeKey);
+    }
+  }, [location.pathname]);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
@@ -281,6 +292,19 @@ const Navbar = () => {
                       {({ isActive }) => (
                         <div className="relative flex flex-col items-center pt-4 pb-4">
                           {link.icon}
+                          {/* iOS-style notification dot - positioned at top-right corner */}
+                          {badges[link.badgeKey] > 0 && (
+                            <span 
+                              className="absolute top-2 right-2 bg-red-500 rounded-full shadow-lg"
+                              style={{
+                                width: '10px',
+                                height: '10px',
+                                border: '2px solid white',
+                                animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                              }}
+                            />
+                          )}
+                          {/* Active indicator */}
                           <span
                             className={`absolute bottom-1 h-1.5 w-3.5 right-0.9 rounded-full bg-green-500 transition-opacity duration-300 ${
                               isActive ? 'opacity-100' : 'opacity-0'
@@ -468,7 +492,23 @@ const Navbar = () => {
                       className={navLinkClass}
                       onClick={() => setIsOpen(false)}
                     >
-                      {link.text}
+                      <div className="relative flex items-center gap-3">
+                        <span className="relative">
+                          {link.icon}
+                          {/* iOS-style notification dot for mobile */}
+                          {badges[link.badgeKey] > 0 && (
+                            <span 
+                              className="absolute -top-1 -right-1 bg-red-500 rounded-full shadow-lg"
+                              style={{
+                                width: '10px',
+                                height: '10px',
+                                border: '2px solid white'
+                              }}
+                            />
+                          )}
+                        </span>
+                        {link.text}
+                      </div>
                     </NavLink>
                   ))}
                   
@@ -539,5 +579,22 @@ const Navbar = () => {
     </header>
   );
 };
+
+// Add global styles for notification badge animation
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+`;
+if (typeof document !== 'undefined' && !document.getElementById('notification-badge-styles')) {
+  style.id = 'notification-badge-styles';
+  document.head.appendChild(style);
+}
 
 export default Navbar;

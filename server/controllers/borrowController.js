@@ -73,6 +73,8 @@ export const requestBook = async (req, res) => {
 
           console.log(`Emitting notification to user:${book.owner}`, notificationData);
           io.to(`user:${book.owner}`).emit('new_notification', notificationData);
+          // Emit badge update event
+          io.to(`user:${book.owner}`).emit('borrow_request:new', { borrowRequestId: borrowRequest._id });
         } else {
           console.warn('Socket.IO instance not available');
         }
@@ -321,6 +323,9 @@ export const updateRequestStatus = async (req, res) => {
 
           console.log(`Emitting approval notification to user:${populatedRequest.borrower._id}`);
           io.to(`user:${populatedRequest.borrower._id}`).emit('new_notification', notificationData);
+          // Emit badge update event
+          io.to(`user:${populatedRequest.borrower._id}`).emit('borrow_request:updated');
+          io.to(`user:${populatedRequest.owner._id}`).emit('borrow_request:updated');
 
           // Also emit the new message to both users
           const messageData = {

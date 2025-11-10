@@ -27,6 +27,12 @@ export const sendFriendRequest = async (req, res) => {
           link: '/friends' 
         } 
       });
+      
+      // Emit socket event for badge update
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`user:${recipientId}`).emit('friend_request:new', { friendshipId: friendship._id });
+      }
     } catch {}
     res.status(201).json(friendship);
   } catch (err) {
@@ -80,6 +86,13 @@ export const respondToFriendRequest = async (req, res) => {
             link: '/friends'
           }
         });
+        
+        // Emit socket event for badge update
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`user:${requesterId}`).emit('friend_request:updated');
+          io.to(`user:${userId}`).emit('friend_request:updated');
+        }
       } catch (notifError) {
         console.error('Failed to create friend accepted notification:', notifError);
       }
