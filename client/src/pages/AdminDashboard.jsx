@@ -39,8 +39,10 @@ import {
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { adminAPIService } from '../utils/adminAPI';
+import { reviewsAPI } from '../utils/api';
 import { Navigate } from 'react-router-dom';
 import ReportActionModal from '../components/admin/ReportActionModal';
+import toast from 'react-hot-toast';
 import ActionSuccessModal from '../components/admin/ActionSuccessModal';
 import ReportDetailsModal from '../components/admin/ReportDetailsModal';
 
@@ -60,6 +62,8 @@ const AdminDashboard = () => {
   const [borrowRequests, setBorrowRequests] = useState([]);
   const [bookClubs, setBookClubs] = useState([]);
   const [reports, setReports] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tabErrors, setTabErrors] = useState({});
@@ -2048,6 +2052,352 @@ const AdminDashboard = () => {
     );
   };
 
+  const renderReviews = () => {
+    const [selectedReview, setSelectedReview] = useState(null);
+    const [filterRating, setFilterRating] = useState('all');
+    const [sortBy, setSortBy] = useState('createdAt');
+
+    useEffect(() => {
+      const fetchReviews = async () => {
+        try {
+          const params = {
+            page: pagination.page,
+            limit: pagination.limit,
+            sortBy,
+            order: 'desc'
+          };
+          if (filterRating !== 'all') params.rating = filterRating;
+
+          const [reviewsRes, statsRes] = await Promise.all([
+            reviewsAPI.getAllReviews(params),
+            reviewsAPI.getReviewStats()
+          ]);
+
+          setReviews(reviewsRes.data.reviews);
+          setReviewStats(statsRes.data);
+          setPagination(prev => ({
+            ...prev,
+            total: reviewsRes.data.total,
+            pages: reviewsRes.data.totalPages
+          }));
+        } catch (error) {
+          console.error('Error fetching reviews:', error);
+          setTabErrors(prev => ({ ...prev, reviews: 'Failed to load reviews' }));
+        }
+      };
+
+      if (activeTab === 'reviews') {
+        fetchReviews();
+      }
+    }, [activeTab, pagination.page, filterRating, sortBy]);
+
+    const handleDeleteReview = async (reviewId) => {
+      if (!window.confirm('Are you sure you want to delete this review? This action cannot be undone.')) return;
+
+      try {
+        await reviewsAPI.deleteReview(reviewId);
+        toast.success('Review deleted successfully');
+        setReviews(prev => prev.filter(r => r._id !== reviewId));
+        // Refresh stats
+        const statsRes = await reviewsAPI.getReviewStats();
+        setReviewStats(statsRes.data);
+      } catch (error) {
+        toast.error('Failed to delete review');
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Stats Cards */}
+        {reviewStats && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Reviews</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{reviewStats.totalReviews}</p>
+                </div>
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <Star className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Average Rating</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{reviewStats.averageRating.toFixed(1)}</p>
+                </div>
+                <div className="p-3 bg-yellow-50 rounded-lg">
+                  <Star className="w-6 h-6 text-yellow-600" fill="currentColor" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">5-Star Reviews</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">
+                    {reviewStats.ratingDistribution.find(r => r._id === 5)?.count || 0}
+                  </p>
+                </div>
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <TrendingUp className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">1-Star Reviews</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">
+                    {reviewStats.ratingDistribution.find(r => r._id === 1)?.count || 0}
+                  </p>
+                </div>
+                <div className="p-3 bg-red-50 rounded-lg">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div className="flex flex-col md:flex-row gap-4">
+            <select
+              value={filterRating}
+              onChange={(e) => setFilterRating(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">All Ratings</option>
+              <option value="5">5 Stars</option>
+              <option value="4">4 Stars</option>
+              <option value="3">3 Stars</option>
+              <option value="2">2 Stars</option>
+              <option value="1">1 Star</option>
+            </select>
+
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="createdAt">Most Recent</option>
+              <option value="rating">Highest Rating</option>
+              <option value="likesCount">Most Liked</option>
+              <option value="commentsCount">Most Commented</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Reviews List */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">From User</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">To User</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comment</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Engagement</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {reviews.map((review) => (
+                  <tr key={review._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <img
+                          src={review.fromUser?.avatar || `https://ui-avatars.com/api/?name=${review.fromUser?.name}`}
+                          alt={review.fromUser?.name}
+                          className="w-8 h-8 rounded-full mr-3"
+                        />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{review.fromUser?.name}</div>
+                          <div className="text-sm text-gray-500">{review.fromUser?.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <img
+                          src={review.toUser?.avatar || `https://ui-avatars.com/api/?name=${review.toUser?.name}`}
+                          alt={review.toUser?.name}
+                          className="w-8 h-8 rounded-full mr-3"
+                        />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{review.toUser?.name}</div>
+                          <div className="text-sm text-gray-500">{review.toUser?.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {[1, 2, 3, 4, 5].map(n => (
+                          <Star
+                            key={n}
+                            size={16}
+                            fill={n <= review.rating ? '#f59e0b' : 'none'}
+                            color={n <= review.rating ? '#f59e0b' : '#d1d5db'}
+                          />
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900 max-w-xs truncate">
+                        {review.comment || <span className="text-gray-400 italic">No comment</span>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3 text-sm text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Star size={14} /> {review.likesCount || 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageSquare size={14} /> {review.commentsCount || 0}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(review.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setSelectedReview(review)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteReview(review._id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {pagination.pages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <div className="text-sm text-gray-700">
+                Showing page {pagination.page} of {pagination.pages}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                  disabled={pagination.page === 1}
+                  className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setPagination(prev => ({ ...prev, page: Math.min(prev.pages, prev.page + 1) }))}
+                  disabled={pagination.page === pagination.pages}
+                  className="px-3 py-1 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Review Details Modal */}
+        {selectedReview && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Review Details</h3>
+                <button onClick={() => setSelectedReview(null)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={selectedReview.fromUser?.avatar || `https://ui-avatars.com/api/?name=${selectedReview.fromUser?.name}`}
+                      alt={selectedReview.fromUser?.name}
+                      className="w-12 h-12 rounded-full"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">{selectedReview.fromUser?.name}</div>
+                      <div className="text-sm text-gray-500">reviewed {selectedReview.toUser?.name}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <Star
+                        key={n}
+                        size={20}
+                        fill={n <= selectedReview.rating ? '#f59e0b' : 'none'}
+                        color={n <= selectedReview.rating ? '#f59e0b' : '#d1d5db'}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {selectedReview.comment && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-gray-700">{selectedReview.comment}</p>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <Star size={16} /> {selectedReview.likesCount || 0} likes
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MessageSquare size={16} /> {selectedReview.commentsCount || 0} comments
+                  </span>
+                  <span>{new Date(selectedReview.createdAt).toLocaleString()}</span>
+                </div>
+
+                {selectedReview.comments && selectedReview.comments.length > 0 && (
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Comments</h4>
+                    <div className="space-y-3">
+                      {selectedReview.comments.map((comment) => (
+                        <div key={comment._id} className="flex gap-3">
+                          <img
+                            src={comment.user?.avatar || `https://ui-avatars.com/api/?name=${comment.user?.name}`}
+                            alt={comment.user?.name}
+                            className="w-8 h-8 rounded-full"
+                          />
+                          <div className="flex-1 bg-gray-50 rounded-lg p-3">
+                            <div className="font-medium text-sm text-gray-900">{comment.user?.name}</div>
+                            <p className="text-sm text-gray-700 mt-1">{comment.text}</p>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {new Date(comment.createdAt).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderReports = () => (
     <div className="space-y-6">
       {loading && (
@@ -2719,6 +3069,17 @@ const AdminDashboard = () => {
             </button>
 
             <button
+              onClick={() => setActiveTab('reviews')}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'reviews'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+            >
+              <Star className="w-4 h-4 mr-3" />
+              Reviews
+            </button>
+
+            <button
               onClick={() => setActiveTab('analytics')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'analytics'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
@@ -2834,6 +3195,7 @@ const AdminDashboard = () => {
           {activeTab === 'books-for-sale' && renderBooksForSale()}
           {activeTab === 'borrows' && renderBorrows()}
           {activeTab === 'clubs' && renderClubs()}
+          {activeTab === 'reviews' && renderReviews()}
           {activeTab === 'analytics' && renderAnalytics()}
           {activeTab === 'reports' && renderReports()}
           {activeTab === 'settings' && renderSettings()}

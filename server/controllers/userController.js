@@ -181,7 +181,7 @@ export const getUserProfile = async (req, res) => {
     const { userId } = req.params;
     
     const user = await User.findById(userId)
-      .select('name email avatar location booksOwned publicKeyJwk')
+      .select('name email avatar location booksOwned publicKeyJwk rating')
       .populate({
         path: 'booksOwned',
         select: '_id title author coverImage isAvailable forBorrowing'

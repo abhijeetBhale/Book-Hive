@@ -449,6 +449,8 @@ const BorrowRequests = () => {
             rating,
             comment,
           });
+          // Emit event to notify other components about the new review
+          window.dispatchEvent(new CustomEvent('review-updated', { detail: { userId: reviewModal.toUserId } }));
           setReviewModal({ open: false, borrowRequestId: null, toUserId: null, counterpartName: '' });
         }}
       />

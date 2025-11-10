@@ -52,7 +52,7 @@ export default function ReviewModal({ open, onClose, onSubmit, counterpartName =
             onClick={async () => {
               try {
                 await onSubmit({ rating, comment });
-                toast.success('Review submitted');
+                toast.success(`Review submitted successfully for ${counterpartName}! ⭐`);
                 onClose();
               } catch (e) {
                 toast.error(e?.response?.data?.message || 'Failed to submit review');

@@ -6,6 +6,7 @@ import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Loader, MapPin, BookOpen, Send, X, User as UserIcon, Star } from 'lucide-react';
 import { getFullImageUrl } from '../utils/imageHelpers';
+import ReviewsModal from '../components/ReviewsModal';
 
 
 // --- Keyframes for Animations ---
@@ -396,6 +397,7 @@ const UserProfile = () => {
   const [friendshipStatus, setFriendshipStatus] = useState(null); // null, 'pending', 'sent', 'friends'
   const [friendshipId, setFriendshipId] = useState(null);
   const [sendingFriendRequest, setSendingFriendRequest] = useState(false);
+  const [showReviewsModal, setShowReviewsModal] = useState(false);
 
 
   // ✨ ADDED: Effect to lock body scroll when a modal is open
@@ -409,24 +411,23 @@ const UserProfile = () => {
     };
   }, [isMessageModalOpen, viewingBook]);
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      setLoading(true);
-      try {
-        const userResponse = await usersAPI.getUserProfile(id);
-        if (!userResponse.data || !userResponse.data.user) throw new Error('User not found');
-        const userData = userResponse.data.user;
+  const fetchUserProfile = async () => {
+    setLoading(true);
+    try {
+      const userResponse = await usersAPI.getUserProfile(id);
+      if (!userResponse.data || !userResponse.data.user) throw new Error('User not found');
+      const userData = userResponse.data.user;
 
-        const booksResponse = await booksAPI.getUserBooks(id);
-        userData.booksOwned = booksResponse.data.books || [];
+      const booksResponse = await booksAPI.getUserBooks(id);
+      userData.booksOwned = booksResponse.data.books || [];
 
-        setUser(userData);
+      setUser(userData);
 
-        // Check friendship status
-        if (currentUser && id !== currentUser._id) {
-          try {
-            const friendsResponse = await friendsAPI.getAll();
-            const { pending, sent, friends } = friendsResponse.data;
+      // Check friendship status
+      if (currentUser && id !== currentUser._id) {
+        try {
+          const friendsResponse = await friendsAPI.getAll();
+          const { pending, sent, friends } = friendsResponse.data;
 
             // Check if there's a pending request from this user to current user
             const pendingRequest = pending.find(req => req.requester._id === id);
@@ -469,8 +470,23 @@ const UserProfile = () => {
         setLoading(false);
       }
     };
+
+  useEffect(() => {
     if (id) fetchUserProfile();
   }, [id, currentUser]);
+
+  // Listen for review updates to refresh profile data
+  useEffect(() => {
+    const handleReviewUpdate = (event) => {
+      if (event.detail?.userId === id) {
+        // Refresh user profile to get updated review count and star level
+        fetchUserProfile();
+      }
+    };
+
+    window.addEventListener('review-updated', handleReviewUpdate);
+    return () => window.removeEventListener('review-updated', handleReviewUpdate);
+  }, [id]);
 
   const handleOpenDetailsModal = (book) => setViewingBook(book);
   const handleCloseDetailsModal = () => setViewingBook(null);
@@ -645,16 +661,32 @@ const UserProfile = () => {
             )}
           </div>
 
-          {/* Simple Rating Display */}
+          {/* Rating Display with Star Level */}
           <div className="rating-section">
+            <div className="star-level-display">
+              {[1, 2, 3, 4, 5].map(n => (
+                <Star 
+                  key={n} 
+                  size={20} 
+                  fill={n <= (user.rating?.starLevel || 0) ? '#f59e0b' : 'none'}
+                  color={n <= (user.rating?.starLevel || 0) ? '#f59e0b' : '#d1d5db'}
+                />
+              ))}
+              <span className="star-level-text">
+                {user.rating?.starLevel || 0} {user.rating?.starLevel === 1 ? 'Star' : 'Stars'}
+              </span>
+            </div>
             <div className="simple-rating">
-              <Star size={20} fill="currentColor" style={{ color: '#fbbf24' }} />
+              <Star size={18} fill="currentColor" style={{ color: '#fbbf24' }} />
               <span className="rating-value">
-                {user.rating?.overallRating || user.rating?.value || 'New'}
+                {user.rating?.overallRating ? user.rating.overallRating.toFixed(1) : 'New'}
               </span>
-              <span className="rating-count">
-                ({user.rating?.totalRatings || user.rating?.count || 0} reviews)
-              </span>
+              <button 
+                className="reviews-link"
+                onClick={() => setShowReviewsModal(true)}
+              >
+                {user.rating?.reviewCount || 0} {user.rating?.reviewCount === 1 ? 'Review' : 'Reviews'}
+              </button>
             </div>
           </div>
         </div>
@@ -748,6 +780,13 @@ const UserProfile = () => {
         book={viewingBook}
         onRequest={handleBorrowRequest}
       />
+
+      <ReviewsModal 
+        open={showReviewsModal}
+        onClose={() => setShowReviewsModal(false)}
+        userId={user._id}
+        userName={user.name}
+      />
     </StyledWrapper>
   );
 };
@@ -810,6 +849,20 @@ const StyledWrapper = styled.div`
     border-top: 1px solid #e5e7eb;
   }
   
+  .star-level-display {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+    
+    .star-level-text {
+      margin-left: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #6b7280;
+    }
+  }
+  
   .simple-rating {
     display: flex;
     align-items: center;
@@ -819,6 +872,23 @@ const StyledWrapper = styled.div`
       font-size: 1.125rem;
       font-weight: 600;
       color: #374151;
+    }
+    
+    .reviews-link {
+      background: none;
+      border: none;
+      color: #4F46E5;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      transition: all 0.2s;
+      
+      &:hover {
+        background: #eef2ff;
+        color: #4338ca;
+      }
     }
     
     .rating-count {

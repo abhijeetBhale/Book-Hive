@@ -304,6 +304,13 @@ export const reviewsAPI = {
   listForUser: (userId, params) =>
     api.get(`/reviews/user/${userId}`, { params }),
   summaryForUser: (userId) => api.get(`/reviews/user/${userId}/summary`),
+  likeReview: (reviewId) => api.post(`/reviews/${reviewId}/like`),
+  addComment: (reviewId, text) => api.post(`/reviews/${reviewId}/comment`, { text }),
+  deleteComment: (reviewId, commentId) => api.delete(`/reviews/${reviewId}/comment/${commentId}`),
+  // Admin endpoints
+  getAllReviews: (params) => api.get('/reviews/admin/all', { params }),
+  getReviewStats: () => api.get('/reviews/admin/stats'),
+  deleteReview: (reviewId) => api.delete(`/reviews/admin/${reviewId}`),
 };
 
 export const notificationsAPI = {

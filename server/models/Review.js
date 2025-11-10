@@ -7,6 +7,17 @@ const reviewSchema = new mongoose.Schema(
     toUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     rating: { type: Number, min: 1, max: 5, required: true },
     comment: { type: String, maxlength: 1000 },
+    likes: [{
+      user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      likedAt: { type: Date, default: Date.now }
+    }],
+    likesCount: { type: Number, default: 0 },
+    comments: [{
+      user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      text: { type: String, required: true, maxlength: 500 },
+      createdAt: { type: Date, default: Date.now }
+    }],
+    commentsCount: { type: Number, default: 0 }
   },
   { timestamps: true }
 );

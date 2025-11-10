@@ -5,8 +5,9 @@ import { authAPI, borrowAPI, messagesAPI, reportAPI, usersAPI } from '../utils/a
 import toast from 'react-hot-toast';
 
 // Import new icons for the password fields
-import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy, Shield, Activity, RefreshCw, Search, CheckCircle, ChevronRight } from 'lucide-react';
+import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy, Shield, Activity, RefreshCw, Search, CheckCircle, ChevronRight, Star } from 'lucide-react';
 import GamificationSection from '../components/profile/GamificationSection';
+import ReviewsModal from '../components/ReviewsModal';
 
 const Profile = () => {
   const { user, setUser, fetchProfile } = useContext(AuthContext);
@@ -17,6 +18,7 @@ const Profile = () => {
   });
   const [activeTab, setActiveTab] = useState('profile');
   const [activeSubTab, setActiveSubTab] = useState('overview');
+  const [showReviewsModal, setShowReviewsModal] = useState(false);
 
   // --- STATE FOR REPORT USER ---
   const [reportData, setReportData] = useState({
@@ -87,6 +89,19 @@ const Profile = () => {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  // Listen for review updates to refresh profile data
+  useEffect(() => {
+    const handleReviewUpdate = (event) => {
+      if (event.detail?.userId === user._id) {
+        // Refresh user profile to get updated review count and star level
+        fetchProfile();
+      }
+    };
+
+    window.addEventListener('review-updated', handleReviewUpdate);
+    return () => window.removeEventListener('review-updated', handleReviewUpdate);
+  }, [user._id, fetchProfile]);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -480,6 +495,27 @@ const Profile = () => {
               <div>
                 <h2 className="user-name">{user.name}</h2>
                 <p className="user-email">{user.email}</p>
+                <div className="user-rating-section">
+                  <div className="star-display">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <Star 
+                        key={n} 
+                        size={18} 
+                        fill={n <= (user.rating?.starLevel || 0) ? '#f59e0b' : 'none'}
+                        color={n <= (user.rating?.starLevel || 0) ? '#f59e0b' : '#d1d5db'}
+                      />
+                    ))}
+                    <span className="star-level-text">
+                      {user.rating?.starLevel || 0} {user.rating?.starLevel === 1 ? 'Star' : 'Stars'}
+                    </span>
+                  </div>
+                  <button 
+                    className="reviews-link"
+                    onClick={() => setShowReviewsModal(true)}
+                  >
+                    {user.rating?.reviewCount || 0} {user.rating?.reviewCount === 1 ? 'Review' : 'Reviews'}
+                  </button>
+                </div>
               </div>
             </div>
             <div className="input-field">
@@ -1200,6 +1236,13 @@ const Profile = () => {
       <div className="main-content">
         {renderContent()}
       </div>
+      
+      <ReviewsModal 
+        open={showReviewsModal}
+        onClose={() => setShowReviewsModal(false)}
+        userId={user._id}
+        userName={user.name}
+      />
     </StyledWrapper>
   );
 };
@@ -1365,8 +1408,45 @@ const StyledWrapper = styled.div`
         &:hover .avatar-image { filter: brightness(0.9); }
         &:hover .camera-overlay { opacity: 1; }
     }
-    .user-name { font-size: 1.75rem; font-weight: 700; color: #111827; }
-    .user-email { font-size: 1rem; color: #6b7280; }
+    .user-name { font-size: 1.75rem; font-weight: 700; color: #111827; margin-bottom: 0.25rem; }
+    .user-email { font-size: 1rem; color: #6b7280; margin-bottom: 0.75rem; }
+    
+    .user-rating-section {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+    
+    .star-display {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    
+    .star-level-text {
+      margin-left: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #6b7280;
+    }
+    
+    .reviews-link {
+      background: none;
+      border: none;
+      color: #4F46E5;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0.375rem 0.75rem;
+      border-radius: 6px;
+      transition: all 0.2s;
+      
+      &:hover {
+        background: #eef2ff;
+        color: #4338ca;
+      }
+    }
     
     .input-field {
         margin-bottom: 1.5rem;
