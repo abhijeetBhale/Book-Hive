@@ -140,7 +140,7 @@ const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
 
-// --- Socket.IO setup ---
+// --- Socket.IO setup with performance optimizations ---
 const io = new SocketIOServer(server, {
   cors: {
     origin: [
@@ -153,7 +153,19 @@ const io = new SocketIOServer(server, {
     credentials: true,
     methods: ['GET', 'POST']
   },
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  // Performance optimizations
+  pingTimeout: 60000, // 60 seconds
+  pingInterval: 25000, // 25 seconds
+  upgradeTimeout: 10000, // 10 seconds
+  maxHttpBufferSize: 1e6, // 1MB
+  allowEIO3: true, // Allow Engine.IO v3 clients
+  perMessageDeflate: {
+    threshold: 1024 // Compress messages larger than 1KB
+  },
+  httpCompression: {
+    threshold: 1024 // Compress HTTP responses larger than 1KB
+  }
 });
 
 // Expose io to routes/controllers

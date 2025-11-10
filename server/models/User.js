@@ -224,8 +224,13 @@ userSchema.methods.getPublicProfile = function() {
   return userObject
 }
 
-// Create a geospatial index for location-based queries
-userSchema.index({ location: '2dsphere' });
+// Create indexes for performance optimization
+userSchema.index({ location: '2dsphere' }); // Geospatial queries
+userSchema.index({ email: 1 }); // Login queries
+userSchema.index({ googleId: 1 }); // OAuth queries
+userSchema.index({ 'rating.starLevel': -1 }); // Sorting by rating
+userSchema.index({ lastActive: -1 }); // Admin dashboard queries
+userSchema.index({ createdAt: -1 }); // Sorting by join date
 
 const User = mongoose.model('User', userSchema)
 export default User

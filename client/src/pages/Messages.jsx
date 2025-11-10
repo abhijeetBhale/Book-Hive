@@ -1207,7 +1207,17 @@ const MessagesPage = () => {
     const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/?api$/i, '');
     const socket = io(base, {
       auth: { token },
-      transports: ['websocket', 'polling'] // Ensure fallback transport
+      transports: ['websocket', 'polling'], // Ensure fallback transport
+      // Performance optimizations
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5,
+      timeout: 20000,
+      autoConnect: true,
+      forceNew: false, // Reuse existing connection
+      upgrade: true, // Allow transport upgrade
+      rememberUpgrade: true // Remember the transport upgrade
     });
     socketRef.current = socket;
 

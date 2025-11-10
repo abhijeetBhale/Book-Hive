@@ -15,16 +15,7 @@ export const sendMessage = async (req, res) => {
     const { recipientId } = req.params;
     const senderId = req.user.id;
 
-    let conversation = await Conversation.findOne({
-      participants: { $all: [senderId, recipientId] },
-    });
-
-    if (!conversation) {
-      conversation = await Conversation.create({
-        participants: [senderId, recipientId],
-      });
-    }
-
+    // Create message immediately without waiting for conversation
     const newMessage = new Message({
       senderId,
       recipientId,
@@ -36,52 +27,65 @@ export const sendMessage = async (req, res) => {
       message, // temporary for migration/notifications preview
     });
 
-    if (newMessage) {
-      conversation.messages.push(newMessage._id);
-    }
-    
-    await Promise.all([conversation.save(), newMessage.save()]);
+    // Save message first for faster response
+    await newMessage.save();
 
+    // Populate user data for response
     const populatedMessage = await Message.findById(newMessage._id)
       .populate('senderId', 'name email avatar')
       .populate('recipientId', 'name email avatar')
       .lean();
 
+    // Send response immediately
+    res.status(201).json(populatedMessage);
 
-    // Emit realtime event to sender and recipient rooms
-    try {
-      const io = req.app.get('io');
-      if (io) {
-        // Emit to recipient
-        io.to(`user:${recipientId}`).emit('message:new', populatedMessage);
-        
-        // Check if recipient is online and mark as delivered
-        const recipientSocket = io.sockets.adapter.rooms.get(`user:${recipientId}`);
-        if (recipientSocket && recipientSocket.size > 0) {
-          // Recipient is online, mark as delivered
-          await Message.findByIdAndUpdate(newMessage._id, { 
-            status: 'delivered', 
-            deliveredAt: new Date() 
-          });
-          
-          // Emit delivery confirmation to sender
-          io.to(`user:${senderId}`).emit('message:delivered', { 
-            messageId: newMessage._id,
-            deliveredAt: new Date()
+    // Handle conversation and socket events asynchronously (non-blocking)
+    setImmediate(async () => {
+      try {
+        // Update or create conversation
+        let conversation = await Conversation.findOne({
+          participants: { $all: [senderId, recipientId] },
+        });
+
+        if (!conversation) {
+          conversation = await Conversation.create({
+            participants: [senderId, recipientId],
           });
         }
-        
-        // Also emit to sender for real-time updates
-        io.to(`user:${senderId}`).emit('message:new', populatedMessage);
+
+        conversation.messages.push(newMessage._id);
+        await conversation.save();
+
+        // Emit realtime events
+        const io = req.app.get('io');
+        if (io) {
+          // Emit to recipient
+          io.to(`user:${recipientId}`).emit('message:new', populatedMessage);
+          
+          // Check if recipient is online and mark as delivered
+          const recipientSocket = io.sockets.adapter.rooms.get(`user:${recipientId}`);
+          if (recipientSocket && recipientSocket.size > 0) {
+            // Recipient is online, mark as delivered
+            await Message.findByIdAndUpdate(newMessage._id, { 
+              status: 'delivered', 
+              deliveredAt: new Date() 
+            });
+            
+            // Emit delivery confirmation to sender
+            io.to(`user:${senderId}`).emit('message:delivered', { 
+              messageId: newMessage._id,
+              deliveredAt: new Date()
+            });
+          }
+          
+          // Also emit to sender for real-time updates
+          io.to(`user:${senderId}`).emit('message:new', populatedMessage);
+        }
+      } catch (e) {
+        console.error('Failed to handle post-message operations:', e.message);
       }
-    } catch (e) {
-      console.error('Failed to emit message:new event:', e.message);
-    }
+    });
 
-    // Don't create notifications for regular chat messages
-    // Notifications are only for book inquiries sent from user profiles
-
-    res.status(201).json(populatedMessage);
   } catch (error) {
     console.error('Error in sendMessage controller: ', error.message);
     res.status(500).json({ message: 'Server error sending message' });
@@ -100,21 +104,21 @@ export const getConversations = async (req, res) => {
           })
           .populate({
             path: 'messages',
-            options: { sort: { createdAt: -1 } },
+            options: { sort: { createdAt: -1 }, limit: 50 }, // Limit messages for performance
             populate: [
               { path: 'senderId', select: 'name email avatar' },
               { path: 'recipientId', select: 'name email avatar' }
             ]
-          });
+          })
+          .lean(); // Use lean() for better performance
 
         const withCounts = conversations.map((c) => {
-          const obj = c.toObject();
           // Filter out messages soft-deleted by this user
-          obj.messages = (obj.messages || []).filter((m) => !(m.deletedBy || []).some(id => id?.toString() === loggedInUserId.toString()));
-          obj.unreadCount = (obj.messages || []).filter((m) => {
+          c.messages = (c.messages || []).filter((m) => !(m.deletedBy || []).some(id => id?.toString() === loggedInUserId.toString()));
+          c.unreadCount = (c.messages || []).filter((m) => {
             return m && m.recipientId && m.recipientId._id?.toString() === loggedInUserId.toString() && m.read !== true;
           }).length;
-          return obj;
+          return c;
         });
 
         res.status(200).json(withCounts);
