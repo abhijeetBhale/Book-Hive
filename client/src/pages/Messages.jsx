@@ -1222,12 +1222,10 @@ const MessagesPage = () => {
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('Socket connected');
       setSocketConnected(true);
     });
 
     socket.on('disconnect', () => {
-      console.log('Socket disconnected');
       setSocketConnected(false);
     });
 
@@ -1482,7 +1480,6 @@ const MessagesPage = () => {
 
   const handleComingSoon = (feature) => {
     setShowComingSoon(true);
-    console.log(`${feature} - Coming Soon!`);
   };
 
   const handleTabChange = (tab) => {

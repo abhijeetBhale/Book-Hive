@@ -32,7 +32,7 @@ const Login = () => {
       await login(formData);
       navigate('/');
     } catch (error) {
-      console.error("Login failed:", error);
+      // Login error handled by toast
     } finally {
       setLoading(false);
     }

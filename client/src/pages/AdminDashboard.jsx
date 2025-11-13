@@ -333,7 +333,6 @@ const AdminDashboard = () => {
       setLoading(true);
       const response = await adminAPIService.getAnalytics('30d');
       // Analytics data is already in dashboardData, so we don't need separate state
-      console.log('Analytics data:', response.data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
     } finally {

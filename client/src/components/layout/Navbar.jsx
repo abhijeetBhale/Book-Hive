@@ -47,7 +47,6 @@ const Navbar = () => {
     }
     
     const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
-    console.log('Connecting to WebSocket at:', base);
     
     const socket = io(base, { 
       auth: { token },
@@ -60,7 +59,7 @@ const Navbar = () => {
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('Navbar socket connected for notifications');
+      // Socket connected
     });
 
     socket.on('connect_error', (error) => {
@@ -74,8 +73,6 @@ const Navbar = () => {
     });
 
     socket.on('new_notification', (notification) => {
-      console.log('New notification received:', notification);
-      
       // Add to realtime notifications list (keep only 5 recent)
       setRealtimeNotifications(prev => [notification, ...prev.slice(0, 4)]);
       
@@ -98,11 +95,11 @@ const Navbar = () => {
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('Navbar socket disconnected:', reason);
+      // Socket disconnected
     });
 
     socket.on('reconnect', (attemptNumber) => {
-      console.log('Navbar socket reconnected after', attemptNumber, 'attempts');
+      // Socket reconnected
     });
 
     socket.on('reconnect_error', (error) => {
@@ -120,9 +117,7 @@ const Navbar = () => {
     const fetchUnread = async () => {
       if (user) {
         try {
-          console.log('Fetching unread count for user:', user._id);
           const result = await notificationsAPI.getUnreadCount();
-          console.log('Unread count result:', result);
           setUnreadCount(result.count || 0);
         } catch (error) {
           console.error('Error fetching unread count:', error);
@@ -137,7 +132,6 @@ const Navbar = () => {
       if (user) {
         try {
           const notifications = await notificationsAPI.getAll({ limit: 5 });
-          console.log('Recent notifications:', notifications);
           setRealtimeNotifications(notifications || []);
         } catch (error) {
           console.error('Error fetching recent notifications:', error);
@@ -155,7 +149,6 @@ const Navbar = () => {
     }, 30000);
     
     const onRead = () => {
-      console.log('Notifications read event triggered, refetching count');
       fetchUnread();
       fetchRecentNotifications();
     };
@@ -182,13 +175,10 @@ const Navbar = () => {
   }, []);
 
   const handleNotificationClick = async (notification) => {
-    console.log('Notification clicked:', notification._id);
-    
     try {
       // Mark this notification as read if it's not already read
       if (!notification.isRead) {
-        const response = await notificationsAPI.markAsRead([notification._id]);
-        console.log('Mark as read response:', response);
+        await notificationsAPI.markAsRead([notification._id]);
         
         // Update local state
         setUnreadCount(prev => Math.max(0, prev - 1));

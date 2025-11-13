@@ -329,12 +329,6 @@ const Calendar = () => {
       setUpcomingEvents(upcoming.slice(0, 10)); // Show only first 10
     } catch (error) {
       console.error('Failed to fetch calendar data:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
-      });
       
       // Set default empty stats
       setStats({ totalBorrowed: 0, totalLent: 0, overdue: 0, dueSoon: 0 });

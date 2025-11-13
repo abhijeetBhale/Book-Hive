@@ -52,7 +52,6 @@ const BooksForSale = () => {
         ...data.pagination
       }));
     } catch (error) {
-      console.error('Error fetching books for sale:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -253,7 +252,6 @@ const BookForSaleCard = ({ book }) => {
 
   const handleContact = () => {
     // Navigate to messaging or show contact modal
-    console.log('Contact seller for book:', book._id);
   };
 
   const handleWishlist = () => {

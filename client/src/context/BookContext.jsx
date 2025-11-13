@@ -17,7 +17,6 @@ export const BookProvider = ({ children }) => {
             setPagination(data.pagination);
         } catch (error) {
             toast.error('Failed to fetch books.');
-            console.error(error);
         } finally {
             setLoading(false);
         }

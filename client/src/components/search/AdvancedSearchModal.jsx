@@ -309,12 +309,9 @@ const AdvancedSearchModal = ({ isOpen, onClose, onSearch, initialFilters = {} })
   const loadFilterOptions = async () => {
     setIsLoadingOptions(true);
     try {
-      console.log('Loading filter options...');
       const response = await booksAPI.getFilterOptions();
-      console.log('Filter options response:', response);
       
       const data = response.data || response;
-      console.log('Filter options data:', data);
       
       setFilterOptions(data || {
         categories: [],
@@ -325,7 +322,6 @@ const AdvancedSearchModal = ({ isOpen, onClose, onSearch, initialFilters = {} })
         yearRange: { minYear: 1800, maxYear: new Date().getFullYear() }
       });
     } catch (error) {
-      console.error('Error loading filter options:', error);
       toast.error('Failed to load filter options');
       // Set default values on error
       setFilterOptions({
@@ -368,7 +364,6 @@ const AdvancedSearchModal = ({ isOpen, onClose, onSearch, initialFilters = {} })
         setIsGettingLocation(false);
       },
       (error) => {
-        console.error('Geolocation error:', error);
         toast.error('Failed to get your location');
         setIsGettingLocation(false);
       },

@@ -118,8 +118,7 @@ export const AuthProvider = ({ children }) => {
         toast.success("Location updated successfully!");
       }
     } catch (error) {
-      console.log("Could not get user location:", error.message);
-      // Don't show error toast for location - it's optional
+      // Location update failed - optional feature
     }
   };
 

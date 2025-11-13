@@ -150,7 +150,6 @@ const BookDetails = () => {
         setBook(response.data);
       } catch (err) {
         setError('Could not load book details.');
-        console.error(err);
       } finally {
         setLoading(false);
       }

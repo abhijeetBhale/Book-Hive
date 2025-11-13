@@ -18,6 +18,7 @@
     "fix:all": "node scripts/fixAllDemoPasswords.js",
     "test:admin": "node scripts/testAdminEndpoints.js",
     "update:covers": "node scripts/updateBookCovers.js",
+    "migrate:location-privacy": "node scripts/migrateLocationPrivacy.js",
     "init:gamification": "node scripts/initializeGamification.js"
   },
   "keywords": [],

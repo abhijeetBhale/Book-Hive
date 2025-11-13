@@ -30,7 +30,6 @@ export const OnlineStatusProvider = ({ children }) => {
         }
 
         const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
-        console.log('Connecting to online status WebSocket at:', base);
 
         const socket = io(base, {
             auth: { token },
@@ -44,7 +43,7 @@ export const OnlineStatusProvider = ({ children }) => {
         socketRef.current = socket;
 
         socket.on('connect', () => {
-            console.log('Online status socket connected');
+            // Socket connected
         });
 
         socket.on('connect_error', (error) => {
@@ -52,16 +51,15 @@ export const OnlineStatusProvider = ({ children }) => {
         });
 
         socket.on('presence:update', (userIds) => {
-            console.log('Online users updated:', userIds);
             setOnlineUsers(new Set(userIds));
         });
 
         socket.on('disconnect', (reason) => {
-            console.log('Online status socket disconnected:', reason);
+            // Socket disconnected
         });
 
         socket.on('reconnect', (attemptNumber) => {
-            console.log('Online status socket reconnected after', attemptNumber, 'attempts');
+            // Socket reconnected
         });
 
         return () => {

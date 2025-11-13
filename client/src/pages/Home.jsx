@@ -185,20 +185,15 @@ const Home = () => {
 
   const handleTestimonialSubmit = async (testimonialData) => {
     try {
-      console.log('Submitting testimonial data:', testimonialData);
-      const response = await testimonialAPI.createTestimonial(testimonialData);
-      console.log('Testimonial submission response:', response);
+      await testimonialAPI.createTestimonial(testimonialData);
 
       // Reload testimonials to show the new one
       try {
         const testimonialsResponse = await testimonialAPI.getPublishedTestimonials();
         setTestimonials(testimonialsResponse);
-        console.log('Testimonials reloaded:', testimonialsResponse);
       } catch (loadError) {
         console.error('Failed to reload testimonials:', loadError);
       }
-
-      console.log('Testimonial submitted successfully');
     } catch (error) {
       console.error('Failed to submit testimonial:', error);
       console.error('Error details:', {

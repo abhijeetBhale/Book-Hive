@@ -23,7 +23,6 @@ const ReviewsModal = ({ open, onClose, userId, userName }) => {
       const res = await reviewsAPI.listForUser(userId, { limit: 50 });
       setReviews(res.data.reviews || []);
     } catch (error) {
-      console.error('Failed to fetch reviews:', error);
       toast.error('Failed to load reviews');
     } finally {
       setLoading(false);

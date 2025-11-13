@@ -287,7 +287,6 @@ const BookDetailsModal = ({ event, onClose, currentUser }) => {
 
   const handleContactUser = (user) => {
     // This could open a messaging modal or redirect to messages
-    console.log('Contact user:', user);
   };
 
   return (

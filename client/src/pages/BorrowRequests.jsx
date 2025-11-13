@@ -50,7 +50,6 @@ const BorrowRequests = () => {
       setMyRequests(validMyRequests);
 
     } catch (error) {
-      console.error('Failed to fetch borrow requests:', error);
       toast.error('Failed to fetch borrow requests.');
       // Set empty arrays on error
       setReceivedRequests([]);
@@ -81,7 +80,6 @@ const BorrowRequests = () => {
       fetchData();
     } catch (error) {
       toast.error('Failed to mark book as borrowed');
-      console.error('Mark as borrowed error:', error);
     }
   };
 
@@ -92,7 +90,6 @@ const BorrowRequests = () => {
       fetchData();
     } catch (error) {
       toast.error('Failed to mark book as returned');
-      console.error('Mark as returned error:', error);
     }
   };
 
@@ -103,7 +100,6 @@ const BorrowRequests = () => {
       fetchData();
     } catch (error) {
       toast.error('Failed to delete request');
-      console.error('Delete request error:', error);
     }
   };
 

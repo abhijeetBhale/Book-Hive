@@ -332,7 +332,6 @@ const MapView = ({ userGroups, userToShowPopup }) => {
     // Handle userToShowPopup - automatically select and show their popup (only once)
     useEffect(() => {
         if (userToShowPopup && !hasProcessedUserToShow) {
-            console.log('Processing userToShowPopup:', userToShowPopup);
             // Find the user in the current users list or use the provided user data
             const userInList = allUsers.find(user => user._id === userToShowPopup._id);
             if (userInList) {
@@ -360,11 +359,6 @@ const MapView = ({ userGroups, userToShowPopup }) => {
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [selectedPin]);
-
-    // Debug selectedPin changes
-    useEffect(() => {
-        console.log('selectedPin changed:', selectedPin);
     }, [selectedPin]);
 
 
@@ -525,9 +519,7 @@ const MapView = ({ userGroups, userToShowPopup }) => {
             e.preventDefault();
             e.stopPropagation();
         }
-        console.log('Close button clicked, current selectedPin:', selectedPin);
         setSelectedPin(null);
-        console.log('selectedPin set to null');
     }
 
     return (
@@ -596,7 +588,6 @@ const MapView = ({ userGroups, userToShowPopup }) => {
                             autoPan={true}
                             eventHandlers={{
                                 remove: () => {
-                                    console.log('Popup removed by Leaflet');
                                     setSelectedPin(null);
                                 }
                             }}

@@ -164,6 +164,13 @@ export const getUsersWithBooks = async (req, res) => {
       
       const userObj = user.toObject();
       userObj.booksOwned = books;
+      
+      // Apply location privacy - return display coordinates for map
+      if (userObj.location && userObj.location.displayCoordinates && userObj.location.displayCoordinates.length === 2) {
+        userObj.location.coordinates = userObj.location.displayCoordinates;
+        delete userObj.location.displayCoordinates; // Don't expose both sets of coordinates
+      }
+      
       return userObj;
     }));
     
@@ -196,7 +203,14 @@ export const getUserProfile = async (req, res) => {
     
     user.booksOwned = books;
     
-    res.json({ user });
+    // Apply location privacy - return display coordinates for map
+    const userObj = user.toObject();
+    if (userObj.location && userObj.location.displayCoordinates && userObj.location.displayCoordinates.length === 2) {
+      userObj.location.coordinates = userObj.location.displayCoordinates;
+      delete userObj.location.displayCoordinates; // Don't expose both sets of coordinates
+    }
+    
+    res.json({ user: userObj });
   } catch (error) {
     console.error('Get user profile error:', error);
     res.status(500).json({ message: 'Server error getting user profile' });

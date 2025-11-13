@@ -17,7 +17,7 @@ class GamificationErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Gamification error:', error, errorInfo);
+    // Gamification error caught
   }
 
   render() {

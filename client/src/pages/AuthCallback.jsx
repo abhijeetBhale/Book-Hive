@@ -47,7 +47,6 @@ const AuthCallback = () => {
 
     const requestUserLocation = async () => {
       if (!navigator.geolocation) {
-        console.log("Geolocation is not supported by this browser.");
         return;
       }
 
@@ -66,11 +65,8 @@ const AuthCallback = () => {
         };
 
         await authAPI.updateLocation(location);
-        // Remove individual location success toast to avoid multiple notifications
-        console.log("Location updated successfully (silent)");
       } catch (error) {
-        console.log("Could not get user location:", error);
-        // Don't show error toast for location - it's optional
+        // Location update failed - optional feature
       }
     };
 

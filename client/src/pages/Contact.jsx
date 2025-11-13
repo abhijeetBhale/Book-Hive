@@ -40,7 +40,6 @@ const Contact = () => {
         message: ''
       });
     } catch (error) {
-      console.error('Failed to submit contact form:', error);
       alert(error.response?.data?.message || 'Failed to send message. Please try again.');
     } finally {
       setSubmitting(false);

@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { validateEmail, validatePassword } from '../utils/validation.js';
 import { uploadFileToCloudinary } from '../config/cloudinary.js';
+import { getConsistentPrivacyOffset } from '../utils/locationPrivacy.js';
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
@@ -121,14 +122,22 @@ export const getProfile = async (req, res) => {
     // Fix: Use req.user._id instead of req.user.id
     const user = await User.findById(req.user._id);
     if (user) {
+      const userObj = user.toObject();
+      
+      // Apply location privacy - return display coordinates for own profile too
+      if (userObj.location && userObj.location.displayCoordinates && userObj.location.displayCoordinates.length === 2) {
+        userObj.location.coordinates = userObj.location.displayCoordinates;
+        delete userObj.location.displayCoordinates; // Don't expose both sets of coordinates
+      }
+      
       res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        avatar: user.avatar,
-        location: user.location,
-        role: user.role || 'user', // Include role for admin access checks
-        securitySettings: user.securitySettings || {
+        _id: userObj._id,
+        name: userObj.name,
+        email: userObj.email,
+        avatar: userObj.avatar,
+        location: userObj.location,
+        role: userObj.role || 'user', // Include role for admin access checks
+        securitySettings: userObj.securitySettings || {
           twoFactorEnabled: false,
           emailNotifications: true,
           loginAlerts: true,
@@ -332,16 +341,25 @@ export const changePassword = async (req, res) => {
 export const updateLocation = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
-    // Fix: Use req.user._id instead of req.user.id
+    
+    if (!latitude || !longitude) {
+      return res.status(400).json({ message: 'Latitude and longitude are required' });
+    }
+
+    // Generate privacy offset for display coordinates
+    const offsetCoords = getConsistentPrivacyOffset(req.user._id.toString(), latitude, longitude);
+
     const user = await User.findById(req.user._id);
 
     if (user) {
       user.location = {
         type: 'Point',
-        coordinates: [longitude, latitude]
+        coordinates: [longitude, latitude], // Original coordinates for accurate distance calculations
+        displayCoordinates: [offsetCoords.longitude, offsetCoords.latitude], // Offset coordinates for map display (privacy)
+        lastUpdated: new Date()
       };
       await user.save();
-      res.json({ message: 'Location updated successfully' });
+      res.json({ message: 'Location updated successfully', user: { location: user.location } });
     } else {
       res.status(404).json({ message: 'User not found' });
     }

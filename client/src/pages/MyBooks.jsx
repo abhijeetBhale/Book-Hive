@@ -230,7 +230,6 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
         forSelling: false,
         lendingDuration: 14
       };
-      console.log('Resetting form with book data:', bookData);
       reset(bookData);
       if (selectedGoogleBook.coverImage) {
         setImagePreview(selectedGoogleBook.coverImage);
@@ -672,7 +671,6 @@ const MyBooks = () => {
   };
 
   const handleSelectBookFromSearch = (bookData) => {
-    console.log('Book selected from search:', bookData);
     setSelectedGoogleBook(bookData);
     setEditingBook(null);
     setIsFormModalOpen(true);
@@ -686,7 +684,6 @@ const MyBooks = () => {
     setIsSubmitting(true);
     const data = new FormData();
     const hasGoogleBooksCover = selectedGoogleBook && selectedGoogleBook.coverImage && (!formData.coverImage || formData.coverImage.length === 0);
-    console.log('Form submission data:', { formData, selectedGoogleBook, hasGoogleBooksCover });
 
     for (const key in formData) {
       if (key === 'coverImage') {

@@ -46,7 +46,6 @@ class SessionManager {
 
         this.refreshTimer = setInterval(() => {
             if (!this.isTokenValid()) {
-                console.log('Token expired or invalid, clearing session');
                 this.removeToken();
                 // Trigger a custom event for components to listen to
                 window.dispatchEvent(new CustomEvent('sessionExpired'));

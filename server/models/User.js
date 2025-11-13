@@ -37,12 +37,20 @@ const userSchema = new mongoose.Schema({
       default: 'Point'
     },
     coordinates: {
-      type: [Number], // [longitude, latitude]
+      type: [Number], // [longitude, latitude] - ORIGINAL coordinates for distance calculations
       default: [0, 0] // Default coordinates instead of required
+    },
+    displayCoordinates: {
+      type: [Number], // [longitude, latitude] - OFFSET coordinates for map display (privacy)
+      default: undefined // Will be generated when location is set
     },
     address: {
       type: String,
       default: 'Location not set'
+    },
+    lastUpdated: {
+      type: Date,
+      default: Date.now
     }
   },
   booksOwned: [{
@@ -226,8 +234,7 @@ userSchema.methods.getPublicProfile = function() {
 
 // Create indexes for performance optimization
 userSchema.index({ location: '2dsphere' }); // Geospatial queries
-userSchema.index({ email: 1 }); // Login queries
-userSchema.index({ googleId: 1 }); // OAuth queries
+// Note: email and googleId already have unique indexes from schema definition
 userSchema.index({ 'rating.starLevel': -1 }); // Sorting by rating
 userSchema.index({ lastActive: -1 }); // Admin dashboard queries
 userSchema.index({ createdAt: -1 }); // Sorting by join date

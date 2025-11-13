@@ -292,12 +292,11 @@ const Books = () => {
             
             if (imageUrls.length > 0) {
               preloadImages(imageUrls).catch(err => {
-                console.warn('Some images failed to preload:', err);
+                // Image preload failed - non-critical
               });
             }
         } catch (err) {
             setError('Failed to load books. Please try again later.');
-            console.error('Error fetching books:', err);
         } finally {
             setLoading(false);
         }
@@ -313,7 +312,6 @@ const Books = () => {
             setFilterAvailable(filters.isAvailable === 'true');
             setSortOrder(`${filters.sortBy || 'createdAt'}-${filters.sortOrder || 'desc'}`);
         } catch (error) {
-            console.error('Error handling advanced search:', error);
             toast.error('Error applying search filters');
         }
     };

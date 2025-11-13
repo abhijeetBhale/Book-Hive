@@ -59,8 +59,8 @@ const Tab = styled.button`
   padding: 1rem 2rem;
   font-size: 1rem;
   font-weight: 600;
-  color: ${props => props.active ? '#8b5cf6' : '#6c757d'};
-  border-bottom: 2px solid ${props => props.active ? '#8b5cf6' : 'transparent'};
+  color: ${props => props.$active ? '#8b5cf6' : '#6c757d'};
+  border-bottom: 2px solid ${props => props.$active ? '#8b5cf6' : 'transparent'};
   cursor: pointer;
   transition: all 0.2s ease;
   
@@ -307,7 +307,6 @@ const FriendsPage = () => {
       const { data: friendsData } = await friendsAPI.getAll();
       setData(friendsData);
     } catch (error) {
-      console.error("Failed to fetch friends data:", error);
       toast.error("Failed to load friends data");
     }
   };
@@ -356,7 +355,7 @@ const FriendsPage = () => {
           setSearchResults(filteredUsers);
           setShowSearchResults(true);
         } catch (error) {
-          console.error('Search error:', error);
+          // Search error handled
         } finally {
           setSearchLoading(false);
         }
@@ -377,7 +376,6 @@ const FriendsPage = () => {
       setShowSearchResults(false);
       refresh();
     } catch (error) {
-      console.error('Failed to send friend request:', error);
       toast.error('Failed to send friend request');
     }
   };
@@ -388,7 +386,6 @@ const FriendsPage = () => {
       toast.success('Friend request accepted!');
       refresh();
     } catch (error) {
-      console.error('Failed to accept request:', error);
       toast.error('Failed to accept request');
     }
   };
@@ -399,7 +396,6 @@ const FriendsPage = () => {
       toast.success('Friend request rejected');
       refresh();
     } catch (error) {
-      console.error('Failed to reject request:', error);
       toast.error('Failed to reject request');
     }
   };
@@ -468,7 +464,7 @@ const FriendsPage = () => {
 
         <TabContainer>
           <Tab
-            active={activeTab === 'friends'}
+            $active={activeTab === 'friends'}
             onClick={() => {
               setActiveTab('friends');
               setSearchTerm('');
@@ -478,7 +474,7 @@ const FriendsPage = () => {
             My Friends ({friendsCount})
           </Tab>
           <Tab
-            active={activeTab === 'pending'}
+            $active={activeTab === 'pending'}
             onClick={() => {
               setActiveTab('pending');
               setSearchTerm('');
