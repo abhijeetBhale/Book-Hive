@@ -100,6 +100,8 @@ const OptimizedImage = ({
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [imageQuality, setImageQuality] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 2;
 
   // Reset states when src changes
   useEffect(() => {
@@ -108,6 +110,7 @@ const OptimizedImage = ({
     setError(false);
     setLoading(true);
     setImageQuality(null);
+    setRetryCount(0);
   }, [src]);
 
   // Optimize image URL for better quality
@@ -161,11 +164,25 @@ const OptimizedImage = ({
   const handleImageError = (e) => {
     setLoading(false);
     
+    // Retry with cache-busting parameter
+    if (retryCount < maxRetries) {
+      setTimeout(() => {
+        const cacheBuster = `?retry=${retryCount + 1}&t=${Date.now()}`;
+        const newSrc = currentSrc.split('?')[0] + cacheBuster;
+        setCurrentSrc(newSrc);
+        setRetryCount(prev => prev + 1);
+        setLoading(true);
+        setError(false);
+      }, 500 * (retryCount + 1)); // Exponential backoff
+      return;
+    }
+    
     // Try fallback source if available and not already tried
-    if (fallbackSrc && currentSrc !== fallbackSrc) {
+    if (fallbackSrc && currentSrc !== fallbackSrc && !currentSrc.includes(fallbackSrc)) {
       setCurrentSrc(fallbackSrc);
       setError(false);
       setLoading(true);
+      setRetryCount(0);
       return;
     }
     

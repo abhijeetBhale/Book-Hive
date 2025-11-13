@@ -5,6 +5,7 @@ import { booksAPI, borrowAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import { Loader, BookOpen, User, ArrowRight } from 'lucide-react';
+import OptimizedAvatar from '../components/OptimizedAvatar';
 
 const PageWrapper = styled.div`
   background-color: #f9fafb;
@@ -96,26 +97,6 @@ const OwnerCard = styled(Link)`
   &:hover {
     background-color: #f3f4f6;
   }
-`;
-
-const Avatar = styled.img`
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-`;
-
-const AvatarPlaceholder = styled.div`
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #4F46E5, #7C3AED);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 600;
-  font-size: 1.25rem;
 `;
 
 const OwnerName = styled.p`
@@ -233,19 +214,13 @@ const BookDetails = () => {
           <OwnerSection>
             <OwnerTitle>Listed By</OwnerTitle>
             <OwnerCard to={`/users/${book.owner._id}`}>
-              {book.owner.avatar ? (
-                <Avatar 
-                  src={getFullImageUrl(book.owner.avatar)} 
-                  alt={book.owner.name}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
-                />
-              ) : null}
-              <AvatarPlaceholder style={{ display: book.owner.avatar ? 'none' : 'flex' }}>
-                {book.owner.name ? book.owner.name.charAt(0).toUpperCase() : 'U'}
-              </AvatarPlaceholder>
+              <OptimizedAvatar 
+                src={getFullImageUrl(book.owner.avatar)}
+                alt={book.owner.name}
+                size={50}
+                rounded={true}
+                fallbackColor="#4F46E5"
+              />
               <OwnerName>{book.owner.name}</OwnerName>
             </OwnerCard>
           </OwnerSection>

@@ -52,3 +52,59 @@ export const revokeObjectURL = (url) => {
     URL.revokeObjectURL(url);
   }
 };
+
+/**
+ * Image cache to store successfully loaded images
+ */
+const imageCache = new Map();
+
+/**
+ * Preload an image and cache it
+ * 
+ * @param {string} src - The image URL to preload
+ * @returns {Promise} - Resolves when image is loaded
+ */
+export const preloadImage = (src) => {
+  return new Promise((resolve, reject) => {
+    // Check if already cached
+    if (imageCache.has(src)) {
+      resolve(imageCache.get(src));
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      imageCache.set(src, true);
+      resolve(img);
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
+};
+
+/**
+ * Preload multiple images
+ * 
+ * @param {string[]} urls - Array of image URLs to preload
+ * @returns {Promise} - Resolves when all images are loaded
+ */
+export const preloadImages = (urls) => {
+  return Promise.allSettled(urls.map(url => preloadImage(url)));
+};
+
+/**
+ * Check if an image is cached
+ * 
+ * @param {string} src - The image URL to check
+ * @returns {boolean} - True if cached
+ */
+export const isImageCached = (src) => {
+  return imageCache.has(src);
+};
+
+/**
+ * Clear the image cache
+ */
+export const clearImageCache = () => {
+  imageCache.clear();
+};

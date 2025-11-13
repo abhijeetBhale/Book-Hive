@@ -291,19 +291,23 @@ const Navbar = () => {
                     >
                       {({ isActive }) => (
                         <div className="relative flex flex-col items-center pt-4 pb-4">
-                          {link.icon}
-                          {/* iOS-style notification dot - positioned at top-right corner */}
-                          {badges[link.badgeKey] > 0 && (
-                            <span 
-                              className="absolute top-2 right-2 bg-red-500 rounded-full shadow-lg"
-                              style={{
-                                width: '10px',
-                                height: '10px',
-                                border: '2px solid white',
-                                animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-                              }}
-                            />
-                          )}
+                          <div className="relative">
+                            {link.icon}
+                            {/* iOS-style notification dot - positioned at top-right corner of icon */}
+                            {badges[link.badgeKey] > 0 && (
+                              <span 
+                                className="absolute bg-red-500 rounded-full shadow-lg"
+                                style={{
+                                  width: '10px',
+                                  height: '10px',
+                                  border: '2px solid white',
+                                  top: '-2px',
+                                  right: '-2px',
+                                  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                                }}
+                              />
+                            )}
+                          </div>
                           {/* Active indicator */}
                           <span
                             className={`absolute bottom-1 h-1.5 w-3.5 right-0.9 rounded-full bg-green-500 transition-opacity duration-300 ${
@@ -493,16 +497,18 @@ const Navbar = () => {
                       onClick={() => setIsOpen(false)}
                     >
                       <div className="relative flex items-center gap-3">
-                        <span className="relative">
+                        <span className="relative inline-block">
                           {link.icon}
-                          {/* iOS-style notification dot for mobile */}
+                          {/* iOS-style notification dot for mobile - top-right corner */}
                           {badges[link.badgeKey] > 0 && (
                             <span 
-                              className="absolute -top-1 -right-1 bg-red-500 rounded-full shadow-lg"
+                              className="absolute bg-red-500 rounded-full shadow-lg"
                               style={{
                                 width: '10px',
                                 height: '10px',
-                                border: '2px solid white'
+                                border: '2px solid white',
+                                top: '-2px',
+                                right: '-2px'
                               }}
                             />
                           )}

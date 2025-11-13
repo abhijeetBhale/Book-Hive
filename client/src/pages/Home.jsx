@@ -350,7 +350,7 @@ const Home = () => {
       <section className="recently-added-section">
         <div className="content-container">
           <div className="section-header">
-            <h2 className="section-title">Fresh on the Shelves</h2>
+            <h2 className="section-title">Fresh On The Shelves</h2>
             <p className="section-subtitle">See what books were recently added by members of the community.</p>
           </div>
           <div className="books-carousel">
@@ -441,7 +441,7 @@ const Home = () => {
       <section className="stats-section" ref={statsRef}>
         <div className="content-container">
           <div className="section-header">
-            <h2 className="section-title">Our Community by the Numbers</h2>
+            <h2 className="section-title">Our Community By The Numbers</h2>
             <p className="section-subtitle">
               BookHive is more than an app; it's a growing movement of readers connecting and sharing in neighborhoods just like yours.
             </p>

@@ -7,6 +7,7 @@ import StyledSearchInput from '../components/ui/StyledSearchInput';
 import AdvancedSearchModal from '../components/search/AdvancedSearchModal';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import toast from 'react-hot-toast';
+import { getFullImageUrl, preloadImages } from '../utils/imageHelpers';
 
 // --- DATA FOR FILTERS ---
 
@@ -279,9 +280,21 @@ const Books = () => {
             };
 
             const response = await booksAPI.getAll(searchParams);
-            setBooks(response.data.books || []);
+            const fetchedBooks = response.data.books || [];
+            setBooks(fetchedBooks);
             setPagination(response.data.pagination || {});
             setError(null);
+            
+            // Preload book cover images for better performance
+            const imageUrls = fetchedBooks
+              .map(book => getFullImageUrl(book.coverImage))
+              .filter(url => url && !url.includes('placehold.co'));
+            
+            if (imageUrls.length > 0) {
+              preloadImages(imageUrls).catch(err => {
+                console.warn('Some images failed to preload:', err);
+              });
+            }
         } catch (err) {
             setError('Failed to load books. Please try again later.');
             console.error('Error fetching books:', err);

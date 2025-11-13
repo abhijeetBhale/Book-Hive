@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
+import { getFullImageUrl } from '../utils/imageHelpers';
 
 const AvatarContainer = styled.div`
   position: relative;
@@ -72,11 +73,14 @@ const OptimizedAvatar = ({
     setLoading(true);
     setError(false);
 
+    // Process the image URL to get full path
+    const processedSrc = getFullImageUrl(src);
+
     // Create a new image to preload
     const img = new Image();
     
     // Add cache-busting only on retry
-    const imageUrl = retryCount > 0 ? `${src}?retry=${retryCount}` : src;
+    const imageUrl = retryCount > 0 ? `${processedSrc}?retry=${retryCount}&t=${Date.now()}` : processedSrc;
     
     img.onload = () => {
       setImageSrc(imageUrl);

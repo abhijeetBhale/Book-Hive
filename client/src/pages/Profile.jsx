@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { AuthContext } from '../context/AuthContext';
 import { authAPI, borrowAPI, messagesAPI, reportAPI, usersAPI } from '../utils/api';
 import toast from 'react-hot-toast';
+import { getFullImageUrl } from '../utils/imageHelpers';
 
 // Import new icons for the password fields
 import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy, Shield, Activity, RefreshCw, Search, CheckCircle, ChevronRight, Star } from 'lucide-react';
@@ -479,9 +480,12 @@ const Profile = () => {
               <div className="avatar-uploader" onClick={() => fileInputRef.current.click()}>
                 <img
                   key={user.avatar}
-                  src={avatarPreview || user.avatar || `https://ui-avatars.com/api/?name=${user.name}&background=4F46E5&color=fff&size=128`}
+                  src={avatarPreview || getFullImageUrl(user.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4F46E5&color=fff&size=128`}
                   alt="avatar"
                   className="avatar-image"
+                  onError={(e) => {
+                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4F46E5&color=fff&size=128`;
+                  }}
                 />
                 <div className="camera-overlay"><Camera size={24} /></div>
               </div>
@@ -1000,10 +1004,13 @@ const Profile = () => {
                     </div>
                     <div className="user-card selected">
                       <img
-                        src={selectedUser.avatar ||
-                          `https://ui-avatars.com/api/?name=${selectedUser.name}&background=818cf8&color=fff`}
+                        src={getFullImageUrl(selectedUser.avatar) ||
+                          `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.name)}&background=818cf8&color=fff`}
                         alt={selectedUser.name}
                         className="user-avatar"
+                        onError={(e) => {
+                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedUser.name)}&background=818cf8&color=fff`;
+                        }}
                       />
                       <div className="user-info">
                         <strong>{selectedUser.name}</strong>
@@ -1037,9 +1044,12 @@ const Profile = () => {
                         onClick={() => handleSelectUser(user)}
                       >
                         <img
-                          src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}&background=818cf8&color=fff`}
+                          src={getFullImageUrl(user.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=818cf8&color=fff`}
                           alt={user.name}
                           className="user-avatar"
+                          onError={(e) => {
+                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=818cf8&color=fff`;
+                          }}
                         />
                         <div className="user-info">
                           <strong>{user.name}</strong>
