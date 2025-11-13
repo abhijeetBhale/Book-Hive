@@ -297,7 +297,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ### 👨‍💻 **Project Maintainer**
 **Abhijeet Bhale**
 - 📧 Email: abhijeetbhale7@gmail.com
-- 💼 LinkedIn: [Abhijeet Bhale](https://linkedin.com/in/abhijeetbhale)
+- 💼 LinkedIn: [Abhijeet Bhale](https://linkedin.com/in/abhijeetbhale7)
 - 🐙 GitHub: [@abhijeetbhale](https://github.com/abhijeetbhale)
 
 ### 🌐 **Project Links**
