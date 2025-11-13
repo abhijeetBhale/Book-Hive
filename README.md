@@ -14,7 +14,7 @@ BookHive is a comprehensive full-stack web application that transforms how book 
 
 In an era where reading often feels solitary, BookHive bridges the gap between digital convenience and community connection. Our platform enables users to build personal libraries, share literary insights, connect locally, communicate seamlessly, and track their reading journey.
 
-## ✨ Latest Updates (December 2024)
+## ✨ Latest Updates (October 2025)
 
 ### 🎉 Major Features Released
 
