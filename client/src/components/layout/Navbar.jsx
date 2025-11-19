@@ -475,19 +475,23 @@ const Navbar = () => {
         </div>
 
         {isOpen && (
-          <div className="md:hidden glass absolute w-full border-b border-gray-200/50">
-            <div className="px-2 pt-2 pb-3 sm:px-3">
+          <div className="md:hidden absolute w-full bg-white border-b border-gray-200 shadow-lg">
+            <div className="px-4 pt-4 pb-4">
               {user && (
-                <div className="flex flex-col items-center gap-4 py-2">
+                <div className="flex flex-col items-start gap-3 py-2">
                   {navLinks.map((link) => (
                     <NavLink
                       key={link.to}
                       to={link.to}
-                      className={navLinkClass}
+                      className={({ isActive }) =>
+                        `transition-colors duration-300 text-base ${
+                          isActive ? 'text-primary font-semibold' : 'text-gray-700 hover:text-primary'
+                        }`
+                      }
                       onClick={() => setIsOpen(false)}
                     >
-                      <div className="relative flex items-center gap-3">
-                        <span className="relative inline-block">
+                      <div className="relative flex items-end gap-3 py-2 px-4 rounded-lg hover:bg-gray-50">
+                        <span className="relative inline-block flex-shrink-0">
                           {link.icon}
                           {/* iOS-style notification dot for mobile - top-right corner */}
                           {badges[link.badgeKey] > 0 && (
@@ -503,7 +507,7 @@ const Navbar = () => {
                             />
                           )}
                         </span>
-                        {link.text}
+                        <span>{link.text}</span>
                       </div>
                     </NavLink>
                   ))}
@@ -514,30 +518,40 @@ const Navbar = () => {
                       setShowNotificationCenter(true);
                       setIsOpen(false);
                     }}
-                    className="relative p-2 text-gray-600 hover:text-primary transition-colors duration-300"
+                    className="relative flex items-center gap-3 py-2 px-4 rounded-lg text-gray-700 hover:text-primary hover:bg-gray-50 transition-colors duration-300"
                   >
-                    <Bell size={24} />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    )}
+                    <span className="relative inline-block flex-shrink-0">
+                      <Bell size={24} />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </span>
+                    <span>Notifications</span>
                   </button>
 
-                  <Link to="/profile" className="relative" onClick={() => setIsOpen(false)}>
-                    <OptimizedAvatar
-                      src={user.avatar}
-                      name={user.name}
-                      alt="avatar"
-                      size="md"
-                    />
-                    {unreadCount > 0 && (
-                      <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" />
-                    )}
+                  <Link 
+                    to="/profile" 
+                    className="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-700 hover:text-primary hover:bg-gray-50 transition-colors duration-300" 
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <span className="relative inline-block flex-shrink-0">
+                      <OptimizedAvatar
+                        src={user.avatar}
+                        name={user.name}
+                        alt="avatar"
+                        size="sm"
+                      />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" />
+                      )}
+                    </span>
+                    <span>Profile</span>
                   </Link>
                 </div>
               )}
-              <div className="mt-4 pt-4 border-t border-gray-200/50">
+              <div className="mt-4 pt-4 border-t border-gray-200">
                 {user ? (
                   <Button
                     onClick={() => {
@@ -545,12 +559,12 @@ const Navbar = () => {
                       setIsOpen(false);
                     }}
                     variant="secondary"
-                    className="w-full"
+                    className="w-full justify-center"
                   >
                     Logout
                   </Button>
                 ) : (
-                  <div className="flex flex-col items-center justify-center gap-4">
+                  <div className="flex flex-col items-center gap-3">
                     <Link to="/login" onClick={() => setIsOpen(false)}>
                       <LoginButton />
                     </Link>

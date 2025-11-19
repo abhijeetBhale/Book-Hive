@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { Loader, MapPin, BookOpen, Send, X, User as UserIcon, Star } from 'lucide-react';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import ReviewsModal from '../components/ReviewsModal';
+import VerifiedBadge from '../components/ui/VerifiedBadge';
 
 
 // --- Keyframes for Animations ---
@@ -30,6 +31,10 @@ const StyledBookDetailsModal = styled.div`
   backdrop-filter: blur(4px);
   padding: 1rem;
   animation: ${fadeIn} 0.2s ease-out;
+  
+  @media (max-width: 480px) {
+    padding: 0.5rem;
+  }
 
   .modal-content {
     background-color: white; border-radius: 1rem;
@@ -38,7 +43,15 @@ const StyledBookDetailsModal = styled.div`
     overflow-y: auto; display: flex;
     flex-direction: column;
     animation: ${slideIn} 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
-    @media (min-width: 768px) { flex-direction: row; }
+    
+    @media (min-width: 768px) { 
+      flex-direction: row; 
+    }
+    
+    @media (max-width: 480px) {
+      border-radius: 0.75rem;
+      max-height: 95vh;
+    }
   }
 
   .close-btn {
@@ -59,9 +72,46 @@ const StyledBookDetailsModal = styled.div`
     }
   }
   
-  .details-pane { padding: 2rem 1.5rem; display: flex; flex-direction: column; flex-grow: 1; }
-  .book-title { font-size: 1.75rem; font-weight: 800; color: #111827; line-height: 1.2; }
-  .book-author { font-size: 1rem; color: #4b5563; margin-top: 0.25rem; margin-bottom: 1rem; }
+  .details-pane { 
+    padding: 2rem 1.5rem; 
+    display: flex; 
+    flex-direction: column; 
+    flex-grow: 1;
+    
+    @media (max-width: 768px) {
+      padding: 1.5rem 1.25rem;
+    }
+    
+    @media (max-width: 480px) {
+      padding: 1.25rem 1rem;
+    }
+  }
+  
+  .book-title { 
+    font-size: 1.75rem; 
+    font-weight: 800; 
+    color: #111827; 
+    line-height: 1.2;
+    
+    @media (max-width: 768px) {
+      font-size: 1.5rem;
+    }
+    
+    @media (max-width: 480px) {
+      font-size: 1.375rem;
+    }
+  }
+  
+  .book-author { 
+    font-size: 1rem; 
+    color: #4b5563; 
+    margin-top: 0.25rem; 
+    margin-bottom: 1rem;
+    
+    @media (max-width: 480px) {
+      font-size: 0.9375rem;
+    }
+  }
   
   .status-badge {
     padding: 0.2rem 0.6rem; font-size: 0.75rem; font-weight: 600;
@@ -72,11 +122,35 @@ const StyledBookDetailsModal = styled.div`
   }
   
   .details-grid {
-    display: grid; grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem; margin-bottom: 1rem; font-size: 0.9rem;
+    display: grid; 
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem; 
+    margin-bottom: 1rem; 
+    font-size: 0.9rem;
+    
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+      gap: 0.625rem;
+      font-size: 0.875rem;
+    }
+    
     div {
-      span:first-child { font-weight: 600; color: #1f2937; display: block; }
-      span:last-child { color: #4b5563; }
+      span:first-child { 
+        font-weight: 600; 
+        color: #1f2937; 
+        display: block;
+        
+        @media (max-width: 480px) {
+          font-size: 0.8125rem;
+        }
+      }
+      span:last-child { 
+        color: #4b5563;
+        
+        @media (max-width: 480px) {
+          font-size: 0.8125rem;
+        }
+      }
     }
   }
 
@@ -89,10 +163,32 @@ const StyledBookDetailsModal = styled.div`
   .modal-footer { margin-top: auto; padding-top: 1.5rem; }
   
   .request-btn {
-    width: 100%; display: inline-flex; align-items: center; justify-content: center;
-    gap: 0.5rem; background-color: #4F46E5; color: white; font-size: 1rem; font-weight: 600;
-    padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; cursor: pointer;
+    width: 100%; 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center;
+    gap: 0.5rem; 
+    background-color: #4F46E5; 
+    color: white; 
+    font-size: 1rem; 
+    font-weight: 600;
+    padding: 0.75rem 1.5rem; 
+    border: none; 
+    border-radius: 0.5rem; 
+    cursor: pointer;
     transition: background-color 0.2s;
+    
+    @media (max-width: 480px) {
+      font-size: 0.9375rem;
+      padding: 0.625rem 1.25rem;
+      gap: 0.375rem;
+      
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+    
     &:hover:not(:disabled) { background-color: #4338ca; }
     &:disabled { background-color: #9ca3af; cursor: not-allowed; }
   }
@@ -176,24 +272,87 @@ const BookDetailsModal = ({ isOpen, onClose, book, onRequest }) => {
 
 // --- BOOK CARD COMPONENT ---
 const StyledBookCard = styled.div`
-  background-color: white; border: 1px solid #e5e7eb; border-radius: 1rem;
-  overflow: hidden; display: flex; flex-direction: column;
+  background-color: white; 
+  border: 1px solid #e5e7eb; 
+  border-radius: 1rem;
+  overflow: hidden; 
+  display: flex; 
+  flex-direction: column;
   box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
+  
+  @media (max-width: 480px) {
+    border-radius: 0.75rem;
+  }
+  
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07);
   }
-  .book-cover { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; }
-  .card-content { padding: 1rem; display: flex; flex-direction: column; flex-grow: 1; }
-  .book-title { font-size: 1.125rem; font-weight: 700; color: #111827; }
-  .book-author { font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem; margin-bottom: 1rem; flex-grow: 1; }
+  
+  .book-cover { 
+    width: 100%; 
+    aspect-ratio: 2 / 3; 
+    object-fit: cover;
+  }
+  
+  .card-content { 
+    padding: 1rem; 
+    display: flex; 
+    flex-direction: column; 
+    flex-grow: 1;
+    
+    @media (max-width: 480px) {
+      padding: 0.75rem;
+    }
+  }
+  
+  .book-title { 
+    font-size: 1.125rem; 
+    font-weight: 700; 
+    color: #111827;
+    line-height: 1.3;
+    
+    @media (max-width: 768px) {
+      font-size: 1rem;
+    }
+    
+    @media (max-width: 480px) {
+      font-size: 0.9375rem;
+    }
+  }
+  
+  .book-author { 
+    font-size: 0.875rem; 
+    color: #6b7280; 
+    margin-top: 0.25rem; 
+    margin-bottom: 1rem; 
+    flex-grow: 1;
+    
+    @media (max-width: 480px) {
+      font-size: 0.8125rem;
+      margin-bottom: 0.75rem;
+    }
+  }
+  
   .status-badge {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 100%; background-color: #f3f4f6; color: #6b7280; font-size: 0.875rem;
-    font-weight: 600; padding: 0.75rem; border-radius: 0.5rem;
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center;
+    width: 100%; 
+    background-color: #f3f4f6; 
+    color: #6b7280; 
+    font-size: 0.875rem;
+    font-weight: 600; 
+    padding: 0.75rem; 
+    border-radius: 0.5rem;
     text-align: center;
+    
+    @media (max-width: 480px) {
+      font-size: 0.8125rem;
+      padding: 0.625rem 0.5rem;
+    }
   }
 `;
 
@@ -647,7 +806,10 @@ const UserProfile = () => {
           <AvatarImage src={getFullImageUrl(user.avatar)} alt={user.name} />
         </div>
         <div className="details-section">
-          <h1 className="user-name">{user.name}</h1>
+          <h1 className="user-name">
+            {user.name}
+            {user.isVerified && <VerifiedBadge size={24} />}
+          </h1>
           <div className="stats">
             <div className="stat-item">
               <BookOpen size={16} />
@@ -797,6 +959,14 @@ const StyledWrapper = styled.div`
   margin: 0 auto;
   font-family: 'Inter', sans-serif;
 
+  @media (max-width: 768px) {
+    padding: 1.5rem 1rem;
+  }
+
+  @media (max-width: 480px) {
+    padding: 1rem 0.75rem;
+  }
+
   .loading-state {
     display: flex; flex-direction: column; justify-content: center; align-items: center; height: 80vh;
     font-size: 1.25rem; color: #4b5563; text-align: center;
@@ -807,23 +977,139 @@ const StyledWrapper = styled.div`
       h3 { font-size: 1.5rem; font-weight: 700; color: #ef4444; margin-bottom: 1rem; }
       p { margin-bottom: 0.5rem; color: #6b7280; }
     }
+    
+    @media (max-width: 768px) {
+      font-size: 1.125rem;
+      
+      .animate-spin {
+        width: 2.5rem;
+        height: 2.5rem;
+      }
+      
+      .error-message h3 {
+        font-size: 1.25rem;
+      }
+    }
   }
+  
   .profile-header-card {
-    display: grid; grid-template-columns: auto 1fr auto; align-items: flex-start;
-    gap: 2rem; background-color: white; padding: 2rem; border-radius: 1rem;
-    border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    display: grid; 
+    grid-template-columns: auto 1fr auto; 
+    align-items: flex-start;
+    gap: 2rem; 
+    background-color: white; 
+    padding: 2rem; 
+    border-radius: 1rem;
+    border: 1px solid #e5e7eb; 
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     margin-bottom: 3rem;
+    
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    @media (max-width: 480px) {
+      padding: 1.25rem;
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+      border-radius: 0.75rem;
+    }
   }
-  .avatar-section img {
-      width: 120px; height: 120px; border-radius: 50%;
-      object-fit: cover; border: 4px solid #eef2ff;
+  
+  .avatar-section {
+    @media (max-width: 768px) {
+      display: flex;
+      justify-content: center;
+    }
+    
+    img {
+      width: 120px; 
+      height: 120px; 
+      border-radius: 50%;
+      object-fit: cover; 
+      border: 4px solid #eef2ff;
+      
+      @media (max-width: 768px) {
+        width: 100px;
+        height: 100px;
+      }
+      
+      @media (max-width: 480px) {
+        width: 90px;
+        height: 90px;
+        border: 3px solid #eef2ff;
+      }
+    }
   }
-  .user-name { font-size: 2.5rem; font-weight: 800; color: #111827; }
-  .stats { display: flex; gap: 1.5rem; margin-top: 0.75rem; }
+  
+  .details-section {
+    @media (max-width: 768px) {
+      text-align: center;
+    }
+  }
+  
+  .user-name { 
+    font-size: 2.5rem; 
+    font-weight: 800; 
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    
+    @media (max-width: 768px) {
+      font-size: 2rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    @media (max-width: 480px) {
+      font-size: 1.75rem;
+    }
+  }
+  .stats { 
+    display: flex; 
+    gap: 1.5rem; 
+    margin-top: 0.75rem;
+    
+    @media (max-width: 768px) {
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    @media (max-width: 480px) {
+      gap: 0.75rem;
+    }
+  }
+  
   .stat-item {
-      display: flex; align-items: center; gap: 0.5rem; font-size: 1rem;
-      font-weight: 500; color: #4b5563;
-      svg { color: #4F46E5; }
+      display: flex; 
+      align-items: center; 
+      gap: 0.5rem; 
+      font-size: 1rem;
+      font-weight: 500; 
+      color: #4b5563;
+      
+      @media (max-width: 768px) {
+        font-size: 0.9375rem;
+      }
+      
+      @media (max-width: 480px) {
+        font-size: 0.875rem;
+        gap: 0.375rem;
+      }
+      
+      svg { 
+        color: #4F46E5;
+        
+        @media (max-width: 480px) {
+          width: 14px;
+          height: 14px;
+        }
+      }
       
       &.clickable-distance {
         cursor: pointer;
@@ -847,6 +1133,11 @@ const StyledWrapper = styled.div`
     margin-top: 1.5rem;
     padding-top: 1.5rem;
     border-top: 1px solid #e5e7eb;
+    
+    @media (max-width: 768px) {
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+    }
   }
   
   .star-level-display {
@@ -855,11 +1146,29 @@ const StyledWrapper = styled.div`
     gap: 0.25rem;
     margin-bottom: 0.75rem;
     
+    @media (max-width: 768px) {
+      justify-content: center;
+    }
+    
+    @media (max-width: 480px) {
+      gap: 0.125rem;
+      
+      svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+    
     .star-level-text {
       margin-left: 0.5rem;
       font-size: 0.875rem;
       font-weight: 600;
       color: #6b7280;
+      
+      @media (max-width: 480px) {
+        font-size: 0.8125rem;
+        margin-left: 0.375rem;
+      }
     }
   }
   
@@ -868,10 +1177,27 @@ const StyledWrapper = styled.div`
     align-items: center;
     gap: 0.5rem;
     
+    @media (max-width: 768px) {
+      justify-content: center;
+    }
+    
+    @media (max-width: 480px) {
+      gap: 0.375rem;
+      
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+    
     .rating-value {
       font-size: 1.125rem;
       font-weight: 600;
       color: #374151;
+      
+      @media (max-width: 480px) {
+        font-size: 1rem;
+      }
     }
     
     .reviews-link {
@@ -885,6 +1211,11 @@ const StyledWrapper = styled.div`
       border-radius: 6px;
       transition: all 0.2s;
       
+      @media (max-width: 480px) {
+        font-size: 0.8125rem;
+        padding: 0.2rem 0.4rem;
+      }
+      
       &:hover {
         background: #eef2ff;
         color: #4338ca;
@@ -894,25 +1225,152 @@ const StyledWrapper = styled.div`
     .rating-count {
       font-size: 0.875rem;
       color: #6b7280;
+      
+      @media (max-width: 480px) {
+        font-size: 0.8125rem;
+      }
     }
   }
+  
+  .actions-section {
+    @media (max-width: 768px) {
+      width: 100%;
+      flex-direction: column !important;
+      
+      button {
+        width: 100%;
+      }
+    }
+  }
+  
   .message-btn {
-    display: inline-flex; align-items: center; gap: 0.5rem; background-color: #4F46E5;
-    color: white; font-size: 1rem; font-weight: 600; padding: 0.75rem 1.5rem;
-    border: none; border-radius: 0.5rem; cursor: pointer; transition: background-color 0.2s;
+    display: inline-flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    background-color: #4F46E5;
+    color: white; 
+    font-size: 1rem; 
+    font-weight: 600; 
+    padding: 0.75rem 1.5rem;
+    border: none; 
+    border-radius: 0.5rem; 
+    cursor: pointer; 
+    transition: background-color 0.2s;
+    white-space: nowrap;
+    
+    @media (max-width: 768px) {
+      width: 100%;
+      justify-content: center;
+      padding: 0.875rem 1.25rem;
+    }
+    
+    @media (max-width: 480px) {
+      font-size: 0.9375rem;
+      padding: 0.75rem 1rem;
+      gap: 0.375rem;
+      
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+    
     &:hover:not(:disabled) { background-color: #4338ca; }
   }
-  .books-section h2 {
-      font-size: 2rem; font-weight: 800; color: #111827; margin-bottom: 2rem;
-      padding-bottom: 1rem; border-bottom: 1px solid #e5e7eb;
+  .books-section {
+    h2 {
+      font-size: 2rem; 
+      font-weight: 800; 
+      color: #111827; 
+      margin-bottom: 2rem;
+      padding-bottom: 1rem; 
+      border-bottom: 1px solid #e5e7eb;
+      
+      @media (max-width: 768px) {
+        font-size: 1.75rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.875rem;
+      }
+      
+      @media (max-width: 480px) {
+        font-size: 1.5rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+      }
+    }
   }
-  .books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+  
+  .books-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+    gap: 1.5rem;
+    
+    @media (max-width: 768px) {
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1.25rem;
+    }
+    
+    @media (max-width: 480px) {
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 1rem;
+    }
+  }
+  
   .empty-state {
-    text-align: center; padding: 4rem 2rem; background-color: #f9fafb;
-    border-radius: 1rem; color: #6b7280;
-    svg { margin: 0 auto 1.5rem auto; color: #9ca3af; }
-    h3 { font-size: 1.5rem; font-weight: 700; color: #111827; }
-    p { margin-top: 0.5rem; max-width: 400px; margin-left: auto; margin-right: auto; }
+    text-align: center; 
+    padding: 4rem 2rem; 
+    background-color: #f9fafb;
+    border-radius: 1rem; 
+    color: #6b7280;
+    
+    @media (max-width: 768px) {
+      padding: 3rem 1.5rem;
+    }
+    
+    @media (max-width: 480px) {
+      padding: 2.5rem 1rem;
+      border-radius: 0.75rem;
+    }
+    
+    svg { 
+      margin: 0 auto 1.5rem auto; 
+      color: #9ca3af;
+      
+      @media (max-width: 480px) {
+        width: 32px;
+        height: 32px;
+        margin-bottom: 1rem;
+      }
+    }
+    
+    h3 { 
+      font-size: 1.5rem; 
+      font-weight: 700; 
+      color: #111827;
+      
+      @media (max-width: 768px) {
+        font-size: 1.375rem;
+      }
+      
+      @media (max-width: 480px) {
+        font-size: 1.25rem;
+      }
+    }
+    
+    p { 
+      margin-top: 0.5rem; 
+      max-width: 400px; 
+      margin-left: auto; 
+      margin-right: auto;
+      
+      @media (max-width: 768px) {
+        font-size: 0.9375rem;
+      }
+      
+      @media (max-width: 480px) {
+        font-size: 0.875rem;
+      }
+    }
   }
 `;
 

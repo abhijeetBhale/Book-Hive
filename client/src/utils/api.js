@@ -335,8 +335,10 @@ export const contactAPI = {
   submitContactForm: (contactData) => api.post('/contact', contactData).then(res => res.data),
 };
 
-
-
-// The problematic line has been removed from here.
+export const paymentAPI = {
+  createVerificationOrder: () => api.post('/payment/create-verification-order'),
+  verifyPayment: (paymentData) => api.post('/payment/verify-payment', paymentData),
+  getVerificationStatus: () => api.get('/payment/verification-status'),
+};
 
 export default api;

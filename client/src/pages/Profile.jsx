@@ -6,9 +6,11 @@ import toast from 'react-hot-toast';
 import { getFullImageUrl } from '../utils/imageHelpers';
 
 // Import new icons for the password fields
-import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy, Shield, Activity, RefreshCw, Search, CheckCircle, ChevronRight, Star } from 'lucide-react';
+import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy, Shield, Activity, RefreshCw, Search, CheckCircle, ChevronRight, Star, BadgeCheck } from 'lucide-react';
 import GamificationSection from '../components/profile/GamificationSection';
 import ReviewsModal from '../components/ReviewsModal';
+import VerificationPaymentModal from '../components/profile/VerificationPaymentModal';
+import VerifiedBadge from '../components/ui/VerifiedBadge';
 
 const Profile = () => {
   const { user, setUser, fetchProfile } = useContext(AuthContext);
@@ -20,6 +22,7 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [activeSubTab, setActiveSubTab] = useState('overview');
   const [showReviewsModal, setShowReviewsModal] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
 
   // --- STATE FOR REPORT USER ---
   const [reportData, setReportData] = useState({
@@ -495,7 +498,10 @@ const Profile = () => {
                 style={{ display: 'none' }}
               />
               <div>
-                <h2 className="user-name">{user.name}</h2>
+                <h2 className="user-name">
+                  {user.name}
+                  {user.isVerified && <VerifiedBadge size={20} />}
+                </h2>
                 <p className="user-email">{user.email}</p>
                 <div className="user-rating-section">
                   <div className="star-display">
@@ -914,6 +920,54 @@ const Profile = () => {
               </div>
             </div>
 
+            {/* Verification Badge Section */}
+            <div className="security-section">
+              <div className="security-section-header">
+                <BadgeCheck size={20} />
+                <h4>Verified Account Badge</h4>
+              </div>
+              <p className="security-description">
+                Get the verified badge to build trust and stand out in the BookHive community.
+              </p>
+              
+              {user.isVerified ? (
+                <div className="verification-status verified">
+                  <div className="status-icon">
+                    <CheckCircle size={24} color="#10b981" />
+                  </div>
+                  <div className="status-content">
+                    <h5>You're Verified! <VerifiedBadge size={18} /></h5>
+                    <p>Your account has been verified since {new Date(user.verificationPurchaseDate).toLocaleDateString()}</p>
+                    <div className="verified-benefits">
+                      <span className="benefit-tag">✓ Trusted Profile</span>
+                      <span className="benefit-tag">✓ Better Visibility</span>
+                      <span className="benefit-tag">✓ Priority Support</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="verification-status not-verified">
+                  <div className="status-content">
+                    <h5>Get Verified</h5>
+                    <p>Stand out with a verified badge next to your name. One-time payment of ₹50.</p>
+                    <ul className="verification-benefits">
+                      <li>✓ Blue verified badge on your profile</li>
+                      <li>✓ Increased trust from other users</li>
+                      <li>✓ Better visibility in search results</li>
+                      <li>✓ Priority customer support</li>
+                    </ul>
+                    <button
+                      className="verification-btn"
+                      onClick={() => setShowVerificationModal(true)}
+                    >
+                      <BadgeCheck size={16} />
+                      Get Verified for ₹50
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Report User Section */}
             <div className="security-section">
               <div className="security-section-header">
@@ -1250,6 +1304,14 @@ const Profile = () => {
         onClose={() => setShowReviewsModal(false)}
         userId={user._id}
         userName={user.name}
+      />
+      
+      <VerificationPaymentModal
+        isOpen={showVerificationModal}
+        onClose={() => setShowVerificationModal(false)}
+        onSuccess={() => {
+          fetchProfile();
+        }}
       />
     </StyledWrapper>
   );
@@ -1873,6 +1935,114 @@ const StyledWrapper = styled.div`
         outline: none;
         border-color: #4f46e5;
         box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+      }
+    }
+
+    /* Verification Badge Styles */
+    .verification-status {
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      margin-top: 1rem;
+      
+      &.verified {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border: 2px solid #22c55e;
+        display: flex;
+        gap: 1rem;
+        align-items: start;
+        
+        .status-icon {
+          flex-shrink: 0;
+        }
+        
+        .status-content {
+          flex: 1;
+          
+          h5 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #166534;
+            margin: 0 0 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          }
+          
+          p {
+            color: #15803d;
+            margin: 0 0 1rem 0;
+            font-size: 0.875rem;
+          }
+          
+          .verified-benefits {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            
+            .benefit-tag {
+              background: white;
+              color: #166534;
+              padding: 0.375rem 0.75rem;
+              border-radius: 1rem;
+              font-size: 0.75rem;
+              font-weight: 600;
+              border: 1px solid #22c55e;
+            }
+          }
+        }
+      }
+      
+      &.not-verified {
+        background: #f9fafb;
+        border: 2px dashed #d1d5db;
+        
+        .status-content {
+          h5 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #111827;
+            margin: 0 0 0.5rem 0;
+          }
+          
+          p {
+            color: #6b7280;
+            margin: 0 0 1rem 0;
+          }
+          
+          .verification-benefits {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1.5rem 0;
+            
+            li {
+              color: #374151;
+              padding: 0.5rem 0;
+              font-size: 0.875rem;
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+            }
+          }
+          
+          .verification-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            
+            &:hover {
+              transform: translateY(-1px);
+              box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+            }
+          }
+        }
       }
     }
 

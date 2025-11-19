@@ -14,19 +14,7 @@ const BorrowRequests = () => {
   const [myRequests, setMyRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('received');
-  const [showDeniedRequests, setShowDeniedRequests] = useState(false);
-
-  // Close denied requests dropdown when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showDeniedRequests && !event.target.closest('.denied-requests-section')) {
-        setShowDeniedRequests(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showDeniedRequests]);
+  const [showDeniedModal, setShowDeniedModal] = useState(false);
 
   const [reviewModal, setReviewModal] = useState({ open: false, borrowRequestId: null, toUserId: null, counterpartName: '' });
 
@@ -131,9 +119,12 @@ const BorrowRequests = () => {
     }
 
     if (activeTab === 'received') {
-      return receivedRequests.length > 0 ? (
+      // Filter out denied requests from main view
+      const activeReceivedRequests = receivedRequests.filter(req => req.book && req.borrower && req.status !== 'denied');
+      
+      return activeReceivedRequests.length > 0 ? (
         <div className="requests-grid">
-          {receivedRequests.filter(req => req.book && req.borrower).map(req => (
+          {activeReceivedRequests.map(req => (
             <div key={req._id} className="request-card">
               <div className="book-cover-container">
                 <img
@@ -218,61 +209,10 @@ const BorrowRequests = () => {
     if (activeTab === 'my') {
       // Filter out denied requests from main view
       const activeRequests = myRequests.filter(req => req.book && req.owner && req.status !== 'denied');
-      const deniedRequests = myRequests.filter(req => req.book && req.owner && req.status === 'denied');
 
       return activeRequests.length > 0 ? (
-        <div>
-          {/* Denied Requests Button */}
-          {deniedRequests.length > 0 && (
-            <div className="denied-requests-section">
-              <button
-                onClick={() => setShowDeniedRequests(!showDeniedRequests)}
-                className="denied-requests-toggle"
-              >
-                <EyeOff size={16} />
-                Denied Requests ({deniedRequests.length})
-                {showDeniedRequests ? <Eye size={14} /> : <EyeOff size={14} />}
-              </button>
-
-              {showDeniedRequests && (
-                <div className="denied-requests-dropdown">
-                  <h4 className="denied-title">Denied Requests</h4>
-                  <div className="denied-requests-list">
-                    {deniedRequests.map(req => (
-                      <div key={req._id} className="denied-request-item">
-                        <img
-                          src={getFullImageUrl(req.book?.coverImage)}
-                          alt={req.book?.title || 'Book cover'}
-                          className="denied-book-cover"
-                          onError={(e) => {
-                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA0MEg2NVY4MEgzNVY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
-                          }}
-                        />
-                        <div className="denied-book-info">
-                          <h5 className="denied-book-title">{req.book?.title || 'Unknown Book'}</h5>
-                          <p className="denied-book-owner">Requested from {req.owner?.name || 'Unknown User'}</p>
-                          <p className="denied-book-date">Denied on: {formatDate(req.updatedAt || req.createdAt)}</p>
-                        </div>
-                        <div className="denied-actions">
-                          {renderStatusBadge(req.status)}
-                          <button
-                            onClick={() => handleDeleteRequest(req._id)}
-                            className="delete-btn"
-                            title="Delete this request"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="requests-grid">
-            {activeRequests.map(req => (
+        <div className="requests-grid">
+          {activeRequests.map(req => (
               <div key={req._id} className={`request-card ${req.status === 'approved' ? 'approved-card' : ''}`}>
                 <div className="book-cover-container">
                   <img
@@ -355,61 +295,10 @@ const BorrowRequests = () => {
                   )}
                 </div>
               </div>
-            ))}
-          </div>
+          ))}
         </div>
       ) : (
-        <div>
-          {/* Show denied requests button even when no active requests */}
-          {deniedRequests.length > 0 && (
-            <div className="denied-requests-section">
-              <button
-                onClick={() => setShowDeniedRequests(!showDeniedRequests)}
-                className="denied-requests-toggle"
-              >
-                <EyeOff size={16} />
-                Denied Requests ({deniedRequests.length})
-                {showDeniedRequests ? <Eye size={14} /> : <EyeOff size={14} />}
-              </button>
-
-              {showDeniedRequests && (
-                <div className="denied-requests-dropdown">
-                  <h4 className="denied-title">Denied Requests</h4>
-                  <div className="denied-requests-list">
-                    {deniedRequests.map(req => (
-                      <div key={req._id} className="denied-request-item">
-                        <img
-                          src={getFullImageUrl(req.book?.coverImage)}
-                          alt={req.book?.title || 'Book cover'}
-                          className="denied-book-cover"
-                          onError={(e) => {
-                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA0MEg2NVY4MEgzNVY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
-                          }}
-                        />
-                        <div className="denied-book-info">
-                          <h5 className="denied-book-title">{req.book?.title || 'Unknown Book'}</h5>
-                          <p className="denied-book-owner">Requested from {req.owner?.name || 'Unknown User'}</p>
-                          <p className="denied-book-date">Denied on: {formatDate(req.updatedAt || req.createdAt)}</p>
-                        </div>
-                        <div className="denied-actions">
-                          {renderStatusBadge(req.status)}
-                          <button
-                            onClick={() => handleDeleteRequest(req._id)}
-                            className="delete-btn"
-                            title="Delete this request"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          <EmptyState message="You haven't made any borrow requests yet. Go explore the community!" />
-        </div>
+        <EmptyState message="You haven't made any borrow requests yet. Go explore the community!" />
       );
     }
   };
@@ -422,11 +311,25 @@ const BorrowRequests = () => {
       </div>
 
       <div className="tabs-container">
-        <button onClick={() => setActiveTab('received')} className={`tab-btn ${activeTab === 'received' ? 'active' : ''}`}>
-          Requests for My Books
-        </button>
-        <button onClick={() => setActiveTab('my')} className={`tab-btn ${activeTab === 'my' ? 'active' : ''}`}>
-          My Borrow Requests
+        <div className="tabs-left">
+          <button onClick={() => setActiveTab('received')} className={`tab-btn ${activeTab === 'received' ? 'active' : ''}`}>
+            Requests for My Books
+          </button>
+          <button onClick={() => setActiveTab('my')} className={`tab-btn ${activeTab === 'my' ? 'active' : ''}`}>
+            My Borrow Requests
+          </button>
+        </div>
+        <button 
+          onClick={() => setShowDeniedModal(true)} 
+          className="denied-btn"
+          title="View Denied Requests"
+        >
+          <EyeOff size={18} />
+          Denied ({
+            activeTab === 'received' 
+              ? receivedRequests.filter(req => req.status === 'denied').length
+              : myRequests.filter(req => req.status === 'denied').length
+          })
         </button>
       </div>
 
@@ -450,7 +353,80 @@ const BorrowRequests = () => {
           setReviewModal({ open: false, borrowRequestId: null, toUserId: null, counterpartName: '' });
         }}
       />
+
+      {/* Denied Requests Modal */}
+      {showDeniedModal && (
+        <DeniedRequestsModal
+          requests={activeTab === 'received' 
+            ? receivedRequests.filter(req => req.status === 'denied')
+            : myRequests.filter(req => req.status === 'denied')
+          }
+          isReceived={activeTab === 'received'}
+          onClose={() => setShowDeniedModal(false)}
+          onDelete={handleDeleteRequest}
+        />
+      )}
     </StyledWrapper>
+  );
+};
+
+// Denied Requests Modal Component
+const DeniedRequestsModal = ({ requests, isReceived, onClose, onDelete }) => {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Denied Requests</h2>
+          <button onClick={onClose} className="close-btn">
+            <X size={24} />
+          </button>
+        </div>
+        <div className="modal-body">
+          {requests.length === 0 ? (
+            <div className="empty-denied">
+              <EyeOff size={48} style={{ color: '#9ca3af', marginBottom: '1rem' }} />
+              <p>No denied requests</p>
+            </div>
+          ) : (
+            <div className="denied-list">
+              {requests.map(req => (
+                <div key={req._id} className="denied-item">
+                  <img
+                    src={getFullImageUrl(req.book?.coverImage)}
+                    alt={req.book?.title || 'Book cover'}
+                    className="denied-cover"
+                    onError={(e) => {
+                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA0MEg2NVY4MEgzNVY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
+                    }}
+                  />
+                  <div className="denied-info">
+                    <h4>{req.book?.title || 'Unknown Book'}</h4>
+                    <p className="denied-user">
+                      {isReceived 
+                        ? `Requested by ${req.borrower?.name || 'Unknown User'}`
+                        : `Requested from ${req.owner?.name || 'Unknown User'}`
+                      }
+                    </p>
+                    <p className="denied-date">Denied on: {formatDate(req.updatedAt || req.createdAt)}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to delete this request from history?')) {
+                        onDelete(req._id);
+                      }
+                    }}
+                    className="delete-denied-btn"
+                    title="Delete from history"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -482,8 +458,35 @@ const StyledWrapper = styled.div`
 
   .tabs-container {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
     border-bottom: 1px solid #e5e7eb;
     margin-bottom: 2rem;
+  }
+
+  .tabs-left {
+    display: flex;
+  }
+
+  .denied-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 0.5rem;
+
+    &:hover {
+      background: #fee2e2;
+      border-color: #fca5a5;
+    }
   }
   
   .tab-btn {
@@ -792,204 +795,140 @@ const StyledWrapper = styled.div`
     margin-top: 0.5rem;
   }
 
-  /* Denied Requests Section */
-  .denied-requests-section {
-    position: relative;
-    margin-bottom: 2rem;
-  }
-
-  .denied-requests-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-    border: 1px solid #fca5a5;
-    border-radius: 0.75rem;
-    color: #dc2626;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-left: auto;
-    width: fit-content;
-
-    &:hover {
-      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(220, 38, 38, 0.15);
-    }
-
-    &:active {
-      transform: translateY(0);
-    }
-  }
-
-  .denied-backdrop {
+  /* Modal Styles */
+  .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.3);
-    z-index: 9;
-    display: none;
-
-    @media (max-width: 640px) {
-      display: block;
-    }
-  }
-
-  .denied-requests-dropdown {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    z-index: 10;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.75rem;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    min-width: 400px;
-    max-width: 500px;
-    max-height: 400px;
-    overflow-y: auto;
-    margin-top: 0.5rem;
-
-    @media (max-width: 640px) {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 90vw;
-      max-width: 90vw;
-      min-width: unset;
-      z-index: 11;
-    }
-  }
-
-  .denied-header {
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    z-index: 1000;
     padding: 1rem;
-    border-bottom: 1px solid #fee2e2;
   }
 
-  .denied-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #dc2626;
-    margin: 0;
-  }
-
-  .denied-close-btn {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    border: none;
-    background: #fee2e2;
-    color: #dc2626;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-
-    &:hover {
-      background: #fecaca;
-    }
-
-    @media (max-width: 640px) {
-      display: flex;
-    }
-  }
-
-  .denied-requests-list {
-    padding: 0.5rem;
-  }
-
-  .denied-request-item {
+  .modal-content {
+    background: white;
+    border-radius: 16px;
+    max-width: 700px;
+    width: 100%;
+    max-height: 80vh;
     display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    border-radius: 0.5rem;
-    transition: background-color 0.2s ease;
-    border-bottom: 1px solid #f3f4f6;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
 
-    &:hover {
-      background-color: #f9fafb;
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #111827;
+      margin: 0;
     }
 
-    &:last-child {
-      border-bottom: none;
+    .close-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #6b7280;
+      padding: 0.5rem;
+      border-radius: 8px;
+      transition: all 0.2s;
+
+      &:hover {
+        background: #f3f4f6;
+        color: #111827;
+      }
     }
   }
 
-  .denied-book-cover {
-    width: 40px;
-    height: 60px;
-    object-fit: cover;
-    object-position: center;
-    border-radius: 0.25rem;
-    flex-shrink: 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    background-color: #f9fafb;
-    border: 1px solid #e5e7eb;
+  .modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
   }
 
-  .denied-book-info {
-    flex-grow: 1;
-    min-width: 0;
-  }
-
-  .denied-book-title {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #111827;
-    margin: 0 0 0.25rem 0;
-    line-height: 1.3;
-  }
-
-  .denied-book-owner {
-    font-size: 0.75rem;
+  .empty-denied {
+    text-align: center;
+    padding: 3rem 1rem;
     color: #6b7280;
-    margin: 0 0 0.25rem 0;
+
+    p {
+      margin-top: 0.5rem;
+      font-size: 1rem;
+    }
   }
 
-  .denied-book-date {
-    font-size: 0.75rem;
-    color: #9ca3af;
-    margin: 0;
-  }
-
-  .denied-actions {
+  .denied-list {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-shrink: 0;
+    flex-direction: column;
+    gap: 1rem;
   }
 
-  .delete-btn {
+  .denied-item {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    border: none;
-    background: #fee2e2;
-    color: #dc2626;
-    border-radius: 0.375rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    transition: all 0.2s;
 
     &:hover {
-      background: #fecaca;
-      transform: scale(1.05);
+      background: #f3f4f6;
+      border-color: #d1d5db;
     }
 
-    &:active {
-      transform: scale(0.95);
+    .denied-cover {
+      width: 60px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .denied-info {
+      flex: 1;
+
+      h4 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 0.5rem 0;
+      }
+
+      .denied-user {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin: 0 0 0.25rem 0;
+      }
+
+      .denied-date {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin: 0;
+      }
+    }
+
+    .delete-denied-btn {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      padding: 0.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      height: fit-content;
+
+      &:hover {
+        background: #fee2e2;
+        border-color: #fca5a5;
+      }
     }
   }
 `;

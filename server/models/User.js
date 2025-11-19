@@ -147,6 +147,17 @@ const userSchema = new mongoose.Schema({
       select: false // Don't include in queries by default
     }
   },
+  // Verification badge
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationPurchaseDate: {
+    type: Date
+  },
+  verificationPaymentId: {
+    type: String
+  },
   // Admin fields
   role: {
     type: String,

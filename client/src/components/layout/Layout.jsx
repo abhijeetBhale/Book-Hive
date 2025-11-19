@@ -3,6 +3,7 @@ import Navbar from './Navbar';
 import { AuthContext } from '../../context/AuthContext';
 import { PlusCircle } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import FloatingVerificationButton from '../ui/FloatingVerificationButton';
 
 const Layout = ({ children }) => {
   const { user } = useContext(AuthContext);
@@ -52,6 +53,9 @@ const Layout = ({ children }) => {
       <main className="pt-20 w-full">
         {children}
       </main>
+      
+      {/* Floating Verification Button - Shows for non-verified users */}
+      <FloatingVerificationButton />
       
       {/* Floating Action Button for Adding Books - Only show on Home and Map pages */}
       {user && allowedPages.includes(location.pathname) && (

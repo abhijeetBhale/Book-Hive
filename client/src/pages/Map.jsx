@@ -270,7 +270,11 @@ const Map = () => {
             <h2>Community Activity</h2>
             <div className="online-status">
               <div className="online-indicator-header online"></div>
-              <span>{onlineCount} online</span>
+              <span className="online-count">{onlineCount}</span>
+              <div className="online-tooltip">
+                <div className="tooltip-indicator online"></div>
+                <span className="tooltip-text">{onlineCount} users are using BookHive</span>
+              </div>
             </div>
           </div>
           <div className="controls">
@@ -712,30 +716,118 @@ const StyledWrapper = styled.div`
       .online-status {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        background-color: #f0fdf4;
-        padding: 0.5rem 0.75rem;
-        border-radius: 0.5rem;
-        border: 1px solid #bbf7d0;
+        gap: .625rem;
+        background: #ffffff;
+        padding: 0.225rem 1rem;
+        border-radius: 50px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        position: relative;
+        margin-top: 7px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          border-color: #4F46E5;
+          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+          
+          .online-tooltip {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(0);
+          }
+        }
         
         .online-indicator-header {
           width: 10px;
           height: 10px;
           border-radius: 50%;
+          position: relative;
+          flex-shrink: 0;
           
           &.online {
             background: #22c55e;
             box-shadow: 
-              0 0 0 2px rgba(34, 197, 94, 0.3),
-              0 1px 3px rgba(34, 197, 94, 0.4);
+              0 0 0 2px rgba(34, 197, 94, 0.2),
+              0 0 6px rgba(34, 197, 94, 0.4);
             animation: pulse-glow 2s infinite;
           }
         }
         
-        span {
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: #065f46;
+        .online-count {
+          font-size: 1.125rem;
+          font-weight: 700;
+          color: #1e293b;
+          letter-spacing: -0.02em;
+        }
+        
+        .online-tooltip {
+          position: absolute;
+          left: calc(100% + 12px);
+          top: -19%;
+          transform: translateY(-50%) translateX(-10px);
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 0.75rem 1rem;
+          white-space: nowrap;
+          box-shadow: 
+            0 10px 25px rgba(0, 0, 0, 0.1),
+            0 4px 10px rgba(0, 0, 0, 0.05);
+          opacity: 0;
+          visibility: hidden;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          z-index: 1000;
+          pointer-events: none;
+          display: flex;
+          align-items: center;
+          gap: 0.625rem;
+          
+          &::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 50%;
+            transform: translateY(-50%) rotate(45deg);
+            width: 12px;
+            height: 12px;
+            background: #ffffff;
+            border-left: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            z-index: -1;
+          }
+          
+          .tooltip-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            
+            &.online {
+              background: #22c55e;
+              box-shadow: 
+                0 0 0 2px rgba(34, 197, 94, 0.2),
+                0 0 6px rgba(34, 197, 94, 0.4);
+              animation: pulse-glow 2s infinite;
+            }
+          }
+          
+          .tooltip-text {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #334155;
+            letter-spacing: 0.01em;
+          }
+        }
+      }
+      
+      @keyframes shimmer {
+        0%, 100% {
+          transform: translateX(-100%);
+          opacity: 0;
+        }
+        50% {
+          opacity: 1;
         }
       }
     }
@@ -756,10 +848,39 @@ const StyledWrapper = styled.div`
         }
         
         .online-status {
-          padding: 0.375rem 0.5rem;
+          padding: 0.5rem 0.875rem;
           
-          span {
-            font-size: 0.75rem;
+          .online-indicator-header {
+            width: 8px;
+            height: 8px;
+          }
+          
+          .online-count {
+            font-size: 1rem;
+          }
+          
+          .online-tooltip {
+            left: auto;
+            right: calc(100% + 12px);
+            padding: 0.625rem 0.875rem;
+            
+            &::before {
+              left: auto;
+              right: -6px;
+              border-left: none;
+              border-bottom: none;
+              border-right: 1px solid #e2e8f0;
+              border-top: 1px solid #e2e8f0;
+            }
+            
+            .tooltip-indicator {
+              width: 8px;
+              height: 8px;
+            }
+            
+            .tooltip-text {
+              font-size: 0.8rem;
+            }
           }
         }
       }

@@ -21,12 +21,12 @@ import {
   Eye,
   Globe,
   Star,
-  Quote,
   X,
   MessageCircle,
 } from 'lucide-react';
 import { AvatarCircles } from '../components/ui/avatar-circles';
 import { AuroraText } from '../components/ui/aurora-text';
+import TestimonialsGrid from '../components/ui/testimonials-grid';
 
 // Authentication Modal Component
 const AuthModal = ({ isOpen, onClose }) => {
@@ -493,7 +493,7 @@ const Home = () => {
                   </div>
                 </li>
               </ul>
-              <Link to="/login" className="btn primary-btn group">
+              <Link to={user ? '/map' : '/login'} className="btn primary-btn group">
                 Explore The Community Map
                 <ArrowRight className="arrow-icon" />
               </Link>
@@ -568,7 +568,7 @@ const Home = () => {
       </section>
 
       {/* ========================================================== */}
-      {/* ============ UPDATED "COMMUNITY REVIEWS" SECTION ============ */}
+      {/* ============ ANIMATED TESTIMONIALS SECTION ============ */}
       {/* ========================================================== */}
       <section className="reviews-section">
         <div className="content-container">
@@ -577,25 +577,14 @@ const Home = () => {
             <p className="section-subtitle">Real experiences from book lovers who've found their reading community through BookHive.</p>
           </div>
 
-          {/* Reusing the existing books carousel for a consistent horizontal scroll */}
-          <div className="books-carousel">
-            <div className="books-scroller testimonials-scroller">
-              {/* Use dynamic testimonials if available, otherwise fallback to static ones */}
-              {(testimonials.length > 0 ? [...testimonials, ...testimonials] : [...communityReviews, ...communityReviews]).map((review, index) => (
-                <div key={index} className="testimonial-card">
-                  <Quote className="testimonial-quote-icon" />
-                  <p className="testimonial-text">{review.review}</p>
-                  <div className="testimonial-author">
-                    <img src={review.avatar} alt={review.user} className="testimonial-avatar" />
-                    <div className="testimonial-author-info">
-                      <p className="testimonial-user">{review.user}</p>
-                      <p className="testimonial-title">{review.title}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Grid Testimonials Component */}
+          <TestimonialsGrid 
+            testimonials={
+              testimonials.length > 0 
+                ? testimonials
+                : communityReviews
+            }
+          />
 
           {/* Add Testimonial Button - Only show if user is logged in */}
           {user ? (
@@ -1677,7 +1666,7 @@ const StyledWrapper = styled.div`
         cursor: pointer;
         transition: all 0.3s ease;
         box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
-        margin-bottom: 1rem;
+        margin-bottom: 20px;
 
         &:hover {
             transform: translateY(-2px);
@@ -1693,7 +1682,7 @@ const StyledWrapper = styled.div`
     .testimonial-cta-text {
         color: #64748b;
         font-size: 1rem;
-        margin: 0;
+        margin-top: 20px;
         line-height: 1.6;
     }
   }

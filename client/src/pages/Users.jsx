@@ -685,12 +685,50 @@ const StyledWrapper = styled.div`
   margin: 0 auto;
   font-family: 'Inter', sans-serif;
 
+  @media (max-width: 768px) {
+    padding: 1.5rem 1rem;
+  }
+
+  @media (max-width: 480px) {
+    padding: 1rem 0.75rem;
+  }
+
   .page-header {
     margin-bottom: 2rem;
     text-align: center;
+    
+    @media (max-width: 768px) {
+      margin-bottom: 1.5rem;
+    }
   }
-  .main-title { font-size: 2.5rem; font-weight: 800; color: #111827; }
-  .subtitle { font-size: 1.125rem; color: #4b5563; margin-top: 0.5rem; }
+  
+  .main-title { 
+    font-size: 2.5rem; 
+    font-weight: 800; 
+    color: #111827;
+    
+    @media (max-width: 768px) {
+      font-size: 2rem;
+    }
+    
+    @media (max-width: 480px) {
+      font-size: 1.5rem;
+    }
+  }
+  
+  .subtitle { 
+    font-size: 1.125rem; 
+    color: #4b5563; 
+    margin-top: 0.5rem;
+    
+    @media (max-width: 768px) {
+      font-size: 1rem;
+    }
+    
+    @media (max-width: 480px) {
+      font-size: 0.875rem;
+    }
+  }
   
   .filter-bar {
       display: flex;
@@ -706,10 +744,40 @@ const StyledWrapper = styled.div`
       @media (max-width: 768px) {
           gap: 0.5rem;
           padding: 0.5rem;
+          margin-bottom: 1.5rem;
       }
   }
-  .search-wrapper { position: relative; flex-grow: 1; }
-  .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #9ca3af; }
+  
+  .search-wrapper { 
+    position: relative; 
+    flex-grow: 1;
+    min-width: 200px;
+    
+    @media (max-width: 768px) {
+      flex-basis: 100%;
+      min-width: unset;
+    }
+  }
+  
+  .search-icon { 
+    position: absolute; 
+    left: 1rem; 
+    top: 50%; 
+    transform: translateY(-50%); 
+    color: #9ca3af;
+    
+    @media (max-width: 768px) {
+      left: 0.75rem;
+    }
+  }
+  
+  .filter-wrapper {
+    @media (max-width: 768px) {
+      flex: 1;
+      min-width: 120px;
+    }
+  }
+  
   .filter-bar input, .filter-bar select {
       width: 100%;
       padding: 0.75rem 1rem 0.75rem 3rem;
@@ -718,11 +786,18 @@ const StyledWrapper = styled.div`
       background-color: #f8f9fe;
       font-size: 1rem;
       font-weight: 500;
+      
+      @media (max-width: 768px) {
+        padding: 0.625rem 0.75rem 0.625rem 2.5rem;
+        font-size: 0.875rem;
+      }
+      
       &:focus {
           outline: none;
           box-shadow: 0 0 0 2px #c7d2fe;
       }
   }
+  
   .filter-bar select {
       padding-left: 1rem;
       background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
@@ -732,6 +807,11 @@ const StyledWrapper = styled.div`
       -webkit-appearance: none;
       -moz-appearance: none;
       appearance: none;
+      
+      @media (max-width: 768px) {
+        padding-left: 0.75rem;
+        padding-right: 2rem;
+      }
   }
   .books-tab-btn {
       padding: 0.75rem 1rem;
@@ -806,13 +886,27 @@ const StyledWrapper = styled.div`
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
       gap: 1.5rem;
-      align-items: stretch; /* Ensure all cards stretch to same height */
+      align-items: stretch;
+      
+      @media (max-width: 768px) {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1rem;
+      }
+      
+      @media (max-width: 480px) {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
   }
   
   .users-list {
       display: flex;
       flex-direction: column;
       gap: 1rem;
+      
+      @media (max-width: 768px) {
+        gap: 0.75rem;
+      }
   }
 
   .user-card-link {
@@ -820,7 +914,6 @@ const StyledWrapper = styled.div`
       color: inherit;
   }
 
-  // ...existing code...
   .user-card {
       position: relative;
       background-color: white;
@@ -830,8 +923,27 @@ const StyledWrapper = styled.div`
       border: 1px solid #e5e7eb;
       display: flex;
       flex-direction: column;
-      height: 100%; /* Ensure consistent height */
-      min-height: 320px; /* Set minimum height for all cards */
+      height: 100%;
+      min-height: 320px;
+      transition: all 0.3s ease;
+      
+      &:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 20px -5px rgba(101, 119, 134, 0.1);
+          border-color: #c7d2fe;
+      }
+      
+      @media (max-width: 768px) {
+        padding: 1.25rem;
+        min-height: 300px;
+        border-radius: 1.25rem;
+      }
+      
+      @media (max-width: 480px) {
+        padding: 1rem;
+        min-height: 280px;
+        border-radius: 1rem;
+      }
   }
   .priority-badge {
       position: absolute;
@@ -866,6 +978,17 @@ const StyledWrapper = styled.div`
     justify-content: center;
     transition: all 0.3s ease;
     
+    @media (max-width: 768px) {
+      width: 76px;
+      height: 76px;
+    }
+    
+    @media (max-width: 480px) {
+      width: 70px;
+      height: 70px;
+      margin-bottom: 0.75rem;
+    }
+    
     &.online {
       background: #22c55e;
       padding: 4px;
@@ -873,12 +996,20 @@ const StyledWrapper = styled.div`
         0 0 0 3px rgba(34, 197, 94, 0.3),
         0 5px 15px rgba(34, 197, 94, 0.4);
       animation: pulse-glow-users 2s infinite;
+      
+      @media (max-width: 480px) {
+        padding: 3px;
+      }
     }
     
     &.offline {
       background: #6b7280;
       padding: 4px;
       box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+      
+      @media (max-width: 480px) {
+        padding: 3px;
+      }
     }
     
     .avatar {
@@ -887,6 +1018,10 @@ const StyledWrapper = styled.div`
         border-radius: 50%;
         object-fit: cover;
         border: 3px solid white;
+        
+        @media (max-width: 480px) {
+          border: 2px solid white;
+        }
     }
     
     .online-indicator {
@@ -902,9 +1037,20 @@ const StyledWrapper = styled.div`
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    flex-wrap: wrap; /* Allow wrapping for long names */
+    flex-wrap: wrap;
     line-height: 1.3;
-    min-height: 2.5rem; /* Consistent height for name section */
+    min-height: 2.5rem;
+    
+    @media (max-width: 768px) {
+      font-size: 1.125rem;
+      min-height: 2.25rem;
+    }
+    
+    @media (max-width: 480px) {
+      font-size: 1rem;
+      min-height: 2rem;
+      gap: 0.375rem;
+    }
     
     .online-badge {
       font-size: 0.65rem;
@@ -919,15 +1065,32 @@ const StyledWrapper = styled.div`
         0 2px 4px rgba(34, 197, 94, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
       border: 1px solid rgba(255, 255, 255, 0.2);
-      flex-shrink: 0; /* Prevent badge from shrinking */
+      flex-shrink: 0;
+      
+      @media (max-width: 480px) {
+        font-size: 0.6rem;
+        padding: 0.15rem 0.4rem;
+      }
     }
   }
+  
   .user-tagline { 
     font-size: 0.9rem; 
     color: #6b7280; 
     margin-bottom: 1.5rem; 
     flex-grow: 1;
-    min-height: 1.5rem; /* Consistent height for tagline */
+    min-height: 1.5rem;
+    
+    @media (max-width: 768px) {
+      font-size: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+    
+    @media (max-width: 480px) {
+      font-size: 0.8rem;
+      margin-bottom: 1rem;
+      min-height: 1.25rem;
+    }
   }
   
   .stats-grid {
@@ -936,7 +1099,16 @@ const StyledWrapper = styled.div`
       gap: 1rem;
       width: 100%;
       margin-top: auto;
+      
+      @media (max-width: 768px) {
+        gap: 0.75rem;
+      }
+      
+      @media (max-width: 480px) {
+        gap: 0.5rem;
+      }
   }
+  
   .stat-item {
       background-color: #f8f9fe;
       padding: 0.75rem;
@@ -945,30 +1117,72 @@ const StyledWrapper = styled.div`
       display: flex;
       flex-direction: column;
       justify-content: center;
-      min-height: 80px; /* Consistent height for stat items */
+      min-height: 80px;
+      
+      @media (max-width: 768px) {
+        padding: 0.625rem 0.5rem;
+        min-height: 70px;
+      }
+      
+      @media (max-width: 480px) {
+        padding: 0.5rem 0.375rem;
+        min-height: 65px;
+      }
       
       .stat-icon {
           color: #4f46e5;
           margin: 0 auto 0.5rem;
+          
+          @media (max-width: 480px) {
+            width: 16px;
+            height: 16px;
+            margin-bottom: 0.375rem;
+          }
       }
+      
       span {
           display: block;
           font-size: 0.8rem;
           color: #9ca3af;
           text-transform: uppercase;
           margin-bottom: 0.25rem;
+          
+          @media (max-width: 768px) {
+            font-size: 0.7rem;
+          }
+          
+          @media (max-width: 480px) {
+            font-size: 0.625rem;
+            margin-bottom: 0.125rem;
+          }
       }
+      
       strong {
           font-size: 1.1rem;
           font-weight: 600;
           color: #374151;
           line-height: 1.2;
           
-          /* Smart text sizing for distance */
+          @media (max-width: 768px) {
+            font-size: 1rem;
+          }
+          
+          @media (max-width: 480px) {
+            font-size: 0.875rem;
+          }
+          
           &.distance-text {
-            font-size: 0.95rem; /* Slightly smaller for distance */
-            word-break: break-word; /* Prevent overflow */
-            hyphens: auto; /* Allow hyphenation if needed */
+            font-size: 0.95rem;
+            word-break: break-word;
+            hyphens: auto;
+            
+            @media (max-width: 768px) {
+              font-size: 0.875rem;
+            }
+            
+            @media (max-width: 480px) {
+              font-size: 0.75rem;
+            }
           }
       }
   }
