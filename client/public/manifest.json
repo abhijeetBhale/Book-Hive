@@ -1,0 +1,23 @@
+{
+  "name": "BookHive - Share Your Thoughts",
+  "short_name": "BookHive",
+  "description": "A revolutionary platform for book lovers to connect, share, and discover new literary adventures through seamless borrowing and real-time communication.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1a87db",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/src/assets/icons8-bee-100.png",
+      "sizes": "100x100",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["books", "social", "lifestyle", "education"],
+  "lang": "en-US",
+  "dir": "ltr",
+  "scope": "/",
+  "prefer_related_applications": false
+}

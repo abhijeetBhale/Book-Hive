@@ -27,6 +27,8 @@ import {
 import { AvatarCircles } from '../components/ui/avatar-circles';
 import { AuroraText } from '../components/ui/aurora-text';
 import TestimonialsGrid from '../components/ui/testimonials-grid';
+import SEO from '../components/SEO';
+import { PAGE_SEO, generateStructuredData } from '../utils/seo';
 
 // Authentication Modal Component
 const AuthModal = ({ isOpen, onClose }) => {
@@ -278,9 +280,17 @@ const Home = () => {
   const { ref: statsRef, inView: isStatsVisible } = useInView({ threshold: 0.3 });
 
   return (
-    <StyledWrapper>
-      {/* Hero Section */}
-      <section className="hero-section">
+    <>
+      <SEO 
+        title={PAGE_SEO.home.title}
+        description={PAGE_SEO.home.description}
+        keywords={PAGE_SEO.home.keywords}
+        url={PAGE_SEO.home.url}
+        structuredData={generateStructuredData('WebSite')}
+      />
+      <StyledWrapper>
+        {/* Hero Section */}
+        <section className="hero-section">
         <div className="lottie-background">
           <Player autoplay loop speed={0.49} src={animationData} style={{ height: '100%', width: '100%' }} />
         </div>
@@ -667,6 +677,7 @@ const Home = () => {
         onClose={() => setShowAuthModal(false)}
       />
     </StyledWrapper>
+    </>
   );
 };
 
