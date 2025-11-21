@@ -1,1 +1,8 @@
+# Serve static files directly
+/robots.txt   /robots.txt   200
+/sitemap.xml  /sitemap.xml  200
+/manifest.json /manifest.json 200
+/google*.html /google*.html 200
+
+# Redirect all other requests to index.html for SPA routing
 /*    /index.html   200
