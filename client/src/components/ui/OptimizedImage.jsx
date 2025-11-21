@@ -83,6 +83,40 @@ const QualityBadge = styled.div`
   transition: opacity 0.3s ease;
 `;
 
+// In-memory cache for successfully loaded images
+const imageCache = new Map();
+
+// Load cached images from sessionStorage on mount
+const loadCacheFromStorage = () => {
+  try {
+    const cached = sessionStorage.getItem('imageCache');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      Object.entries(parsed).forEach(([key, value]) => {
+        imageCache.set(key, value);
+      });
+    }
+  } catch (err) {
+    // Ignore cache load errors
+  }
+};
+
+// Save cache to sessionStorage
+const saveCacheToStorage = () => {
+  try {
+    const cacheObj = {};
+    imageCache.forEach((value, key) => {
+      cacheObj[key] = value;
+    });
+    sessionStorage.setItem('imageCache', JSON.stringify(cacheObj));
+  } catch (err) {
+    // Ignore cache save errors (e.g., quota exceeded)
+  }
+};
+
+// Load cache on first import
+loadCacheFromStorage();
+
 const OptimizedImage = ({ 
   src, 
   alt, 
@@ -95,27 +129,43 @@ const OptimizedImage = ({
   style,
   ...props 
 }) => {
-  const [currentSrc, setCurrentSrc] = useState(src);
-  const [loaded, setLoaded] = useState(false);
+  // Check if image is already cached
+  const cachedSrc = imageCache.get(src);
+  const initialSrc = cachedSrc || src;
+  
+  const [currentSrc, setCurrentSrc] = useState(initialSrc);
+  const [loaded, setLoaded] = useState(!!cachedSrc);
   const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedSrc);
   const [imageQuality, setImageQuality] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 2;
 
   // Reset states when src changes
   useEffect(() => {
-    setCurrentSrc(src);
-    setLoaded(false);
-    setError(false);
-    setLoading(true);
-    setImageQuality(null);
-    setRetryCount(0);
+    const cached = imageCache.get(src);
+    if (cached) {
+      // Use cached version immediately
+      setCurrentSrc(cached);
+      setLoaded(true);
+      setError(false);
+      setLoading(false);
+    } else {
+      setCurrentSrc(src);
+      setLoaded(false);
+      setError(false);
+      setLoading(true);
+      setImageQuality(null);
+      setRetryCount(0);
+    }
   }, [src]);
 
-  // Optimize image URL for better quality
+  // Optimize image URL for better quality and reliability
   const optimizeImageUrl = (url) => {
     if (!url) return url;
+    
+    // Skip optimization for placeholder images
+    if (url.includes('placehold.co')) return url;
     
     // Google Books image optimization
     if (url.includes('books.google.com') || url.includes('googleusercontent.com')) {
@@ -131,21 +181,38 @@ const OptimizedImage = ({
         optimizedUrl += 'fife=w800-h1200';
       }
       
+      // Ensure HTTPS
+      optimizedUrl = optimizedUrl.replace(/^http:/, 'https:');
+      
       return optimizedUrl;
     }
     
     // Open Library image optimization
     if (url.includes('covers.openlibrary.org')) {
       // Use large size if not already specified
+      let optimizedUrl = url;
       if (url.includes('-S.jpg')) {
-        return url.replace('-S.jpg', '-L.jpg');
+        optimizedUrl = url.replace('-S.jpg', '-L.jpg');
+      } else if (url.includes('-M.jpg')) {
+        optimizedUrl = url.replace('-M.jpg', '-L.jpg');
       }
-      if (url.includes('-M.jpg')) {
-        return url.replace('-M.jpg', '-L.jpg');
-      }
+      // Ensure HTTPS
+      optimizedUrl = optimizedUrl.replace(/^http:/, 'https:');
+      return optimizedUrl;
     }
     
-    return url;
+    // Cloudinary optimization (if using Cloudinary)
+    if (url.includes('cloudinary.com')) {
+      // Ensure proper transformations
+      if (!url.includes('/upload/')) return url;
+      
+      const parts = url.split('/upload/');
+      const transformations = 'f_auto,q_auto,w_800,h_1200,c_limit';
+      return `${parts[0]}/upload/${transformations}/${parts[1]}`;
+    }
+    
+    // Ensure HTTPS for all URLs
+    return url.replace(/^http:/, 'https:');
   };
 
   const handleImageLoad = (e) => {
@@ -153,6 +220,12 @@ const OptimizedImage = ({
     setLoaded(true);
     setLoading(false);
     setError(false);
+    
+    // Cache the successful image URL in memory
+    imageCache.set(src, currentSrc);
+    
+    // Persist to sessionStorage for page reloads
+    saveCacheToStorage();
     
     // Determine image quality based on dimensions
     const quality = img.naturalWidth > 400 ? 'HD' : img.naturalWidth > 200 ? 'Good' : 'Low';
@@ -164,25 +237,32 @@ const OptimizedImage = ({
   const handleImageError = (e) => {
     setLoading(false);
     
-    // Retry with cache-busting parameter
-    if (retryCount < maxRetries) {
-      setTimeout(() => {
-        const cacheBuster = `?retry=${retryCount + 1}&t=${Date.now()}`;
-        const newSrc = currentSrc.split('?')[0] + cacheBuster;
-        setCurrentSrc(newSrc);
-        setRetryCount(prev => prev + 1);
-        setLoading(true);
-        setError(false);
-      }, 500 * (retryCount + 1)); // Exponential backoff
+    // Don't retry if we're already using the fallback
+    if (currentSrc === fallbackSrc || currentSrc.includes('placehold.co')) {
+      setError(true);
+      if (onError) onError(e);
       return;
     }
     
-    // Try fallback source if available and not already tried
-    if (fallbackSrc && currentSrc !== fallbackSrc && !currentSrc.includes(fallbackSrc)) {
+    // Try fallback source immediately if available
+    if (fallbackSrc && currentSrc !== fallbackSrc) {
       setCurrentSrc(fallbackSrc);
       setError(false);
       setLoading(true);
       setRetryCount(0);
+      return;
+    }
+    
+    // Only retry once with cache-busting for non-fallback images
+    if (retryCount < 1 && !currentSrc.includes('retry=')) {
+      setTimeout(() => {
+        const separator = currentSrc.includes('?') ? '&' : '?';
+        const newSrc = `${currentSrc}${separator}retry=1&t=${Date.now()}`;
+        setCurrentSrc(newSrc);
+        setRetryCount(1);
+        setLoading(true);
+        setError(false);
+      }, 300);
       return;
     }
     

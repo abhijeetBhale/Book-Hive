@@ -1,11 +1,10 @@
-import React from 'react';
-import { CheckCircle } from 'lucide-react';
 import styled from 'styled-components';
+import { BadgeCheck } from 'lucide-react';
 
-const VerifiedBadge = ({ size = 16, className = '' }) => {
+const VerifiedBadge = ({ size = 20, className = '' }) => {
   return (
     <StyledBadge className={className} title="Verified Account">
-      <CheckCircle size={size} fill="#3b82f6" color="white" />
+      <BadgeCheck size={size} color="#1a87db" fill="#ffffffff" />
     </StyledBadge>
   );
 };

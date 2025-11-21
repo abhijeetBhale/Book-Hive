@@ -79,3 +79,71 @@ export const sendVerificationConfirmationEmail = async (email, name) => {
   
   await sendEmail({ to: email, subject, html });
 };
+
+export const sendAccountDeletionEmail = async (email, name) => {
+  const subject = 'Goodbye from BookHive - Your Account Has Been Deleted';
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+        .icon { font-size: 48px; margin-bottom: 10px; }
+        .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
+        .info-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
+        .highlight { color: #667eea; font-weight: bold; }
+        .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="icon">📚</div>
+          <h1>Goodbye, ${name}</h1>
+          <p>We're sorry to see you go</p>
+        </div>
+        <div class="content">
+          <p>Your BookHive account has been successfully deleted as requested.</p>
+          
+          <div class="info-box">
+            <h3>What has been deleted:</h3>
+            <ul>
+              <li>Your profile and personal information</li>
+              <li>All your book listings</li>
+              <li>Your friendships and connections</li>
+              <li>All messages and conversations</li>
+              <li>Your reviews and ratings</li>
+              <li>Your location data from the map</li>
+              <li>All borrow and lending history</li>
+              <li>Club memberships and activities</li>
+            </ul>
+          </div>
+
+          <p>Thank you for being part of the BookHive community. We appreciate the time you spent with us and hope you enjoyed sharing books with fellow readers.</p>
+
+          <div class="info-box">
+            <h3>📖 What We Offered:</h3>
+            <p>BookHive was designed to connect book lovers, facilitate book sharing, and build a community of readers. We hope we made a positive impact during your time with us.</p>
+          </div>
+
+          <p><strong>Changed your mind?</strong></p>
+          <p>If you'd like to return to BookHive in the future, you're always welcome to create a new account. However, please note that your previous data cannot be recovered.</p>
+
+          <p>We wish you all the best in your future reading adventures!</p>
+          
+          <p><strong>The BookHive Team</strong></p>
+        </div>
+        <div class="footer">
+          <p>This is a confirmation email for your account deletion request.</p>
+          <p>If you did not request this deletion, please contact us immediately at support@bookhive.com</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  await sendEmail({ to: email, subject, html });
+};

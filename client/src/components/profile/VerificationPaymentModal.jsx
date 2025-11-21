@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import styled from 'styled-components';
-import { X, CheckCircle, Shield, Star, Zap, Loader, BookOpen } from 'lucide-react';
+import { X, Shield, Star, Zap, Loader, BookOpen, BadgeCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AuthContext } from '../../context/AuthContext';
 import { getFullImageUrl } from '../../utils/imageHelpers';
@@ -25,8 +25,12 @@ const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
   const handlePayment = async () => {
     setLoading(true);
     try {
+      // Get API URL
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      console.log('API URL:', apiUrl);
+      
       // Create order
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/payment/create-verification-order`, {
+      const response = await fetch(`${apiUrl}/payment/create-verification-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -34,16 +38,24 @@ const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
         }
       });
 
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (!response.ok) {
         // Check if it's a configuration error
         if (response.status === 503) {
-          toast.error('Payment service is not configured yet. Please contact support or check setup instructions.');
+          toast.error('Payment service is not configured yet. Please contact support.');
           setLoading(false);
           return;
         }
-        throw new Error(data.message || 'Failed to create order');
+        if (response.status === 400 && data.message.includes('already verified')) {
+          toast.error('You are already verified!');
+          setLoading(false);
+          onClose();
+          return;
+        }
+        throw new Error(data.message || data.error || 'Failed to create order');
       }
 
       // Check if Razorpay script is loaded
@@ -63,8 +75,10 @@ const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
         order_id: data.order.id,
         handler: async function (response) {
           try {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+            
             // Verify payment
-            const verifyResponse = await fetch(`${import.meta.env.VITE_API_URL}/payment/verify-payment`, {
+            const verifyResponse = await fetch(`${apiUrl}/payment/verify-payment`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -81,7 +95,7 @@ const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
 
             if (verifyData.success) {
               toast.success('🎉 Verification badge activated!');
-              onSuccess();
+              if (onSuccess) onSuccess();
               onClose();
             } else {
               toast.error('Payment verification failed. Please contact support.');
@@ -127,9 +141,11 @@ const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
 
         <Header>
           <BadgeIcon>
-            <CheckCircle size={48} color="#3b82f6" />
+            <BadgeCheck size={48} color="#1a87db" fill="#ffffffff" />
           </BadgeIcon>
-          <h2>Get Verified on BookHive</h2>
+          <h2>
+            Get Verified on BookHive{' '}
+          </h2>
           <Price>₹{verificationPrice}</Price>
           <Subtitle>One-time payment • Lifetime verification</Subtitle>
         </Header>
@@ -148,7 +164,7 @@ const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
               <NameWithBadge>
                 <ProfileName>{user?.name || 'Your Name'}</ProfileName>
                 <VerifiedBadgePreview>
-                  <CheckCircle size={28} fill="#3b82f6" color="white" />
+                  <BadgeCheck size={24} color="#1a87db" fill="#ffffffff" />
                 </VerifiedBadgePreview>
               </NameWithBadge>
               <ProfileStats>
@@ -171,28 +187,28 @@ const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
         <Benefits>
           <h3>What you'll get:</h3>
           <BenefitItem>
-            <CheckCircle size={20} color="#10b981" />
+            <BadgeCheck size={20} color="#1a87db" fill="#ffffffff" />
             <div>
               <strong>Verified Badge</strong>
               <p>Blue checkmark displayed next to your name everywhere</p>
             </div>
           </BenefitItem>
           <BenefitItem>
-            <Shield size={20} color="#10b981" />
+            <Shield size={20} color="#6308ccff" />
             <div>
               <strong>Increased Trust</strong>
               <p>Build credibility with other readers in the community</p>
             </div>
           </BenefitItem>
           <BenefitItem>
-            <Star size={20} color="#10b981" />
+            <Star size={20} color="#f4bc05ff" />
             <div>
               <strong>Better Visibility</strong>
               <p>Stand out in search results and user listings</p>
             </div>
           </BenefitItem>
           <BenefitItem>
-            <Zap size={20} color="#10b981" />
+            <Zap size={20} color="#29b910ff" />
             <div>
               <strong>Priority Support</strong>
               <p>Get faster responses from our support team</p>
@@ -217,7 +233,7 @@ const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
               </>
             ) : (
               <>
-                <CheckCircle size={16} />
+                <BadgeCheck size={16} />
                 Get Verified Now
               </>
             )}
@@ -359,23 +375,11 @@ const ProfileName = styled.h4`
 const VerifiedBadgePreview = styled.span`
   display: inline-flex;
   align-items: center;
-  color: #3b82f6;
+  color: #1a87db;
   font-size: 24px;
-  animation: pulse 2s infinite;
   
   svg {
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
-  }
-  
-  @keyframes pulse {
-    0%, 100% {
-      transform: scale(1);
-      opacity: 1;
-    }
-    50% {
-      transform: scale(1.05);
-      opacity: 0.9;
-    }
   }
 `;
 

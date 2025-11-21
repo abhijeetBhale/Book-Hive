@@ -260,7 +260,7 @@ export const getBookById = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id).populate(
       'owner',
-      'name email'
+      'name email avatar isVerified'
     );
     if (book) {
       res.json(book);

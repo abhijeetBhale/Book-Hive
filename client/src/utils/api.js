@@ -262,6 +262,9 @@ export const usersAPI = {
   searchUsers: (params) => api.get("/users/search", { params }),
   updatePublicKey: (publicKeyJwk) =>
     api.put("/users/public-key", { publicKeyJwk }),
+  // Account deletion endpoints
+  getDeletionPreview: () => api.get("/users/account/deletion-preview"),
+  deleteAccount: (data) => api.delete("/users/account", { data }),
 };
 
 export const friendsAPI = {

@@ -2,6 +2,40 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { getFullImageUrl } from '../utils/imageHelpers';
 
+// Cache for avatar images
+const avatarCache = new Map();
+
+// Load cache from sessionStorage
+const loadAvatarCache = () => {
+  try {
+    const cached = sessionStorage.getItem('avatarCache');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      Object.entries(parsed).forEach(([key, value]) => {
+        avatarCache.set(key, value);
+      });
+    }
+  } catch (err) {
+    // Ignore cache errors
+  }
+};
+
+// Save cache to sessionStorage
+const saveAvatarCache = () => {
+  try {
+    const cacheObj = {};
+    avatarCache.forEach((value, key) => {
+      cacheObj[key] = value;
+    });
+    sessionStorage.setItem('avatarCache', JSON.stringify(cacheObj));
+  } catch (err) {
+    // Ignore cache errors
+  }
+};
+
+// Load cache on first import
+loadAvatarCache();
+
 const AvatarContainer = styled.div`
   position: relative;
   display: inline-block;
@@ -40,12 +74,14 @@ const OptimizedAvatar = ({
   className = '',
   fallbackColor = '#667eea'
 }) => {
-  const [imageSrc, setImageSrc] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Check cache first
+  const cachedSrc = src ? avatarCache.get(src) : null;
+  const [imageSrc, setImageSrc] = useState(cachedSrc);
+  const [loading, setLoading] = useState(!cachedSrc);
   const [error, setError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const imgRef = useRef(null);
-  const maxRetries = 2;
+  const maxRetries = 1;
 
   // Generate initials from name
   const getInitials = (name) => {
@@ -70,6 +106,15 @@ const OptimizedAvatar = ({
       return;
     }
 
+    // Check cache first
+    const cached = avatarCache.get(src);
+    if (cached) {
+      setImageSrc(cached);
+      setLoading(false);
+      setError(false);
+      return;
+    }
+
     setLoading(true);
     setError(false);
 
@@ -86,6 +131,9 @@ const OptimizedAvatar = ({
       setImageSrc(imageUrl);
       setLoading(false);
       setError(false);
+      // Cache successful load
+      avatarCache.set(src, imageUrl);
+      saveAvatarCache();
     };
 
     img.onerror = () => {
@@ -93,12 +141,16 @@ const OptimizedAvatar = ({
         // Retry after a short delay
         setTimeout(() => {
           setRetryCount(prev => prev + 1);
-        }, 500 * (retryCount + 1)); // Exponential backoff
+        }, 300);
       } else {
         // Use fallback after max retries
-        setImageSrc(getFallbackUrl(alt));
+        const fallbackUrl = getFallbackUrl(alt);
+        setImageSrc(fallbackUrl);
         setLoading(false);
         setError(true);
+        // Cache the fallback
+        avatarCache.set(src, fallbackUrl);
+        saveAvatarCache();
       }
     };
 

@@ -5,6 +5,8 @@ import { booksAPI, borrowAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import { Loader, BookOpen, User, ArrowRight } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircleCheck } from '@fortawesome/free-solid-svg-icons';
 import OptimizedAvatar from '../components/OptimizedAvatar';
 
 const PageWrapper = styled.div`
@@ -88,14 +90,19 @@ const OwnerCard = styled(Link)`
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1rem;
+  padding: 1.25rem;
   border-radius: 0.75rem;
-  background-color: #f9fafb;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border: 2px solid #e5e7eb;
   text-decoration: none;
-  transition: background-color 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 
   &:hover {
-    background-color: #f3f4f6;
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    border-color: #c7d2fe;
+    box-shadow: 0 4px 6px rgba(79, 70, 229, 0.1);
+    transform: translateY(-2px);
   }
 `;
 
@@ -216,11 +223,24 @@ const BookDetails = () => {
               <OptimizedAvatar 
                 src={getFullImageUrl(book.owner.avatar)}
                 alt={book.owner.name}
-                size={50}
+                size={60}
                 rounded={true}
                 fallbackColor="#4F46E5"
               />
-              <OwnerName>{book.owner.name}</OwnerName>
+              <div style={{ flex: 1 }}>
+                <OwnerName style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  {book.owner.name}
+                  {book.owner.isVerified && (
+                    <FontAwesomeIcon 
+                      icon={faCircleCheck} 
+                      style={{ color: "#1a87db", fontSize: "18px" }} 
+                    />
+                  )}
+                </OwnerName>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>
+                  View Profile →
+                </p>
+              </div>
             </OwnerCard>
           </OwnerSection>
 

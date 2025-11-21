@@ -281,23 +281,28 @@ const Books = () => {
 
             const response = await booksAPI.getAll(searchParams);
             const fetchedBooks = response.data.books || [];
+            
+            // Set books immediately for faster rendering
             setBooks(fetchedBooks);
             setPagination(response.data.pagination || {});
             setError(null);
+            setLoading(false);
             
-            // Preload book cover images for better performance
+            // Preload book cover images in the background for better performance
             const imageUrls = fetchedBooks
               .map(book => getFullImageUrl(book.coverImage))
               .filter(url => url && !url.includes('placehold.co'));
             
             if (imageUrls.length > 0) {
-              preloadImages(imageUrls).catch(err => {
-                // Image preload failed - non-critical
-              });
+              // Preload images without blocking the UI
+              setTimeout(() => {
+                preloadImages(imageUrls).catch(err => {
+                  console.log('Image preload completed with some errors (non-critical)');
+                });
+              }, 100);
             }
         } catch (err) {
             setError('Failed to load books. Please try again later.');
-        } finally {
             setLoading(false);
         }
     };

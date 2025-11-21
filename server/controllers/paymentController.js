@@ -23,10 +23,8 @@ if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
 export const createVerificationOrder = async (req, res) => {
   try {
     console.log('📝 Create verification order request received');
-    console.log('User:', req.user);
+    console.log('User:', req.user?.name, req.user?.email);
     console.log('User ID:', req.user?._id);
-    console.log('Razorpay initialized:', !!razorpay);
-    console.log('Razorpay key ID:', process.env.RAZORPAY_KEY_ID);
     
     // Check if user is authenticated
     if (!req.user || !req.user._id) {
@@ -37,15 +35,33 @@ export const createVerificationOrder = async (req, res) => {
       });
     }
     
-    // Check if Razorpay is initialized
-    if (!razorpay) {
-      console.error('❌ Razorpay not initialized');
+    // Check if Razorpay keys are configured
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error('❌ Razorpay keys not configured');
       console.error('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID ? 'Set' : 'Not set');
       console.error('RAZORPAY_KEY_SECRET:', process.env.RAZORPAY_KEY_SECRET ? 'Set' : 'Not set');
       return res.status(503).json({ 
         message: 'Payment service is not configured. Please contact support.',
         error: 'Razorpay keys not configured'
       });
+    }
+
+    // Initialize Razorpay if not already done
+    if (!razorpay) {
+      console.log('🔄 Initializing Razorpay...');
+      try {
+        razorpay = new Razorpay({
+          key_id: process.env.RAZORPAY_KEY_ID,
+          key_secret: process.env.RAZORPAY_KEY_SECRET
+        });
+        console.log('✅ Razorpay initialized successfully');
+      } catch (initError) {
+        console.error('❌ Failed to initialize Razorpay:', initError);
+        return res.status(503).json({ 
+          message: 'Failed to initialize payment service',
+          error: initError.message
+        });
+      }
     }
 
     const userId = req.user._id;
@@ -67,13 +83,20 @@ export const createVerificationOrder = async (req, res) => {
     }
 
     // Create Razorpay order
+    // Receipt must be max 40 characters
+    const timestamp = Date.now().toString().slice(-8); // Last 8 digits
+    const userIdShort = userId.toString().slice(-8); // Last 8 chars of userId
+    const receipt = `ver_${userIdShort}_${timestamp}`; // Format: ver_12345678_12345678 (max 27 chars)
+    
     const options = {
-      amount: VERIFICATION_PRICE, // amount in paise
+      amount: VERIFICATION_PRICE, // amount in paise (50 rupees = 5000 paise)
       currency: 'INR',
-      receipt: `verification_${userId}_${Date.now()}`,
+      receipt: receipt,
       notes: {
         userId: userId.toString(),
-        purpose: 'verification_badge'
+        purpose: 'verification_badge',
+        userName: user.name,
+        userEmail: user.email
       }
     };
 
@@ -98,18 +121,20 @@ export const createVerificationOrder = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Create verification order error:', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
-    console.error('Error details:', {
-      message: error.message,
-      description: error.description,
-      statusCode: error.statusCode,
-      error: error.error
-    });
+    
+    // Check for specific Razorpay errors
+    if (error.error) {
+      console.error('Razorpay error details:', error.error);
+    }
+    
     res.status(500).json({ 
       message: 'Failed to create payment order',
       error: error.message,
-      details: error.description || error.error?.description,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      details: error.error?.description || error.description,
+      hint: 'Make sure your Razorpay Test Mode keys are correct and active'
     });
   }
 };

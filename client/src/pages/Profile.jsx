@@ -11,6 +11,7 @@ import GamificationSection from '../components/profile/GamificationSection';
 import ReviewsModal from '../components/ReviewsModal';
 import VerificationPaymentModal from '../components/profile/VerificationPaymentModal';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
+import AccountDeletion from '../components/profile/AccountDeletion';
 
 const Profile = () => {
   const { user, setUser, fetchProfile } = useContext(AuthContext);
@@ -464,6 +465,15 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle account deletion
+  const handleAccountDeleted = () => {
+    // Clear user data and redirect to home
+    localStorage.removeItem('token');
+    setUser(null);
+    toast.success('Your account has been deleted. We\'re sorry to see you go!');
+    window.location.href = '/';
   };
 
   const totalNotifications = notifications.pendingRequests + notifications.messages.length;
@@ -984,6 +994,12 @@ const Profile = () => {
                 <AlertTriangle size={16} /> Report a User
               </button>
             </div>
+
+            {/* Account Deletion Section */}
+            <AccountDeletion 
+              user={user} 
+              onAccountDeleted={handleAccountDeleted}
+            />
           </div>
         );
       case 'report-user':
