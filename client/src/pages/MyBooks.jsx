@@ -7,6 +7,7 @@ import { AuthContext } from '../context/AuthContext';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import { booksAPI } from '../utils/api';
 import BookSearchModal from '../components/books/BookSearchModal';
+import AnimatedButton from '../components/ui/AnimatedButton';
 
 // --- UI Components ---
 
@@ -582,21 +583,139 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
 
 
 const StyledBookCard = styled.div`
-  background-color: white; border: 1px solid #e5e7eb; border-radius: 0.75rem; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s ease, box-shadow 0.2s ease; &:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07); }
-  .book-cover { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; }
-  .card-content { padding: 0.75rem; display: flex; flex-direction: column; flex-grow: 1; }
-  .book-title { font-size: 1rem; font-weight: 600; color: #111827; line-height: 1.4; margin-bottom: 0.25rem; }
-  .book-author { font-size: 0.8rem; color: #6b7280; margin-bottom: 0.5rem; }
-  .book-category { font-size: 0.7rem; color: #4f46e5; font-weight: 500; margin-bottom: 0.75rem; }
-  .status-badge { padding: 0.2rem 0.6rem; font-size: 0.7rem; font-weight: 600; border-radius: 9999px; text-transform: capitalize; align-self: flex-start; &.available { background-color: #f0fdf4; color: #16a34a; } &.borrowed { background-color: #eff6ff; color: #2563eb; } }
-  .card-footer { margin-top: auto; padding-top: 0.75rem; border-top: 1px solid #e5e7eb; display: flex; gap: 0.5rem; }
-  .btn { flex-grow: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.8rem; font-weight: 600; border-radius: 0.5rem; cursor: pointer; transition: background-color 0.2s; border: 1px solid transparent; }
-  .edit-btn { background-color: #f9fafb; color: #374151; border-color: #d1d5db; &:hover { background-color: #f3f4f6; } }
-  .delete-btn { background-color: #fef2f2; color: #ef4444; border-color: #fecaca; &:hover { background-color: #fee2e2; } }
+  background-color: white; 
+  border: 1px solid #e5e7eb; 
+  border-radius: 0.75rem; 
+  overflow: hidden; 
+  display: flex; 
+  flex-direction: column; 
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); 
+  transition: transform 0.2s ease, box-shadow 0.2s ease; 
+  
+  &:hover { 
+    transform: translateY(-4px); 
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07); 
+  }
+  
+  .book-cover { 
+    width: 100%; 
+    aspect-ratio: 2 / 3; 
+    object-fit: cover; 
+  }
+  
+  .card-content { 
+    padding: 0.75rem; 
+    display: flex; 
+    flex-direction: column; 
+    flex-grow: 1; 
+  }
+  
+  .book-title { 
+    font-size: 1rem; 
+    font-weight: 600; 
+    color: #111827; 
+    line-height: 1.4; 
+    margin-bottom: 0.25rem; 
+  }
+  
+  .book-author { 
+    font-size: 0.8rem; 
+    color: #6b7280; 
+    margin-bottom: 0.5rem; 
+  }
+  
+  .book-category { 
+    font-size: 0.7rem; 
+    color: #4f46e5; 
+    font-weight: 500; 
+    margin-bottom: 0.75rem; 
+  }
+  
+  .availability-section {
+    margin-bottom: 0.75rem;
+    width: 100%;
+  }
+  
+  .card-footer { 
+    margin-top: auto; 
+    padding-top: 0.75rem; 
+    border-top: 1px solid #e5e7eb; 
+    display: flex; 
+    gap: 0.5rem; 
+  }
+  
+  .btn { 
+    flex-grow: 1; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 0.5rem; 
+    padding: 0.5rem 0.75rem; 
+    font-size: 0.8rem; 
+    font-weight: 600; 
+    border-radius: 0.5rem; 
+    cursor: pointer; 
+    transition: background-color 0.2s; 
+    border: 1px solid transparent; 
+  }
+  
+  .edit-btn { 
+    background-color: #f9fafb; 
+    color: #374151; 
+    border-color: #d1d5db; 
+    
+    &:hover { 
+      background-color: #f3f4f6; 
+    } 
+  }
+  
+  .delete-btn { 
+    background-color: #fef2f2; 
+    color: #ef4444; 
+    border-color: #fecaca; 
+    
+    &:hover { 
+      background-color: #fee2e2; 
+    } 
+  }
 `;
 
 const BookCard = ({ book, onEdit, onDelete }) => {
   const coverImageUrl = getFullImageUrl(book.coverImage);
+  // Determine button text and variant based on book status
+  const getButtonConfig = () => {
+    if (!book.isAvailable) {
+      return {
+        text: 'Currently On Loan',
+        variant: 'borrowed'
+      };
+    }
+    if (book.forBorrowing && book.forSelling) {
+      return {
+        text: 'Available for Borrow & Sale',
+        variant: 'available'
+      };
+    }
+    if (book.forBorrowing) {
+      return {
+        text: 'Available for Borrow',
+        variant: 'available'
+      };
+    }
+    if (book.forSelling) {
+      return {
+        text: 'Available for Sale',
+        variant: 'available'
+      };
+    }
+    return {
+      text: 'Not Available',
+      variant: 'unavailable'
+    };
+  };
+
+  const buttonConfig = getButtonConfig();
+
   return (
     <StyledBookCard>
       <img key={book._id} src={coverImageUrl} alt={book.title} className="book-cover" />
@@ -604,9 +723,13 @@ const BookCard = ({ book, onEdit, onDelete }) => {
         <h3 className="book-title">{book.title}</h3>
         <p className="book-author">by {book.author}</p>
         <p className="book-category">{book.category}</p>
-        <span className={`status-badge ${book.isAvailable ? 'available' : 'borrowed'}`}>
-          {book.isAvailable ? 'Available' : 'On Loan'}
-        </span>
+        <div className="availability-section">
+          <AnimatedButton 
+            text={buttonConfig.text}
+            variant={buttonConfig.variant}
+            disabled={true}
+          />
+        </div>
         <div className="card-footer">
           <button onClick={() => onEdit(book)} className="btn edit-btn"><Edit size={14} /> Edit</button>
           <button onClick={() => onDelete(book._id)} className="btn delete-btn"><Trash2 size={14} /> Delete</button>

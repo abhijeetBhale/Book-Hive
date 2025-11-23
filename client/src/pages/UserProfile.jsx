@@ -8,6 +8,7 @@ import { Loader, MapPin, BookOpen, Send, X, User as UserIcon, Star } from 'lucid
 import { getFullImageUrl } from '../utils/imageHelpers';
 import ReviewsModal from '../components/ReviewsModal';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
+import AnimatedButton from '../components/ui/AnimatedButton';
 
 
 // --- Keyframes for Animations ---
@@ -280,7 +281,6 @@ const StyledBookCard = styled.div`
   flex-direction: column;
   box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  cursor: pointer;
   
   @media (max-width: 480px) {
     border-radius: 0.75rem;
@@ -295,6 +295,7 @@ const StyledBookCard = styled.div`
     width: 100%; 
     aspect-ratio: 2 / 3; 
     object-fit: cover;
+    cursor: pointer;
   }
   
   .card-content { 
@@ -313,6 +314,7 @@ const StyledBookCard = styled.div`
     font-weight: 700; 
     color: #111827;
     line-height: 1.3;
+    cursor: pointer;
     
     @media (max-width: 768px) {
       font-size: 1rem;
@@ -327,39 +329,73 @@ const StyledBookCard = styled.div`
     font-size: 0.875rem; 
     color: #6b7280; 
     margin-top: 0.25rem; 
-    margin-bottom: 1rem; 
-    flex-grow: 1;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
     
     @media (max-width: 480px) {
       font-size: 0.8125rem;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.625rem;
     }
   }
   
-  .status-badge {
-    display: inline-flex; 
-    align-items: center; 
-    justify-content: center;
-    width: 100%; 
-    background-color: #f3f4f6; 
-    color: #6b7280; 
-    font-size: 0.875rem;
-    font-weight: 600; 
-    padding: 0.75rem; 
-    border-radius: 0.5rem;
-    text-align: center;
+  .book-action-section {
+    margin-top: auto;
+    width: 100%;
     
     @media (max-width: 480px) {
-      font-size: 0.8125rem;
-      padding: 0.625rem 0.5rem;
+      margin-top: 0.5rem;
     }
   }
 `;
 
 const BookCard = ({ book, onClick }) => {
+  // Determine button text and variant based on book status
+  const getButtonConfig = () => {
+    if (!book.isAvailable) {
+      return {
+        text: 'Currently Borrowed',
+        variant: 'borrowed',
+        disabled: true
+      };
+    }
+    if (book.forBorrowing && book.forSelling) {
+      return {
+        text: 'Borrow or Buy',
+        variant: 'available',
+        disabled: false
+      };
+    }
+    if (book.forBorrowing) {
+      return {
+        text: 'Available to Borrow',
+        variant: 'available',
+        disabled: false
+      };
+    }
+    if (book.forSelling) {
+      return {
+        text: 'Available to Buy',
+        variant: 'available',
+        disabled: false
+      };
+    }
+    return {
+      text: 'Not Available',
+      variant: 'unavailable',
+      disabled: true
+    };
+  };
+
+  const buttonConfig = getButtonConfig();
+
+  const handleButtonClick = (e) => {
+    e.stopPropagation(); // Prevent card click event
+    onClick(book);
+  };
+
   return (
-    <StyledBookCard onClick={() => onClick(book)}>
-      <div style={{ position: 'relative' }}>
+    <StyledBookCard>
+      <div style={{ position: 'relative' }} onClick={() => onClick(book)}>
         <img src={getFullImageUrl(book.coverImage)} alt={book.title} className="book-cover" />
         
         {/* Availability Badges */}
@@ -392,14 +428,16 @@ const BookCard = ({ book, onClick }) => {
       </div>
       
       <div className="card-content">
-        <h3 className="book-title">{book.title}</h3>
-        <p className="book-author">by {book.author}</p>
-        <div className="status-badge">
-          {!book.isAvailable ? 'Currently Borrowed' : 
-           book.forBorrowing && book.forSelling ? 'Available to Borrow or Buy' :
-           book.forBorrowing ? 'Available to Borrow' : 
-           book.forSelling ? 'Available to Buy' : 
-           'Not Available'}
+        <h3 className="book-title" onClick={() => onClick(book)}>{book.title}</h3>
+        <p className="book-author" onClick={() => onClick(book)}>by {book.author}</p>
+        
+        <div className="book-action-section">
+          <AnimatedButton 
+            text={buttonConfig.text}
+            variant={buttonConfig.variant}
+            disabled={buttonConfig.disabled}
+            onClick={handleButtonClick}
+          />
         </div>
       </div>
     </StyledBookCard>

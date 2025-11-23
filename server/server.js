@@ -30,6 +30,8 @@ import challengeRoutes from './routes/challengeRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import contactRoutes from './routes/contact.js';
 import paymentRoutes from './routes/payment.js';
+import eventRoutes from './routes/eventRoutes.js';
+import organizerRoutes from './routes/organizerRoutes.js';
 import { initializeDefaultAchievements } from './services/achievementService.js';
 import { initializeAllUserStats } from './services/userStatsService.js';
 import NotificationService from './services/notificationService.js';
@@ -121,6 +123,8 @@ app.use('/api/challenges', challengeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/organizer', organizerRoutes);
 
 
 // Error handler

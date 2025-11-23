@@ -1,23 +1,21 @@
 import express from 'express';
-import { 
-  createVerificationOrder, 
-  verifyPayment, 
-  getVerificationStatus 
+import {
+  createVerificationOrder,
+  verifyPayment,
+  getVerificationStatus,
+  createDepositOrder,
+  verifyDepositPayment
 } from '../controllers/paymentController.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// All routes require authentication
-router.use(protect);
+router.post('/create-order', protect, createVerificationOrder); // Assuming createOrder maps to createVerificationOrder
+router.post('/verify-payment', protect, verifyPayment);
+router.get('/verification-status', protect, getVerificationStatus);
 
-// Get verification status
-router.get('/verification-status', getVerificationStatus);
-
-// Create verification order
-router.post('/create-verification-order', createVerificationOrder);
-
-// Verify payment
-router.post('/verify-payment', verifyPayment);
+// Security Deposit Routes
+router.post('/create-deposit-order', protect, createDepositOrder);
+router.post('/verify-deposit-payment', protect, verifyDepositPayment);
 
 export default router;

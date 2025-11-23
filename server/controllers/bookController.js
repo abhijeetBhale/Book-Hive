@@ -107,12 +107,18 @@ export const getAllBooks = async (req, res) => {
       query.tags = { $in: tagArray.map(tag => new RegExp(tag, 'i')) };
     }
 
-    // Build sort object
+    // Build sort object with verified user boost
     let sort = {};
     const validSortFields = ['title', 'author', 'createdAt', 'publicationYear', 'viewCount', 'borrowCount'];
     const sortField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
     const sortDirection = sortOrder === 'asc' ? 1 : -1;
-    sort[sortField] = sortDirection;
+    
+    // Premium feature: Verified users get search boost
+    // Their books appear first, then sorted by the selected field
+    sort = {
+      'ownerVerified': -1, // Verified users first (will be added in aggregation)
+      [sortField]: sortDirection
+    };
 
     // Location-based search
     let aggregationPipeline = [];
@@ -210,13 +216,57 @@ export const getAllBooks = async (req, res) => {
       books = booksResult;
       total = totalResult[0]?.total || 0;
     } else {
-      // Use regular find for non-location searches
+      // Use aggregation for search boost (verified users first)
+      const aggregation = [
+        { $match: query },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'owner',
+            foreignField: '_id',
+            as: 'ownerData'
+          }
+        },
+        {
+          $addFields: {
+            ownerVerified: { 
+              $cond: [
+                { $eq: [{ $arrayElemAt: ['$ownerData.isVerified', 0] }, true] },
+                1,
+                0
+              ]
+            }
+          }
+        },
+        { $sort: sort },
+        { $skip: (pageNum - 1) * limitNum },
+        { $limit: limitNum },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'owner',
+            foreignField: '_id',
+            as: 'owner',
+            pipeline: [
+              { 
+                $project: { 
+                  name: 1, 
+                  email: 1, 
+                  avatar: 1, 
+                  location: 1,
+                  isVerified: 1,
+                  'contactVerification.email.isVerified': 1
+                } 
+              }
+            ]
+          }
+        },
+        { $unwind: '$owner' },
+        { $project: { ownerData: 0, ownerVerified: 0 } } // Remove temporary fields
+      ];
+
       const [booksResult, totalResult] = await Promise.all([
-        Book.find(query)
-          .populate('owner', 'name email avatar location')
-          .sort(sort)
-          .skip((pageNum - 1) * limitNum)
-          .limit(limitNum),
+        Book.aggregate(aggregation),
         Book.countDocuments(query),
       ]);
       
@@ -235,40 +285,33 @@ export const getAllBooks = async (req, res) => {
       filters: {
         search,
         category,
-        author,
         condition,
-        language,
-        genre,
-        minYear,
-        maxYear,
-        isAvailable,
-        forBorrowing,
         sortBy,
-        sortOrder,
-        hasLocationFilter: !!(latitude && longitude)
+        sortOrder
       }
     });
   } catch (error) {
     console.error('Get all books error:', error);
-    res.status(500).json({ message: 'Server error getting books', error: error.message });
+    res.status(500).json({ message: 'Server error getting books' });
   }
 };
 
-// @desc    Get book by ID
+// @desc    Get single book
 // @route   GET /api/books/:id
 export const getBookById = async (req, res) => {
   try {
-    const book = await Book.findById(req.params.id).populate(
-      'owner',
-      'name email avatar isVerified'
-    );
+    const book = await Book.findById(req.params.id).populate('owner', 'name email avatar location');
     if (book) {
+      // Increment view count
+      book.viewCount = (book.viewCount || 0) + 1;
+      await book.save({ validateBeforeSave: false });
+      
       res.json(book);
     } else {
       res.status(404).json({ message: 'Book not found' });
     }
   } catch (error) {
-    console.error('Get book by ID error:', error);
+    console.error('Get book error:', error);
     res.status(500).json({ message: 'Server error getting book' });
   }
 };
@@ -292,7 +335,8 @@ export const createBook = async (req, res) => {
       isAvailable,
       isAvailableForBorrowing,
       isCurrentlyAvailable,
-      coverImageUrl 
+      coverImageUrl,
+      securityDeposit 
     } = req.body;
     
     let finalCoverImageUrl;
@@ -343,7 +387,8 @@ export const createBook = async (req, res) => {
       ...(priceValidationResult && {
         marketPrice: priceValidationResult.priceComparison?.marketPrice,
         priceValidation: priceValidationResult
-      })
+      }),
+      securityDeposit: securityDeposit ? Number(securityDeposit) : 0
     });
     
     const createdBook = await book.save();
@@ -384,42 +429,21 @@ export const updateBook = async (req, res) => {
       lendingDuration,
       sellingPrice,
       isAvailable,
-      coverImageUrl 
+      isAvailableForBorrowing,
+      isCurrentlyAvailable,
+      coverImageUrl,
+      securityDeposit 
     } = req.body;
+
     const book = await Book.findById(req.params.id);
 
     if (book) {
       if (book.owner.toString() !== req.user._id.toString()) {
         return res.status(401).json({ message: 'Not authorized' });
       }
-      book.title = title || book.title;
-      book.author = author || book.author;
-      book.description = description || book.description;
-      book.category = category || book.category;
-      book.isbn = isbn !== undefined ? isbn : book.isbn;
-      book.publicationYear = publicationYear ? Number(publicationYear) : book.publicationYear;
-      book.condition = condition || book.condition;
-      book.forBorrowing = forBorrowing !== undefined ? forBorrowing : book.forBorrowing;
-      book.forSelling = forSelling !== undefined ? forSelling : book.forSelling;
-      book.lendingDuration = lendingDuration ? Number(lendingDuration) : book.lendingDuration;
-      book.sellingPrice = forSelling && sellingPrice ? Number(sellingPrice) : (forSelling ? book.sellingPrice : null);
-      book.isAvailable = isAvailable !== undefined ? isAvailable : book.isAvailable;
 
-      // Re-validate price if selling price changed
-      if (forSelling && sellingPrice && sellingPrice !== book.sellingPrice) {
-        const priceValidationService = new PriceValidationService();
-        const priceValidationResult = await priceValidationService.validateBookPrice(
-          { title: book.title, author: book.author, isbn: book.isbn },
-          parseFloat(sellingPrice)
-        );
-        
-        if (priceValidationResult) {
-          book.marketPrice = priceValidationResult.priceComparison?.marketPrice;
-          book.priceValidation = priceValidationResult;
-        }
-      }
-
-      // Handle cover image update - priority: uploaded file > Google Books URL
+      let finalCoverImageUrl = book.coverImage;
+      
       if (req.file) {
         const result = await uploadToCloudinary(req.file.buffer, {
           folder: 'bookhive_books',
@@ -428,11 +452,51 @@ export const updateBook = async (req, res) => {
           crop: 'fill',
           resource_type: 'image'
         });
-        book.coverImage = result.secure_url;
+        finalCoverImageUrl = result.secure_url;
       } else if (coverImageUrl) {
-        book.coverImage = coverImageUrl;
+        finalCoverImageUrl = coverImageUrl;
       }
+
+      // Validate selling price if book is for selling
+      let priceValidationResult = null;
+      if (forSelling && sellingPrice) {
+        const priceValidationService = new PriceValidationService();
+        priceValidationResult = await priceValidationService.validateBookPrice(
+          { title, author, isbn },
+          parseFloat(sellingPrice)
+        );
+      }
+
+      book.title = title || book.title;
+      book.author = author || book.author;
+      book.description = description || book.description;
+      book.category = category || book.category;
+      book.isbn = isbn || book.isbn;
+      book.publicationYear = publicationYear ? Number(publicationYear) : book.publicationYear;
+      book.condition = condition || book.condition;
       
+      // Handle booleans carefully
+      if (forBorrowing !== undefined) book.forBorrowing = forBorrowing;
+      if (isAvailableForBorrowing !== undefined) book.forBorrowing = isAvailableForBorrowing;
+      
+      if (forSelling !== undefined) book.forSelling = forSelling;
+      
+      if (isAvailable !== undefined) book.isAvailable = isAvailable;
+      if (isCurrentlyAvailable !== undefined) book.isAvailable = isCurrentlyAvailable;
+      
+      book.lendingDuration = lendingDuration ? Number(lendingDuration) : book.lendingDuration;
+      book.sellingPrice = (forSelling || book.forSelling) && sellingPrice ? Number(sellingPrice) : book.sellingPrice;
+      book.coverImage = finalCoverImageUrl;
+      
+      if (securityDeposit !== undefined) {
+        book.securityDeposit = Number(securityDeposit);
+      }
+
+      if (priceValidationResult) {
+        book.marketPrice = priceValidationResult.priceComparison?.marketPrice;
+        book.priceValidation = priceValidationResult;
+      }
+
       const updatedBook = await book.save();
       res.json(updatedBook);
     } else {

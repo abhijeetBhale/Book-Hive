@@ -1,22 +1,22 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import passport from 'passport';
+import mongoose from 'mongoose';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import hpp from 'hpp';
-import passport from 'passport';
-import mongoose from 'mongoose';
 
-// Import middleware and config
-import errorHandler from './middleware/errorHandler.js';
+// Import config
 import './config/cloudinary.js';
 import './config/passport-setup.js';
+import errorHandler from './middleware/errorHandler.js';
 
-// Import services for initialization
+// Import services
 import { initializeDefaultAchievements } from './services/achievementService.js';
 import { initializeAllUserStats } from './services/userStatsService.js';
 
-// Import ALL routes (restored to original)
+// Import ALL routes
 import authRoutes from './routes/auth.js';
 import bookRoutes from './routes/books.js';
 import bookSearchRoutes from './routes/bookSearch.js';
@@ -32,57 +32,9 @@ import bookClubRoutes from './routes/bookClubRoutes.js';
 import achievementRoutes from './routes/achievementRoutes.js';
 import challengeRoutes from './routes/challengeRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import paymentRoutes from './routes/payment.js';
 
 const app = express();
-
-// Database connection with serverless optimization
-let isConnected = false;
-let isInitialized = false;
-
-const connectDB = async () => {
-  if (isConnected && mongoose.connection.readyState === 1) {
-    return mongoose.connection;
-  }
-
-  try {
-    if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI environment variable is not set');
-    }
-
-    const options = {
-      bufferCommands: false,
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      family: 4,
-      maxIdleTimeMS: 30000,
-      minPoolSize: 0,
-    };
-
-    const connection = await mongoose.connect(process.env.MONGODB_URI, options);
-    isConnected = true;
-    console.log('✅ MongoDB Connected for serverless');
-    
-    // Initialize achievements and user stats (only once)
-    if (!isInitialized) {
-      try {
-        await initializeDefaultAchievements();
-        await initializeAllUserStats();
-        isInitialized = true;
-        console.log('✅ App initialization completed');
-      } catch (initError) {
-        console.error('❌ Initialization error:', initError.message);
-        // Don't fail the connection if initialization fails
-      }
-    }
-    
-    return connection;
-  } catch (error) {
-    console.error('❌ Database connection error:', error);
-    isConnected = false;
-    throw error;
-  }
-};
 
 // Security middleware
 app.use(helmet({
@@ -119,11 +71,10 @@ app.use(cors({
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.includes(origin)) {
-      console.log('✅ CORS allowed for origin:', origin);
       callback(null, true);
     } else {
       console.log('❌ CORS blocked origin:', origin);
-      callback(null, false); // Don't throw error, just deny
+      callback(null, false);
     }
   },
   credentials: true,
@@ -138,120 +89,11 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-// Handle preflight requests explicitly
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin);
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, X-HTTP-Method-Override');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400');
-  res.sendStatus(200);
-});
-
-// Rate limiting - Temporarily disabled for debugging
-// TODO: Re-enable with proper configuration after testing
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10000, // Extremely high limit for debugging
-  message: {
-    error: 'Too many requests from this IP, please try again later.',
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => {
-    // Skip rate limiting for most endpoints during debugging
-    return true; // Temporarily skip all rate limiting
-  },
-});
-
-// Temporarily disable rate limiting
-// app.use(limiter);
-
-// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Initialize Passport
 app.use(passport.initialize());
 
-// CORS debug endpoint
-app.get('/api/cors-test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'CORS is working!',
-    origin: req.headers.origin,
-    clientUrl: process.env.CLIENT_URL,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Rate limiting debug endpoint
-app.get('/api/rate-limit-test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Rate limiting test endpoint',
-    ip: req.ip,
-    headers: req.headers,
-    timestamp: new Date().toISOString(),
-    rateLimitInfo: {
-      remaining: res.get('X-RateLimit-Remaining'),
-      limit: res.get('X-RateLimit-Limit'),
-      reset: res.get('X-RateLimit-Reset')
-    }
-  });
-});
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-  });
-});
-
-// Root endpoint
-app.get('/', (req, res) => {
-  res.status(200).json({
-    message: 'BookHive API is running!',
-    version: '2.0.0',
-    status: 'active',
-    endpoints: {
-      health: '/api/health',
-      auth: '/api/auth',
-      books: '/api/books',
-      users: '/api/users',
-    },
-  });
-});
-
-// Test endpoint
-app.get('/api/test', (req, res) => {
-  res.status(200).json({
-    message: 'API is working!',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-    mongoUri: process.env.MONGODB_URI ? 'Set' : 'Not set',
-    jwtSecret: process.env.JWT_SECRET ? 'Set' : 'Not set',
-    cloudinaryName: process.env.CLOUDINARY_CLOUD_NAME ? 'Set' : 'Not set',
-    googleClientId: process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Not set',
-    googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'Not set',
-    clientUrl: process.env.CLIENT_URL,
-  });
-});
-
-// Google OAuth test endpoint
-app.get('/api/auth/test-google', (req, res) => {
-  res.status(200).json({
-    message: 'Google OAuth test endpoint',
-    googleConfigured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-    callbackUrl: '/api/auth/google/callback',
-    clientUrl: process.env.CLIENT_URL,
-  });
-});
-
-// API Routes (restored to original)
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/books', bookRoutes);
 app.use('/api/book-search', bookSearchRoutes);
@@ -267,6 +109,7 @@ app.use('/api/clubs', bookClubRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/challenges', challengeRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
@@ -281,37 +124,57 @@ app.use((req, res) => {
   });
 });
 
-// Serverless function handler
-export default async function handler(req, res) {
-  try {
-    // Set CORS headers for all requests
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
+// Database connection
+let isConnected = false;
+let isInitialized = false;
 
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-      res.status(200).end();
-      return;
-    }
-
-    // Connect to database
-    await connectDB();
-
-    // Handle the request
-    return app(req, res);
-  } catch (error) {
-    console.error('Serverless function error:', error);
-    console.error('Error stack:', error.stack);
-
-    // Return proper error response
-    if (!res.headersSent) {
-      return res.status(500).json({
-        error: 'Internal Server Error',
-        message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong',
-        timestamp: new Date().toISOString(),
-      });
-    }
+const connectDB = async () => {
+  if (isConnected && mongoose.connection.readyState === 1) {
+    return mongoose.connection;
   }
-}
+
+  try {
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI environment variable is not set');
+    }
+
+    const options = {
+      bufferCommands: false,
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      family: 4,
+      maxIdleTimeMS: 30000,
+      minPoolSize: 0,
+    };
+
+    const connection = await mongoose.connect(process.env.MONGODB_URI, options);
+    isConnected = true;
+    console.log('✅ MongoDB Connected for serverless');
+    
+    // Initialize achievements and user stats (only once)
+    if (!isInitialized) {
+      try {
+        await initializeDefaultAchievements();
+        await initializeAllUserStats();
+        isInitialized = true;
+        console.log('✅ App initialization completed');
+      } catch (initError) {
+        console.error('❌ Initialization error:', initError.message);
+      }
+    }
+    
+    return connection;
+  } catch (error) {
+    console.error('❌ Database connection error:', error);
+    isConnected = false;
+    throw error;
+  }
+};
+
+console.log('Starting server...');
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, async () => {
+  console.log(`Server running on port ${PORT}`);
+  await connectDB();
+});

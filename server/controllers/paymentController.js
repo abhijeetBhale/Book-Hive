@@ -2,8 +2,8 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import User from '../models/User.js';
 
-// Verification badge price in paise (50 rupees = 5000 paise)
-const VERIFICATION_PRICE = 5000;
+// Verification badge price in paise (99 rupees = 9900 paise)
+const VERIFICATION_PRICE = 9900;
 
 // Initialize Razorpay instance only if keys are available
 let razorpay = null;
@@ -168,13 +168,19 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
-    // Payment is verified, update user
+    // Payment is verified, update user with premium features
     const user = await User.findByIdAndUpdate(
       userId,
       {
         isVerified: true,
         verificationPurchaseDate: new Date(),
-        verificationPaymentId: razorpay_payment_id
+        verificationPaymentId: razorpay_payment_id,
+        // Enable all premium features
+        'premiumFeatures.searchBoost': true,
+        'premiumFeatures.priorityQueue': true,
+        'premiumFeatures.multipleBooks': true,
+        'premiumFeatures.maxBooksLimit': 3, // Premium users can borrow 3 books at a time
+        'premiumFeatures.earlyAccess': true
       },
       { new: true }
     );
@@ -225,6 +231,101 @@ export const getVerificationStatus = async (req, res) => {
     console.error('Get verification status error:', error);
     res.status(500).json({ 
       message: 'Failed to get verification status',
+      error: error.message 
+    });
+  }
+};
+
+// @desc    Create order for security deposit
+// @route   POST /api/payment/create-deposit-order
+export const createDepositOrder = async (req, res) => {
+  try {
+    const { borrowRequestId } = req.body;
+    const userId = req.user._id;
+
+    const borrowRequest = await BorrowRequest.findById(borrowRequestId).populate('book');
+    if (!borrowRequest) {
+      return res.status(404).json({ message: 'Borrow request not found' });
+    }
+
+    if (borrowRequest.borrower.toString() !== userId.toString()) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    if (borrowRequest.depositStatus !== 'pending') {
+      return res.status(400).json({ message: 'Deposit is not pending for this request' });
+    }
+
+    const amount = borrowRequest.depositAmount * 100; // Convert to paise
+
+    const options = {
+      amount,
+      currency: 'INR',
+      receipt: `dep_${borrowRequestId.toString().slice(-8)}_${Date.now().toString().slice(-8)}`,
+      notes: {
+        userId: userId.toString(),
+        purpose: 'security_deposit',
+        borrowRequestId: borrowRequestId.toString()
+      }
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    res.json({
+      success: true,
+      order: {
+        id: order.id,
+        amount: order.amount,
+        currency: order.currency
+      },
+      key: process.env.RAZORPAY_KEY_ID
+    });
+  } catch (error) {
+    console.error('Create deposit order error:', error);
+    res.status(500).json({ 
+      message: 'Failed to create payment order',
+      error: error.message 
+    });
+  }
+};
+
+// @desc    Verify security deposit payment
+// @route   POST /api/payment/verify-deposit-payment
+export const verifyDepositPayment = async (req, res) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, borrowRequestId } = req.body;
+
+    const body = razorpay_order_id + '|' + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(body.toString())
+      .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Payment verification failed' 
+      });
+    }
+
+    // Update borrow request
+    await BorrowRequest.findByIdAndUpdate(
+      borrowRequestId,
+      {
+        depositStatus: 'paid',
+        depositPaymentId: razorpay_payment_id
+      }
+    );
+
+    res.json({
+      success: true,
+      message: 'Security deposit paid successfully!'
+    });
+  } catch (error) {
+    console.error('Verify deposit payment error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to verify payment',
       error: error.message 
     });
   }

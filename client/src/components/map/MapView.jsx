@@ -40,7 +40,7 @@ class MapErrorBoundary extends React.Component {
                     <p style={{ margin: '0', textAlign: 'center' }}>
                         The map is temporarily unavailable. Please refresh the page.
                     </p>
-                    <button 
+                    <button
                         onClick={() => window.location.reload()}
                         style={{
                             marginTop: '1rem',
@@ -65,7 +65,7 @@ class MapErrorBoundary extends React.Component {
 // Safe Map Container Component
 const SafeMapContainer = ({ children, center, zoom, mapKey }) => {
     const containerRef = useRef(null);
-    
+
     useEffect(() => {
         // Cleanup any existing leaflet containers in this element
         if (containerRef.current) {
@@ -85,14 +85,14 @@ const SafeMapContainer = ({ children, center, zoom, mapKey }) => {
             });
         }
     }, [mapKey]);
-    
+
     return (
         <div ref={containerRef} style={{ height: '100%', width: '100%' }}>
-            <MapContainer 
+            <MapContainer
                 key={mapKey}
-                center={center} 
-                zoom={zoom} 
-                scrollWheelZoom={true} 
+                center={center}
+                zoom={zoom}
+                scrollWheelZoom={true}
                 style={{ height: '100%', width: '100%' }}
             >
                 {children}
@@ -316,7 +316,7 @@ const MapView = ({ userGroups, userToShowPopup }) => {
 
     // Use only real user data
     const usersToDisplay = allUsers;
-    
+
     // Force remount when userGroups change to prevent initialization errors
     useEffect(() => {
         setMapKey(`map-${Date.now()}-${Math.random()}`);
@@ -526,9 +526,9 @@ const MapView = ({ userGroups, userToShowPopup }) => {
         <MapErrorBoundary>
             <style>{customMarkerStyles}</style>
             <StyledMapWrapper>
-                <SafeMapContainer 
-                    center={defaultPosition} 
-                    zoom={12} 
+                <SafeMapContainer
+                    center={defaultPosition}
+                    zoom={12}
                     mapKey={mapKey}
                 >
                     <MapBoundsAdjuster allUsers={usersToDisplay} userToShowPopup={userToShowPopup} />
@@ -556,8 +556,8 @@ const MapView = ({ userGroups, userToShowPopup }) => {
                             );
 
                             // Add userToShowPopup if not already in the list
-                            if (userToShowPopup && 
-                                userToShowPopup.location?.coordinates && 
+                            if (userToShowPopup &&
+                                userToShowPopup.location?.coordinates &&
                                 userToShowPopup.location.coordinates.length === 2 &&
                                 !allUsersToShow.find(user => user._id === userToShowPopup._id)) {
                                 allUsersToShow = [...allUsersToShow, userToShowPopup];
@@ -593,8 +593,8 @@ const MapView = ({ userGroups, userToShowPopup }) => {
                             }}
                         >
                             <PopupCard onClick={(e) => e.stopPropagation()}>
-                                <button 
-                                    className="close-popup-btn" 
+                                <button
+                                    className="close-popup-btn"
                                     onClick={handleClosePopup}
                                     type="button"
                                 >
@@ -614,6 +614,28 @@ const MapView = ({ userGroups, userToShowPopup }) => {
                                             <span>{selectedPin.isOnline ? 'Online' : 'Offline'}</span>
                                         </div>
                                     </div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 1.5rem 0', padding: '0 0', gap: '0.2rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                                            <span style={{ fontWeight: '600', color: '#111827', fontSize: '0.9rem' }}>
+                                                {selectedPin.friendsCount || 0}
+                                            </span>
+                                            <span>Followers</span>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                                            <span style={{ fontWeight: '600', color: '#111827', fontSize: '0.9rem' }}>
+                                                {selectedPin.contributions || 0}
+                                            </span>
+                                            <span>Contributions</span>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                                            <span style={{ fontWeight: '600', color: '#111827', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                                                {selectedPin.createdAt ? new Date(selectedPin.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : 'Recent'}
+                                            </span>
+                                            <span>Joined</span>
+                                        </div>
+                                    </div>
+
                                     <div className="stats">
                                         <div className="stat-item">
                                             <BookOpen size={18} />

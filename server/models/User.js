@@ -147,7 +147,27 @@ const userSchema = new mongoose.Schema({
       select: false // Don't include in queries by default
     }
   },
-  // Verification badge
+  // Contact Verification (Free)
+  contactVerification: {
+    email: {
+      isVerified: {
+        type: Boolean,
+        default: false
+      },
+      verifiedAt: {
+        type: Date
+      },
+      verificationToken: {
+        type: String,
+        select: false
+      },
+      tokenExpiry: {
+        type: Date,
+        select: false
+      }
+    }
+  },
+  // Premium Verification Badge (Paid)
   isVerified: {
     type: Boolean,
     default: false
@@ -158,11 +178,75 @@ const userSchema = new mongoose.Schema({
   verificationPaymentId: {
     type: String
   },
+  // Premium Features
+  premiumFeatures: {
+    searchBoost: {
+      type: Boolean,
+      default: false
+    },
+    priorityQueue: {
+      type: Boolean,
+      default: false
+    },
+    multipleBooks: {
+      type: Boolean,
+      default: false
+    },
+    maxBooksLimit: {
+      type: Number,
+      default: 1 // Free users can borrow 1 book at a time
+    },
+    earlyAccess: {
+      type: Boolean,
+      default: false
+    }
+  },
   // Admin fields
   role: {
     type: String,
-    enum: ['user', 'admin', 'superadmin'],
+    enum: ['user', 'organizer', 'admin', 'superadmin'],
     default: 'user'
+  },
+  verified: {
+    type: Boolean,
+    default: false
+  },
+  organizerProfile: {
+    organizationName: {
+      type: String,
+      default: ''
+    },
+    organizationType: {
+      type: String,
+      enum: ['community', 'library', 'bookstore', 'educational', 'other', ''],
+      default: ''
+    },
+    contactEmail: {
+      type: String,
+      default: ''
+    },
+    contactPhone: {
+      type: String,
+      default: ''
+    },
+    website: {
+      type: String,
+      default: ''
+    },
+    description: {
+      type: String,
+      default: ''
+    },
+    verificationDocuments: [{
+      type: String
+    }],
+    approvedAt: {
+      type: Date
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
   },
   isActive: {
     type: Boolean,

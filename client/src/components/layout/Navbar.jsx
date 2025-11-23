@@ -11,6 +11,7 @@ import {
   Heart,
   Bell,
   Trash2,
+  Calendar,
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { useNotificationBadges } from '../../context/NotificationBadgeContext';
@@ -45,10 +46,10 @@ const Navbar = () => {
       console.warn('No token available for WebSocket connection');
       return;
     }
-    
+
     const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
-    
-    const socket = io(base, { 
+
+    const socket = io(base, {
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -75,10 +76,10 @@ const Navbar = () => {
     socket.on('new_notification', (notification) => {
       // Add to realtime notifications list (keep only 5 recent)
       setRealtimeNotifications(prev => [notification, ...prev.slice(0, 4)]);
-      
+
       // Update unread count
       setUnreadCount(prev => prev + 1);
-      
+
       // Show toast notification with better styling
       toast.success(notification.message || notification.title, {
         duration: 4000,
@@ -142,17 +143,17 @@ const Navbar = () => {
 
     fetchUnread();
     fetchRecentNotifications();
-    
+
     const interval = setInterval(() => {
       fetchUnread();
       fetchRecentNotifications();
     }, 30000);
-    
+
     const onRead = () => {
       fetchUnread();
       fetchRecentNotifications();
     };
-    
+
     window.addEventListener('notifications-read', onRead);
     return () => {
       clearInterval(interval);
@@ -179,20 +180,20 @@ const Navbar = () => {
       // Mark this notification as read if it's not already read
       if (!notification.isRead) {
         await notificationsAPI.markAsRead([notification._id]);
-        
+
         // Update local state
         setUnreadCount(prev => Math.max(0, prev - 1));
-        setRealtimeNotifications(prev => 
+        setRealtimeNotifications(prev =>
           prev.map(n => n._id === notification._id ? { ...n, isRead: true } : n)
         );
-        
+
         // Dispatch event to update other components
         window.dispatchEvent(new Event('notifications-read'));
       }
-      
+
       // Close dropdown
       setShowNotificationDropdown(false);
-      
+
       // Navigate to the notification link if available
       if (notification.metadata?.link) {
         window.location.href = notification.metadata.link;
@@ -204,24 +205,24 @@ const Navbar = () => {
 
   const handleDeleteNotification = async (notificationId, event) => {
     event.stopPropagation(); // Prevent triggering the notification click
-    
+
     try {
       await notificationsAPI.delete(notificationId);
-      
+
       // Update local state - remove the notification
-      setRealtimeNotifications(prev => 
+      setRealtimeNotifications(prev =>
         prev.filter(n => n._id !== notificationId)
       );
-      
+
       // Update unread count if the deleted notification was unread
       const deletedNotification = realtimeNotifications.find(n => n._id === notificationId);
       if (deletedNotification && !deletedNotification.isRead) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
-      
+
       // Dispatch event to update other components
       window.dispatchEvent(new Event('notifications-read'));
-      
+
       toast.success('Notification deleted', {
         icon: '',
         duration: 1000
@@ -233,18 +234,36 @@ const Navbar = () => {
   };
 
   const navLinkClass = ({ isActive }) =>
-    `transition-colors duration-300 text-lg ${
-      isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'
+    `transition-colors duration-300 text-lg ${isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'
     }`;
 
-  const navLinks = [
-    { to: '/users', text: 'Community', icon: <Users size={24} />, badgeKey: 'community' },
-    { to: '/map', text: 'Map', icon: <Map size={24} />, badgeKey: 'map' },
-    { to: '/my-books', text: 'My Books', icon: <BookMarked size={24} />, badgeKey: 'myBooks' },
-    { to: '/borrow-requests', text: 'Requests', icon: <ArrowLeftRight size={24} />, badgeKey: 'requests' },
-    { to: '/messages', text: 'Messages', icon: <MessageSquare size={24} />, badgeKey: 'messages' },
-    { to: '/friends', text: 'Friends', icon: <Heart size={24} />, badgeKey: 'friends' },
-  ];
+  // Conditional navigation based on user role
+  const getNavLinks = () => {
+    const baseLinks = [
+      { to: '/events', text: 'Events', icon: <Calendar size={24} />, badgeKey: 'events', showForAll: true },
+      { to: '/map', text: 'Map', icon: <Map size={24} />, badgeKey: 'map', showForAll: true },
+    ];
+
+    // Organizer-specific links
+    if (user?.role === 'organizer') {
+      return [
+        ...baseLinks,
+        { to: '/organizer/dashboard', text: 'My Events', icon: <Calendar size={24} />, badgeKey: 'organizerEvents' },
+      ];
+    }
+
+    // Regular user links
+    return [
+      ...baseLinks,
+      { to: '/users', text: 'Community', icon: <Users size={24} />, badgeKey: 'community' },
+      { to: '/my-books', text: 'My Books', icon: <BookMarked size={24} />, badgeKey: 'myBooks' },
+      { to: '/borrow-requests', text: 'Requests', icon: <ArrowLeftRight size={24} />, badgeKey: 'requests' },
+      { to: '/messages', text: 'Messages', icon: <MessageSquare size={24} />, badgeKey: 'messages' },
+      { to: '/friends', text: 'Friends', icon: <Heart size={24} />, badgeKey: 'friends' },
+    ];
+  };
+
+  const navLinks = getNavLinks();
 
   // Clear badge when navigating to a page
   useEffect(() => {
@@ -265,7 +284,7 @@ const Navbar = () => {
                 <span className="text-2xl font-bold text-gray-800">BookHive</span>
               </Link>
             </div>
-            <div className="hidden md:block">
+            <div className="hidden min-[1201px]:block">
               <div className="flex items-center space-x-20">
                 {user &&
                   navLinks.map((link) => (
@@ -273,8 +292,7 @@ const Navbar = () => {
                       key={link.to}
                       to={link.to}
                       className={({ isActive }) =>
-                        `transition-colors duration-300 ${
-                          isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'
+                        `transition-colors duration-300 ${isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'
                         }`
                       }
                       title={link.text} // Tooltip for desktop
@@ -285,7 +303,7 @@ const Navbar = () => {
                             {link.icon}
                             {/* iOS-style notification dot - positioned at top-right corner of icon */}
                             {badges[link.badgeKey] > 0 && (
-                              <span 
+                              <span
                                 className="absolute bg-red-500 rounded-full shadow-lg"
                                 style={{
                                   width: '10px',
@@ -300,9 +318,8 @@ const Navbar = () => {
                           </div>
                           {/* Active indicator */}
                           <span
-                            className={`absolute bottom-1 h-1.5 w-3.5 right-0.9 rounded-full bg-green-500 transition-opacity duration-300 ${
-                              isActive ? 'opacity-100' : 'opacity-0'
-                            }`}
+                            className={`absolute bottom-1 h-1.5 w-3.5 right-0.9 rounded-full bg-green-500 transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'
+                              }`}
                           ></span>
                         </div>
                       )}
@@ -310,7 +327,7 @@ const Navbar = () => {
                   ))}
               </div>
             </div>
-            <div className="hidden md:block">
+            <div className="hidden min-[1201px]:block">
               {user ? (
                 <div className="flex items-center gap-4">
                   {/* Real-time Notification Bell */}
@@ -329,13 +346,13 @@ const Navbar = () => {
                         </span>
                       )}
                     </button>
-                    
+
                     {/* Notification Dropdown */}
                     {showNotificationDropdown && (
-                      <div 
-                        ref={dropdownRef} 
+                      <div
+                        ref={dropdownRef}
                         className="absolute right-0 top-12 w-96 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-lg shadow-lg z-[9999]"
-                        style={{ 
+                        style={{
                           position: 'absolute',
                           zIndex: 9999,
                           pointerEvents: 'auto'
@@ -344,7 +361,7 @@ const Navbar = () => {
                         <div className="p-3 border-b border-gray-100">
                           <div className="flex items-center justify-between">
                             <h3 className="font-semibold text-gray-900">Notifications</h3>
-                            <Link 
+                            <Link
                               to="/profile#notifications"
                               className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                               onClick={() => {
@@ -355,9 +372,9 @@ const Navbar = () => {
                             </Link>
                           </div>
                         </div>
-                        <div 
-                          className="max-h-96 overflow-y-auto relative" 
-                          style={{ 
+                        <div
+                          className="max-h-96 overflow-y-auto relative"
+                          style={{
                             scrollbarWidth: 'thin',
                             scrollbarColor: '#d1d5db #f3f4f6'
                           }}
@@ -369,11 +386,10 @@ const Navbar = () => {
                           )}
                           {realtimeNotifications.length > 0 ? (
                             realtimeNotifications.map((notification) => (
-                              <div 
-                                key={notification._id} 
-                                className={`p-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors relative ${
-                                  notification.isRead ? 'opacity-75' : ''
-                                }`}
+                              <div
+                                key={notification._id}
+                                className={`p-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors relative ${notification.isRead ? 'opacity-75' : ''
+                                  }`}
                                 style={{ zIndex: 1 }}
                                 onClick={(e) => {
                                   e.preventDefault();
@@ -415,10 +431,10 @@ const Navbar = () => {
                                       </div>
                                     </div>
                                     <p className="text-xs text-gray-500 mt-1">
-                                      {new Date(notification.createdAt).toLocaleTimeString([], { 
-                                        hour: 'numeric', 
-                                        minute: '2-digit', 
-                                        hour12: true 
+                                      {new Date(notification.createdAt).toLocaleTimeString([], {
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                        hour12: true
                                       })}
                                     </p>
                                   </div>
@@ -462,7 +478,7 @@ const Navbar = () => {
                 </div>
               )}
             </div>
-            <div className="-mr-2 flex md:hidden">
+            <div className="-mr-2 flex min-[1201px]:hidden">
               <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-primary focus:outline-none"
@@ -475,7 +491,7 @@ const Navbar = () => {
         </div>
 
         {isOpen && (
-          <div className="md:hidden absolute w-full bg-white border-b border-gray-200 shadow-lg">
+          <div className="min-[1201px]:hidden absolute w-full bg-white border-b border-gray-200 shadow-lg">
             <div className="px-4 pt-4 pb-4">
               {user && (
                 <div className="flex flex-col items-start gap-3 py-2">
@@ -484,8 +500,7 @@ const Navbar = () => {
                       key={link.to}
                       to={link.to}
                       className={({ isActive }) =>
-                        `transition-colors duration-300 text-base ${
-                          isActive ? 'text-primary font-semibold' : 'text-gray-700 hover:text-primary'
+                        `transition-colors duration-300 text-base ${isActive ? 'text-primary font-semibold' : 'text-gray-700 hover:text-primary'
                         }`
                       }
                       onClick={() => setIsOpen(false)}
@@ -495,7 +510,7 @@ const Navbar = () => {
                           {link.icon}
                           {/* iOS-style notification dot for mobile - top-right corner */}
                           {badges[link.badgeKey] > 0 && (
-                            <span 
+                            <span
                               className="absolute bg-red-500 rounded-full shadow-lg"
                               style={{
                                 width: '10px',
@@ -511,7 +526,7 @@ const Navbar = () => {
                       </div>
                     </NavLink>
                   ))}
-                  
+
                   {/* Mobile Notification Bell */}
                   <button
                     onClick={() => {
@@ -531,9 +546,9 @@ const Navbar = () => {
                     <span>Notifications</span>
                   </button>
 
-                  <Link 
-                    to="/profile" 
-                    className="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-700 hover:text-primary hover:bg-gray-50 transition-colors duration-300" 
+                  <Link
+                    to="/profile"
+                    className="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-700 hover:text-primary hover:bg-gray-50 transition-colors duration-300"
                     onClick={() => setIsOpen(false)}
                   >
                     <span className="relative inline-block flex-shrink-0">
@@ -580,9 +595,9 @@ const Navbar = () => {
       </nav>
 
       {/* Notification Center */}
-      <NotificationCenter 
-        isOpen={showNotificationCenter} 
-        onClose={() => setShowNotificationCenter(false)} 
+      <NotificationCenter
+        isOpen={showNotificationCenter}
+        onClose={() => setShowNotificationCenter(false)}
       />
 
 

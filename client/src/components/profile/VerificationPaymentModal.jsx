@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import styled from 'styled-components';
-import { X, Shield, Star, Zap, Loader, BookOpen, BadgeCheck } from 'lucide-react';
+import { X, Shield, Star, Zap, Loader, BookOpen, BadgeCheck, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AuthContext } from '../../context/AuthContext';
 import { getFullImageUrl } from '../../utils/imageHelpers';
@@ -8,7 +8,7 @@ import { getFullImageUrl } from '../../utils/imageHelpers';
 const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
   const { user } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
-  const [verificationPrice, setVerificationPrice] = useState(50);
+  const [verificationPrice, setVerificationPrice] = useState(99);
 
   useEffect(() => {
     // Load Razorpay script
@@ -185,33 +185,47 @@ const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
         </PreviewSection>
 
         <Benefits>
-          <h3>What you'll get:</h3>
+          <h3>🎁 Premium Benefits You'll Get:</h3>
           <BenefitItem>
             <BadgeCheck size={20} color="#1a87db" fill="#ffffffff" />
             <div>
-              <strong>Verified Badge</strong>
-              <p>Blue checkmark displayed next to your name everywhere</p>
+              <strong>Verified Blue Badge</strong>
+              <p>Blue checkmark displayed next to your name everywhere on BookHive</p>
             </div>
           </BenefitItem>
           <BenefitItem>
-            <Shield size={20} color="#6308ccff" />
+            <Zap size={20} color="#f59e0b" />
             <div>
-              <strong>Increased Trust</strong>
-              <p>Build credibility with other readers in the community</p>
+              <strong>Boosted Search Visibility</strong>
+              <p>Your profile and books appear higher in search results</p>
             </div>
           </BenefitItem>
           <BenefitItem>
-            <Star size={20} color="#f4bc05ff" />
+            <Star size={20} color="#10b981" />
             <div>
-              <strong>Better Visibility</strong>
-              <p>Stand out in search results and user listings</p>
+              <strong>Priority Borrowing Queue</strong>
+              <p>Your borrow requests get priority approval from book owners</p>
             </div>
           </BenefitItem>
           <BenefitItem>
-            <Zap size={20} color="#29b910ff" />
+            <BookOpen size={20} color="#6366f1" />
             <div>
-              <strong>Priority Support</strong>
-              <p>Get faster responses from our support team</p>
+              <strong>Borrow Multiple Books</strong>
+              <p>Borrow up to 3 books simultaneously (vs 1 for free users)</p>
+            </div>
+          </BenefitItem>
+          <BenefitItem>
+            <Shield size={20} color="#8b5cf6" />
+            <div>
+              <strong>Early Access to Rare Books</strong>
+              <p>Get first dibs on newly listed rare and popular books</p>
+            </div>
+          </BenefitItem>
+          <BenefitItem>
+            <CheckCircle size={20} color="#14b8a6" />
+            <div>
+              <strong>Trusted Member Profile</strong>
+              <p>Build instant credibility with the BookHive community</p>
             </div>
           </BenefitItem>
         </Benefits>

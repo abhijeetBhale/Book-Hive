@@ -38,8 +38,36 @@ export const registerUser = async (req, res) => {
     }
 
     const user = await User.create({ name, email, password });
+    
+    // Generate email verification token
+    const verificationToken = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    // Save verification token to user
+    user.contactVerification = {
+      email: {
+        isVerified: false,
+        verificationToken: verificationToken,
+        tokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+      }
+    };
+    await user.save();
+    
+    // Send verification email
+    try {
+      const { sendEmailVerification } = await import('../services/emailService.js');
+      await sendEmailVerification(email, name, verificationToken);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Don't fail registration if email fails
+    }
+    
     res.status(201).json({
-      token: generateToken(user._id)
+      token: generateToken(user._id),
+      message: 'Registration successful! Please check your email to verify your account.'
     });
   } catch (error) {
     console.error('Register user error:', error);
@@ -137,6 +165,19 @@ export const getProfile = async (req, res) => {
         avatar: userObj.avatar,
         location: userObj.location,
         role: userObj.role || 'user', // Include role for admin access checks
+        isVerified: userObj.isVerified || false, // Premium verification
+        contactVerification: {
+          email: {
+            isVerified: userObj.contactVerification?.email?.isVerified || false
+          }
+        },
+        premiumFeatures: userObj.premiumFeatures || {
+          searchBoost: false,
+          priorityQueue: false,
+          multipleBooks: false,
+          maxBooksLimit: 1,
+          earlyAccess: false
+        },
         securitySettings: userObj.securitySettings || {
           twoFactorEnabled: false,
           emailNotifications: true,
@@ -583,6 +624,136 @@ export const verify2FA = async (req, res) => {
     console.error('Verify 2FA error:', error);
     res.status(500).json({ 
       message: 'Server error verifying 2FA code',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// @desc    Verify email address
+// @route   GET /api/auth/verify-email/:token
+export const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    if (!token) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Verification token is required' 
+      });
+    }
+
+    // Verify token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid or expired verification token' 
+      });
+    }
+
+    // Find user
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+
+    // Check if already verified
+    if (user.contactVerification?.email?.isVerified) {
+      return res.status(200).json({ 
+        success: true,
+        message: 'Email already verified',
+        alreadyVerified: true
+      });
+    }
+
+    // Verify email
+    if (!user.contactVerification) {
+      user.contactVerification = { email: {} };
+    }
+    user.contactVerification.email.isVerified = true;
+    user.contactVerification.email.verifiedAt = new Date();
+    user.contactVerification.email.verificationToken = undefined;
+    user.contactVerification.email.tokenExpiry = undefined;
+    
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully! You now have the "Contact Verified" badge.'
+    });
+  } catch (error) {
+    console.error('Verify email error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error verifying email',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// @desc    Resend email verification
+// @route   POST /api/auth/resend-verification
+export const resendVerification = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+
+    // Check if already verified
+    if (user.contactVerification?.email?.isVerified) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email is already verified' 
+      });
+    }
+
+    // Generate new verification token
+    const verificationToken = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    // Update user with new token
+    if (!user.contactVerification) {
+      user.contactVerification = { email: {} };
+    }
+    user.contactVerification.email.verificationToken = verificationToken;
+    user.contactVerification.email.tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await user.save();
+    
+    // Send verification email
+    try {
+      const { sendEmailVerification } = await import('../services/emailService.js');
+      await sendEmailVerification(user.email, user.name, verificationToken);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      return res.status(500).json({ 
+        success: false,
+        message: 'Failed to send verification email' 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification email sent! Please check your inbox.'
+    });
+  } catch (error) {
+    console.error('Resend verification error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error resending verification email',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

@@ -4,9 +4,7 @@ import styled from 'styled-components';
 import { booksAPI, borrowAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import { getFullImageUrl } from '../utils/imageHelpers';
-import { Loader, BookOpen, User, ArrowRight } from 'lucide-react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleCheck } from '@fortawesome/free-solid-svg-icons';
+import { Loader, Shield } from 'lucide-react';
 import OptimizedAvatar from '../components/OptimizedAvatar';
 
 const PageWrapper = styled.div`
@@ -59,18 +57,6 @@ const Description = styled.p`
   line-height: 1.625;
   color: #374151;
   margin-bottom: 2rem;
-`;
-
-const InfoTag = styled.span`
-  display: inline-block;
-  background-color: #eef2ff;
-  color: #4338ca;
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  font-weight: 600;
-  font-size: 0.875rem;
-  margin-right: 0.5rem;
-  margin-bottom: 0.5rem;
 `;
 
 const OwnerSection = styled.div`
@@ -168,7 +154,6 @@ const BookDetails = () => {
     try {
       await borrowAPI.createRequest(id);
       alert('Borrow request sent successfully!');
-      // You might want to update the UI to reflect this
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to send borrow request.');
     }
@@ -200,64 +185,39 @@ const BookDetails = () => {
           <Title>{book.title}</Title>
           <Author>by {book.author}</Author>
           <Description>{book.description || 'No description available.'}</Description>
-          <div>
-            <InfoTag>Category: {book.category}</InfoTag>
-            <InfoTag>Condition: {book.condition}</InfoTag>
-            <InfoTag>Publication Year: {book.publicationYear || 'Unknown'}</InfoTag>
-            <InfoTag>Status: {book.isAvailable ? 'Available' : 'Not Available'}</InfoTag>
-            {book.forBorrowing && (
-              <InfoTag style={{ backgroundColor: '#dbeafe', color: '#1d4ed8' }}>
-                Lending Duration: {book.lendingDuration || 14} days
-              </InfoTag>
-            )}
-            {book.forSelling && (
-              <InfoTag style={{ backgroundColor: '#d1fae5', color: '#059669' }}>
-                For Sale: ₹{book.sellingPrice?.toFixed(2) || '0.00'}
-              </InfoTag>
-            )}
-          </div>
 
-          <OwnerSection>
-            <OwnerTitle>Listed By</OwnerTitle>
-            <OwnerCard to={`/users/${book.owner._id}`}>
-              <OptimizedAvatar 
-                src={getFullImageUrl(book.owner.avatar)}
-                alt={book.owner.name}
-                size={60}
-                rounded={true}
-                fallbackColor="#4F46E5"
-              />
-              <div style={{ flex: 1 }}>
-                <OwnerName style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  {book.owner.name}
-                  {book.owner.isVerified && (
-                    <FontAwesomeIcon 
-                      icon={faCircleCheck} 
-                      style={{ color: "#1a87db", fontSize: "18px" }} 
-                    />
-                  )}
-                </OwnerName>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0.25rem 0 0 0' }}>
-                  View Profile →
-                </p>
-              </div>
-            </OwnerCard>
-          </OwnerSection>
+          {book.securityDeposit > 0 && (
+            <div style={{
+              marginTop: '1rem',
+              padding: '0.75rem',
+              backgroundColor: '#eff6ff',
+              borderRadius: '0.5rem',
+              border: '1px solid #bfdbfe',
+              color: '#1e40af',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <Shield size={20} />
+              <span style={{ fontWeight: 600 }}>
+                Security Deposit: ₹{book.securityDeposit}
+              </span>
+            </div>
+          )}
 
-          {!isOwner && book.isAvailable && (
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+          {!isOwner && (
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
               {book.forBorrowing && (
-                <ActionButton onClick={handleBorrowRequest} style={{ flex: book.forSelling ? 1 : 'auto' }}>
-                  Request to Borrow ({book.lendingDuration || 14} days)
+                <ActionButton onClick={handleBorrowRequest}>
+                  Request to Borrow
                 </ActionButton>
               )}
               {book.forSelling && (
-                <ActionButton 
-                  onClick={() => alert('Contact seller functionality coming soon!')} 
-                  style={{ 
+                <ActionButton
+                  onClick={() => alert('Contact seller functionality coming soon!')}
+                  style={{
                     flex: book.forBorrowing ? 1 : 'auto',
                     backgroundColor: '#059669',
-                    '&:hover': { backgroundColor: '#047857' }
                   }}
                 >
                   Buy for ₹{book.sellingPrice?.toFixed(2) || '0.00'}
@@ -265,6 +225,18 @@ const BookDetails = () => {
               )}
             </div>
           )}
+
+          <OwnerSection>
+            <OwnerTitle>Book Owner</OwnerTitle>
+            <OwnerCard to={`/profile/${book.owner._id}`}>
+              <OptimizedAvatar
+                src={book.owner.avatar}
+                alt={book.owner.name}
+                size={50}
+              />
+              <OwnerName>{book.owner.name}</OwnerName>
+            </OwnerCard>
+          </OwnerSection>
         </DetailsContainer>
       </ContentWrapper>
     </PageWrapper>

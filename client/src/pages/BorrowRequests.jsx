@@ -15,8 +15,10 @@ const BorrowRequests = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('received');
   const [showDeniedModal, setShowDeniedModal] = useState(false);
+  const [editingBook, setEditingBook] = useState(null);
 
   const [reviewModal, setReviewModal] = useState({ open: false, borrowRequestId: null, toUserId: null, counterpartName: '' });
+  const [reviewedRequests, setReviewedRequests] = useState(new Set());
 
   const fetchData = async () => {
     setLoading(true);
@@ -91,6 +93,43 @@ const BorrowRequests = () => {
     }
   };
 
+  const handleMakeAvailableAgain = async (bookId, requestId) => {
+    if (!editingBook) {
+      // Just open the edit modal
+      const book = receivedRequests.find(req => req.book._id === bookId)?.book;
+      if (book) {
+        setEditingBook({
+          id: bookId,
+          requestId: requestId,
+          lendingDuration: book.lendingDuration || 14,
+          securityDeposit: book.securityDeposit || 0
+        });
+      }
+      return;
+    }
+
+    try {
+      // Import booksAPI
+      const { booksAPI } = await import('../utils/api');
+      
+      await booksAPI.update(bookId, {
+        isAvailable: true,
+        forBorrowing: true,
+        lendingDuration: editingBook.lendingDuration,
+        securityDeposit: editingBook.securityDeposit
+      });
+
+      // Delete the borrow request to remove it from the returned tab
+      await borrowAPI.deleteRequest(editingBook.requestId);
+      
+      toast.success('Book is now available for borrowing again!');
+      setEditingBook(null);
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to make book available');
+    }
+  };
+
   const renderStatusBadge = (status) => {
     const statusStyles = {
       pending: { bg: '#fffbeb', text: '#b45309' },
@@ -119,8 +158,13 @@ const BorrowRequests = () => {
     }
 
     if (activeTab === 'received') {
-      // Filter out denied requests from main view
-      const activeReceivedRequests = receivedRequests.filter(req => req.book && req.borrower && req.status !== 'denied');
+      // Filter out denied and reviewed returned requests from main view
+      const activeReceivedRequests = receivedRequests.filter(req => 
+        req.book && 
+        req.borrower && 
+        req.status !== 'denied' && 
+        !(req.status === 'returned' && reviewedRequests.has(req._id))
+      );
       
       return activeReceivedRequests.length > 0 ? (
         <div className="requests-grid">
@@ -207,8 +251,13 @@ const BorrowRequests = () => {
     }
 
     if (activeTab === 'my') {
-      // Filter out denied requests from main view
-      const activeRequests = myRequests.filter(req => req.book && req.owner && req.status !== 'denied');
+      // Filter out denied and reviewed returned requests from main view
+      const activeRequests = myRequests.filter(req => 
+        req.book && 
+        req.owner && 
+        req.status !== 'denied' && 
+        !(req.status === 'returned' && reviewedRequests.has(req._id))
+      );
 
       return activeRequests.length > 0 ? (
         <div className="requests-grid">
@@ -301,6 +350,102 @@ const BorrowRequests = () => {
         <EmptyState message="You haven't made any borrow requests yet. Go explore the community!" />
       );
     }
+
+    if (activeTab === 'returned') {
+      const returnedBooks = receivedRequests.filter(req => req.book && req.borrower && req.status === 'returned');
+
+      return returnedBooks.length > 0 ? (
+        <div className="requests-grid">
+          {returnedBooks.map(req => (
+            <div key={req._id} className="request-card returned-card">
+              <div className="book-cover-container">
+                <img
+                  src={getFullImageUrl(req.book?.coverImage)}
+                  alt={req.book?.title || 'Book cover'}
+                  className="book-cover"
+                  onError={(e) => {
+                    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA0MEg2NVY4MEgzNVY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
+                  }}
+                />
+                <div className="returned-badge">
+                  <CheckCircle size={16} />
+                  Returned
+                </div>
+              </div>
+              <div className="card-content">
+                <div className="card-header">
+                  <h3 className="book-title">{req.book?.title || 'Unknown Book'}</h3>
+                  {renderStatusBadge(req.status)}
+                </div>
+                <div className="user-info">
+                  <img
+                    src={req.borrower?.avatar || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K'}
+                    alt={req.borrower?.name || 'User'}
+                    className="user-avatar"
+                    onError={(e) => {
+                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
+                    }}
+                  />
+                  <p>Returned by {req.borrower?.name || 'Unknown User'}</p>
+                </div>
+                <p className="request-date">Returned on: {formatDate(req.returnedDate || req.actualReturnDate || req.updatedAt)}</p>
+                
+                {editingBook && editingBook.id === req.book._id ? (
+                  <div className="edit-form">
+                    <div className="form-group">
+                      <label>Lending Duration (days)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={editingBook.lendingDuration}
+                        onChange={(e) => setEditingBook({...editingBook, lendingDuration: parseInt(e.target.value)})}
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Security Deposit (₹)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editingBook.securityDeposit}
+                        onChange={(e) => setEditingBook({...editingBook, securityDeposit: parseInt(e.target.value)})}
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="card-actions">
+                      <button onClick={() => setEditingBook(null)} className="btn deny-btn">
+                        Cancel
+                      </button>
+                      <button onClick={() => handleMakeAvailableAgain(req.book._id, req._id)} className="btn approve-btn">
+                        <Check size={16} /> Save & Make Available
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="card-actions">
+                    <button
+                      className="btn approve-btn"
+                      onClick={() => setReviewModal({ open: true, borrowRequestId: req._id, toUserId: req.borrower?._id, counterpartName: req.borrower?.name || 'User' })}
+                    >
+                      Leave a Review
+                    </button>
+                    <button
+                      className="btn make-available-btn"
+                      onClick={() => handleMakeAvailableAgain(req.book._id, req._id)}
+                    >
+                      <Eye size={16} /> Make Available Again
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState message="No returned books yet. Books will appear here once borrowers return them." />
+      );
+    }
   };
 
   return (
@@ -317,6 +462,9 @@ const BorrowRequests = () => {
           </button>
           <button onClick={() => setActiveTab('my')} className={`tab-btn ${activeTab === 'my' ? 'active' : ''}`}>
             My Borrow Requests
+          </button>
+          <button onClick={() => setActiveTab('returned')} className={`tab-btn ${activeTab === 'returned' ? 'active' : ''}`}>
+            Returned Books ({receivedRequests.filter(req => req.status === 'returned').length})
           </button>
         </div>
         <button 
@@ -348,6 +496,8 @@ const BorrowRequests = () => {
             rating,
             comment,
           });
+          // Mark this request as reviewed
+          setReviewedRequests(prev => new Set([...prev, reviewModal.borrowRequestId]));
           // Emit event to notify other components about the new review
           window.dispatchEvent(new CustomEvent('review-updated', { detail: { userId: reviewModal.toUserId } }));
           setReviewModal({ open: false, borrowRequestId: null, toUserId: null, counterpartName: '' });
@@ -930,6 +1080,72 @@ const StyledWrapper = styled.div`
         border-color: #fca5a5;
       }
     }
+  }
+  .returned-card {
+    border-color: #10b981;
+    background: linear-gradient(to right, #f0fdf4, #ffffff);
+  }
+
+  .returned-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: #10b981;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .book-cover-container {
+    position: relative;
+  }
+
+  .edit-form {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+
+    .form-group {
+      margin-bottom: 1rem;
+
+      label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+      }
+
+      .form-input {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        transition: border-color 0.2s;
+
+        &:focus {
+          outline: none;
+          border-color: #4F46E5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+      }
+    }
+  }
+
+  .make-available-btn {
+    background-color: #4F46E5;
+    color: white;
+    border: 1px solid transparent;
+    &:hover { background-color: #4338ca; }
   }
 `;
 

@@ -24,12 +24,27 @@ const borrowRequestSchema = new mongoose.Schema({
   dueDate: {
     type: Date
   },
-  remindersSent: {
+  // Security Deposit fields
+  depositStatus: {
+    type: String,
+    enum: ['pending', 'paid', 'refunded', 'forfeited', 'not_required'],
+    default: 'not_required'
+  },
+  depositPaymentId: {
+    type: String
+  },
+  depositAmount: {
     type: Number,
     default: 0
   },
-  lastReminderDate: {
-    type: Date
+  // Transaction metadata for rating calculations
+  metadata: {
+    handoverDate: Date,
+    returnRequestDate: Date,
+    communicationQuality: {
+      responseTime: Number, // Average response time in hours
+      messageCount: Number
+    }
   },
   communicationStarted: {
     type: Boolean,
@@ -39,44 +54,27 @@ const borrowRequestSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Conversation'
   },
-  
-  // Rating-related fields
+  borrowedDate: {
+    type: Date
+  },
+  returnedDate: {
+    type: Date
+  },
   actualReturnDate: {
     type: Date
   },
-  
-  isRatedByLender: {
-    type: Boolean,
-    default: false
-  },
-  
-  isRatedByBorrower: {
-    type: Boolean,
-    default: false
-  },
-  
-  // Auto-calculated penalties
   penalties: [{
     type: {
       type: String,
-      enum: ['late_return', 'very_late_return', 'damaged_book']
+      enum: ['late_return', 'damage', 'lost', 'very_late_return']
     },
     value: Number,
-    appliedAt: {
-      type: Date,
-      default: Date.now
+    appliedAt: Date,
+    paid: {
+      type: Boolean,
+      default: false
     }
-  }],
-  
-  // Transaction metadata for rating calculations
-  metadata: {
-    handoverDate: Date,
-    returnRequestDate: Date,
-    communicationQuality: {
-      responseTime: Number, // Average response time in hours
-      messageCount: Number
-    }
-  }
+  }]
 }, {
   timestamps: true
 })

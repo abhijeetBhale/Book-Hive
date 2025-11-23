@@ -344,4 +344,41 @@ export const paymentAPI = {
   getVerificationStatus: () => api.get('/payment/verification-status'),
 };
 
+// Events API
+export const eventsAPI = {
+  // Public endpoints
+  getPublicEvents: (params) => api.get('/events', { params }).then(res => res.data),
+  getEventById: (id) => api.get(`/events/${id}`).then(res => res.data),
+  registerForEvent: (id, data) => api.post(`/events/${id}/register`, data).then(res => res.data),
+  cancelRegistration: (id) => api.delete(`/events/${id}/register`).then(res => res.data),
+  getMyRegistrations: () => api.get('/events/my-registrations').then(res => res.data),
+};
+
+// Organizer API
+export const organizerAPI = {
+  // Application
+  applyAsOrganizer: (data) => api.post('/organizer/apply', data).then(res => res.data),
+  
+  // Events management
+  getOrganizerEvents: (params) => api.get('/organizer/events', { params }).then(res => res.data),
+  getOrganizerEventsForMap: () => api.get('/organizer/events/map').then(res => res.data),
+  createEvent: (data) => api.post('/organizer/events', data).then(res => res.data),
+  updateEvent: (id, data) => api.put(`/organizer/events/${id}`, data).then(res => res.data),
+  deleteEvent: (id) => api.delete(`/organizer/events/${id}`).then(res => res.data),
+  
+  // Registrants management
+  getEventRegistrants: (id, params) => api.get(`/organizer/events/${id}/registrants`, { params }).then(res => res.data),
+  exportRegistrants: (id) => api.get(`/organizer/events/${id}/export`, { responseType: 'blob' }),
+  updateRegistrantStatus: (eventId, registrationId, data) => 
+    api.put(`/organizer/events/${eventId}/registrants/${registrationId}`, data).then(res => res.data),
+  
+  // Stats
+  getOrganizerStats: () => api.get('/organizer/stats').then(res => res.data),
+  
+  // Admin endpoints for organizer applications
+  getApplications: (params) => api.get('/organizer/applications', { params }).then(res => res.data),
+  approveApplication: (id) => api.put(`/organizer/applications/${id}/approve`).then(res => res.data),
+  rejectApplication: (id, reason) => api.put(`/organizer/applications/${id}/reject`, { reason }).then(res => res.data),
+};
+
 export default api;

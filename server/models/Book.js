@@ -84,6 +84,12 @@ const bookSchema = new mongoose.Schema({
     max: 365,
     default: 14, // Default 14 days
   },
+  // Security Deposit
+  securityDeposit: {
+    type: Number,
+    min: 0,
+    default: 0, // 0 means no deposit required
+  },
   // Selling options
   forSelling: {
     type: Boolean,

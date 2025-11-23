@@ -29,10 +29,51 @@ export const requestBook = async (req, res) => {
         .status(400)
         .json({ message: 'This book is currently unavailable' });
     }
+
+    // Check for existing pending request
+    const existingRequest = await BorrowRequest.findOne({
+      book: req.params.bookId,
+      borrower: req.user._id,
+      status: 'pending'
+    });
+
+    if (existingRequest) {
+      return res
+        .status(400)
+        .json({ message: 'You have already requested this book' });
+    }
+
+    // Premium feature: Check multiple books limit
+    const User = (await import('../models/User.js')).default;
+    const currentUser = await User.findById(req.user._id);
+    const maxBooksLimit = currentUser.premiumFeatures?.maxBooksLimit || 1;
+    
+    // Count currently active borrows (approved and not returned)
+    const activeBorrows = await BorrowRequest.countDocuments({
+      borrower: req.user._id,
+      status: 'approved',
+      returnedAt: { $exists: false }
+    });
+
+    if (activeBorrows >= maxBooksLimit) {
+      const upgradeMessage = maxBooksLimit === 1 
+        ? 'You can only borrow 1 book at a time. Upgrade to Premium Verified to borrow up to 3 books simultaneously!'
+        : `You have reached your limit of ${maxBooksLimit} books. Please return a book before borrowing another.`;
+      
+      return res.status(400).json({ 
+        message: upgradeMessage,
+        code: 'BORROW_LIMIT_REACHED',
+        currentLimit: maxBooksLimit,
+        activeBorrows: activeBorrows,
+        isPremium: currentUser.isVerified || false
+      });
+    }
     const borrowRequest = new BorrowRequest({
       book: req.params.bookId,
       borrower: req.user._id,
-      owner: book.owner
+      owner: book.owner,
+      depositStatus: book.securityDeposit > 0 ? 'pending' : 'not_required',
+      depositAmount: book.securityDeposit || 0
     });
     await borrowRequest.save();
     // Create a notification for the book owner
@@ -196,10 +237,55 @@ export const returnBook = async (req, res) => {
 // @route   GET /api/borrow/received-requests
 export const getReceivedRequests = async (req, res) => {
   try {
-    const requests = await BorrowRequest.find({ owner: req.user._id })
-      .populate('book', 'title coverImage')
-      .populate('borrower', 'name email avatar')
-      .sort({ createdAt: -1 });
+    // Premium feature: Priority queue - verified users' requests appear first
+    const requests = await BorrowRequest.aggregate([
+      { $match: { owner: req.user._id } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'borrower',
+          foreignField: '_id',
+          as: 'borrowerData'
+        }
+      },
+      {
+        $lookup: {
+          from: 'books',
+          localField: 'book',
+          foreignField: '_id',
+          as: 'bookData'
+        }
+      },
+      {
+        $addFields: {
+          borrowerVerified: { 
+            $cond: [
+              { $eq: [{ $arrayElemAt: ['$borrowerData.isVerified', 0] }, true] },
+              1,
+              0
+            ]
+          },
+          borrower: { $arrayElemAt: ['$borrowerData', 0] },
+          book: { $arrayElemAt: ['$bookData', 0] }
+        }
+      },
+      {
+        $sort: {
+          borrowerVerified: -1, // Verified users first
+          createdAt: -1 // Then by creation date
+        }
+      },
+      {
+        $project: {
+          borrowerData: 0,
+          bookData: 0,
+          borrowerVerified: 0,
+          'borrower.password': 0,
+          'borrower.securitySettings': 0,
+          'borrower.premiumFeatures': 0
+        }
+      }
+    ]);
 
     res.json({ requests });
   } catch (error) {
@@ -432,6 +518,15 @@ export const markAsBorrowed = async (req, res) => {
       return res.status(400).json({ message: 'Request must be approved first' });
     }
 
+    // Check if deposit is required and paid
+    if (request.depositStatus === 'pending') {
+      return res.status(400).json({ 
+        message: 'Security deposit must be paid before borrowing',
+        requiresDeposit: true,
+        depositAmount: request.depositAmount
+      });
+    }
+
     // Update the request status and let the pre-save hook handle the rest
     const updatedRequest = await BorrowRequest.findById(req.params.requestId);
     updatedRequest.status = 'borrowed';
@@ -490,11 +585,16 @@ export const markAsReturned = async (req, res) => {
 
     await BorrowRequest.findByIdAndUpdate(req.params.requestId, {
       status: 'returned',
-      returnedDate: new Date()
+      returnedDate: new Date(),
+      // If deposit was paid, mark as refunded (logical refund)
+      ...(request.depositStatus === 'paid' && { depositStatus: 'refunded' })
     });
 
     // Update book availability
     await Book.findByIdAndUpdate(request.book._id, {
+      $set: {
+        isAvailable: true
+      },
       $unset: {
         isBooked: 1,
         bookedFrom: 1,

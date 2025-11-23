@@ -55,6 +55,30 @@ const Map = () => {
     const fetchUsers = async () => {
       setLoading(true);
       try {
+        // If user is an organizer, fetch their events instead of users
+        if (currentUser?.role === 'organizer') {
+          try {
+            const { organizerAPI } = await import('../utils/api');
+            const response = await organizerAPI.getOrganizerEventsForMap();
+            // Transform events to match user structure for map display
+            const eventMarkers = (response.data || []).map(event => ({
+              _id: event._id,
+              name: event.title,
+              location: event.location,
+              isEvent: true,
+              eventData: event
+            }));
+            setUsers(eventMarkers);
+            setSelectedUserIds(eventMarkers.map(e => e._id));
+          } catch (error) {
+            console.error('Failed to load organizer events:', error);
+            toast.error('Failed to load your events');
+            setUsers([]);
+          }
+          setLoading(false);
+          return;
+        }
+
         if (!currentUser?.location?.coordinates || currentUser.location.coordinates.length !== 2) {
           toast.error('Please set your location in your profile to use distance filtering.');
           setUsers([]);

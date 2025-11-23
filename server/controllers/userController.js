@@ -1,6 +1,8 @@
 import User from '../models/User.js';
 import Book from '../models/Book.js';
 import Notification from '../models/Notification.js'; // Ensure Notification model is imported
+import UserStats from '../models/UserStats.js';
+import Friendship from '../models/Friendship.js';
 
 // @desc    Get user profile
 // @route   GET /api/users/profile
@@ -156,14 +158,33 @@ export const getUsersWithBooks = async (req, res) => {
     }
     
     const users = await User.find(query)
-      .select('name email avatar location booksOwned rating');
+      .select('name email avatar location booksOwned rating createdAt');
     
     const usersWithBooks = await Promise.all(users.map(async (user) => {
       const books = await Book.find({ owner: user._id })
         .select('title author category isAvailable forBorrowing coverImage');
       
+      // Fetch user stats for additional info
+      const stats = await UserStats.findOne({ user: user._id });
+      
+      // Count friends dynamically
+      const friendsCount = await Friendship.countDocuments({
+        $or: [
+          { requester: user._id, status: 'accepted' },
+          { recipient: user._id, status: 'accepted' }
+        ]
+      });
+      
       const userObj = user.toObject();
       userObj.booksOwned = books;
+      userObj.friendsCount = friendsCount;
+      
+      // Add additional stats
+      if (stats) {
+        userObj.contributions = (stats.sharing?.booksLent || 0) + (stats.sharing?.booksBorrowed || 0);
+      } else {
+        userObj.contributions = 0;
+      }
       
       // Apply location privacy - return display coordinates for map
       if (userObj.location && userObj.location.displayCoordinates && userObj.location.displayCoordinates.length === 2) {

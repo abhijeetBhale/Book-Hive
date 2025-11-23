@@ -325,7 +325,30 @@ const MessagesArea = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  background: #f8fafc;
+  background-color: #efeae2;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 20%),
+    radial-gradient(circle at 90% 80%, rgba(0, 0, 0, 0.02) 0%, transparent 20%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+  background-size: 400px 400px, 300px 300px, 500px 500px;
+  background-position: 0 0, 100% 100%, 50% 50%;
+  background-repeat: repeat;
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.015) 2px, rgba(0,0,0,0.015) 4px),
+      repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.015) 2px, rgba(0,0,0,0.015) 4px);
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -338,12 +361,12 @@ const DateSeparator = styled.div`
   .date-text {
     display: inline-block;
     padding: 6px 12px;
-    background: rgba(0, 0, 0, 0.1);
-    color: #718096;
-    font-size: 12px;
+    background: rgba(225, 245, 254, 0.92);
+    color: #54656f;
+    font-size: 12.5px;
     font-weight: 500;
-    border-radius: 12px;
-    backdrop-filter: blur(10px);
+    border-radius: 7.5px;
+    box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
   }
 `;
 
@@ -373,37 +396,76 @@ const MessageGroup = styled.div`
 `;
 
 const MessageBubble = styled.div`
-  padding: 12px 16px;
-  border-radius: 18px;
+  padding: 8px 12px;
+  border-radius: 8px;
   word-wrap: break-word;
+  word-break: break-word;
   position: relative;
   max-width: 100%;
+  min-width: 80px;
+  box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
   
   ${props => props.$isMe ? `
-    background: #4299e1;
-    color: white;
-    border-bottom-right-radius: 6px;
+    background: #d9fdd3;
+    color: #111b21;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    border-top-right-radius: 0px;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -8px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 0 10px 8px;
+      border-color: transparent transparent #d9fdd3 transparent;
+      rotate: 180deg;
+    }
   ` : `
     background: white;
-    color: #2d3748;
-    border: 1px solid #e2e8f0;
-    border-bottom-left-radius: 6px;
+    color: #111b21;
+    border-top-right-radius: 8px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    border-top-left-radius: 0px;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -8px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 8px 10px 0;
+      border-color: transparent white transparent transparent;
+    }
   `}
   
   .message-text {
-    font-size: 14px;
-    line-height: 1.4;
-    margin-bottom: 4px;
+    font-size: 14.2px;
+    line-height: 19px;
+    margin: 0;
+    padding-right: 70px;
+    padding-bottom: 0;
+    min-height: 19px;
   }
   
   .message-time {
     font-size: 11px;
-    opacity: 0.7;
+    color: #667781;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     justify-content: flex-end;
-    margin-top: 4px;
+    position: absolute;
+    bottom: 4px;
+    right: 8px;
+    white-space: nowrap;
   }
 `;
 
@@ -443,30 +505,25 @@ const TypingIndicator = styled.div`
 `;
 
 const MessageInput = styled.div`
-  padding: 16px 20px;
-  border-top: 1px solid #e2e8f0;
-  background: white;
+  padding: 10px 16px;
+  border-top: 1px solid #d1d7db;
+  background: #f0f2f5;
   
   .input-container {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    background: #f7fafc;
-    border-radius: 24px;
-    border: 1px solid #e2e8f0;
+    gap: 8px;
+    padding: 9px 12px;
+    background: white;
+    border-radius: 21px;
+    border: none;
     transition: all 0.2s;
-    
-    &:focus-within {
-      border-color: #4299e1;
-      background: white;
-    }
   }
   
   .input-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
   }
   
   .input-btn {
@@ -479,12 +536,11 @@ const MessageInput = styled.div`
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    color: #718096;
+    color: #54656f;
     transition: all 0.2s;
     
     &:hover {
-      background: #edf2f7;
-      color: #4299e1;
+      background: #f5f6f6;
     }
   }
   
@@ -493,24 +549,25 @@ const MessageInput = styled.div`
     border: none;
     background: none;
     outline: none;
-    font-size: 14px;
-    color: #2d3748;
+    font-size: 15px;
+    color: #111b21;
+    line-height: 20px;
     
     &::placeholder {
-      color: #a0aec0;
+      color: #667781;
     }
   }
   
   .send-btn {
-    background: #4299e1;
+    background: #00a884;
     color: white;
     
     &:hover {
-      background: #3182ce;
+      background: #06cf9c;
     }
     
     &:disabled {
-      background: #cbd5e0;
+      background: #d1d7db;
       cursor: not-allowed;
     }
   }
@@ -1023,7 +1080,7 @@ const getStatusIcon = (status) => {
   switch (status) {
     case 'sent': return <Check size={14} />;
     case 'delivered': return <CheckCheck size={14} />;
-    case 'read': return <CheckCheck size={14} />;
+    case 'read': return <CheckCheck size={14} style={{ color: '#53bdeb' }} />;
     default: return <Check size={14} />;
   }
 };
@@ -1152,7 +1209,7 @@ const MessagesPage = () => {
       const preselectId = searchParams.get('userId');
       const storedId = localStorage.getItem('lastActiveUserId');
       const targetId = preselectId || storedId;
-      
+
       // On mobile, don't auto-select conversations - let user choose
       if (isMobile) {
         if (preselectId) {
@@ -1358,16 +1415,29 @@ const MessagesPage = () => {
         }
         setDecryptedTexts(results);
 
-        // Initialize message statuses
-        const statuses = {};
-        (active.messages || []).forEach(m => {
-          statuses[m._id] = {
-            status: m.status || 'sent',
-            deliveredAt: m.deliveredAt,
-            readAt: m.readAt
-          };
+        // Initialize message statuses - preserve existing statuses, especially 'read'
+        setMessageStatuses(prevStatuses => {
+          const statuses = { ...prevStatuses };
+          (active.messages || []).forEach(m => {
+            // Only update if we don't have a status, or if the new status is more advanced
+            const existingStatus = statuses[m._id];
+            const newStatus = m.status || 'sent';
+
+            // Status hierarchy: sent < delivered < read
+            const statusPriority = { 'sent': 1, 'delivered': 2, 'read': 3 };
+            const shouldUpdate = !existingStatus ||
+              (statusPriority[newStatus] > statusPriority[existingStatus.status]);
+
+            if (shouldUpdate || !statuses[m._id]) {
+              statuses[m._id] = {
+                status: existingStatus?.status === 'read' ? 'read' : newStatus,
+                deliveredAt: m.deliveredAt || existingStatus?.deliveredAt,
+                readAt: m.readAt || existingStatus?.readAt
+              };
+            }
+          });
+          return statuses;
         });
-        setMessageStatuses(statuses);
 
         setTimeout(() => {
           if (messagesListRef.current) messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
@@ -1723,12 +1793,12 @@ const MessagesPage = () => {
                     localStorage.setItem('lastActiveUserId', peer._id);
                     const { data } = await messagesAPI.getConversationWith(peer._id);
                     setActive(data || c);
-                    
+
                     // On mobile, hide sidebar when chat is selected
                     if (isMobile) {
                       setShowSidebar(false);
                     }
-                    
+
                     try {
                       const list = await messagesAPI.getConversations();
                       setConversations(list.data);
@@ -1770,7 +1840,7 @@ const MessagesPage = () => {
             <ChatHeader>
               <div className="chat-user-info">
                 {isMobile && (
-                  <button 
+                  <button
                     className="mobile-back-btn"
                     onClick={() => setShowSidebar(true)}
                     title="Back to conversations"
@@ -1991,13 +2061,13 @@ const MessagesPage = () => {
               {isMobile ? 'Welcome to Messages' : 'Select a conversation'}
             </div>
             <div className="empty-subtitle">
-              {isMobile 
-                ? 'Tap the menu to see your conversations and start chatting' 
+              {isMobile
+                ? 'Tap the menu to see your conversations and start chatting'
                 : 'Choose from your existing conversations or start a new one'
               }
             </div>
             {isMobile && (
-              <button 
+              <button
                 className="mobile-show-conversations"
                 onClick={() => setShowSidebar(true)}
               >

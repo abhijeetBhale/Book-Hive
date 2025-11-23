@@ -20,6 +20,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import Contact from './pages/Contact';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import Pricing from './pages/Pricing';
+import VerifyEmail from './pages/VerifyEmail';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import { OnlineStatusProvider } from './context/OnlineStatusContext';
@@ -45,15 +47,15 @@ function NotificationHandler() {
         try {
           // Add a small delay to ensure everything is loaded
           await new Promise(resolve => setTimeout(resolve, 500));
-          
+
           const response = await notificationsAPI.getModerationNotifications();
           const notifications = response.data?.data || response.data || [];
-          
+
           if (notifications.length > 0) {
             setModerationNotifications(notifications);
             setShowModerationModal(true);
           }
-          
+
           setHasCheckedNotifications(true);
         } catch (error) {
           console.error('Error checking moderation notifications:', error);
@@ -64,7 +66,7 @@ function NotificationHandler() {
 
     // Add a small delay before checking notifications
     const timeoutId = setTimeout(checkModerationNotifications, 100);
-    
+
     return () => clearTimeout(timeoutId);
   }, [user, hasCheckedNotifications]);
 
@@ -87,7 +89,7 @@ function NotificationHandler() {
     } catch (error) {
       console.error('Error marking notifications as read:', error);
     }
-    
+
     setShowModerationModal(false);
     setModerationNotifications([]);
   };
@@ -110,7 +112,7 @@ function App() {
             <Routes>
               {/* Hidden Admin Route - Completely separate from main app layout */}
               <Route path="/admin-dashboard-secure" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-              
+
               {/* Main App Routes with Layout */}
               <Route path="/*" element={
                 <Layout>
@@ -120,10 +122,12 @@ function App() {
                     <Route path="/register" element={<Register />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/auth/callback" element={<AuthCallback />} />
+                    <Route path="/verify-email" element={<VerifyEmail />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/terms" element={<TermsOfService />} />
                     <Route path="/privacy" element={<PrivacyPolicy />} />
-                    
+                    <Route path="/pricing" element={<Pricing />} />
+
                     <Route path="/books" element={<ProtectedRoute><Books /></ProtectedRoute>} />
                     <Route path="/books/:id" element={<ProtectedRoute><BookDetails /></ProtectedRoute>} />
 
@@ -142,10 +146,10 @@ function App() {
                 </Layout>
               } />
             </Routes>
-            
+
             {/* Global Notification Handler */}
             <NotificationHandler />
-            
+
             {/* Toast Notifications */}
             <Toaster
               position="top-right"

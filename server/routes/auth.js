@@ -13,7 +13,9 @@ import {
   getAccountActivity,
   enable2FA,
   disable2FA,
-  verify2FA
+  verify2FA,
+  verifyEmail,
+  resendVerification
 } from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
@@ -170,5 +172,9 @@ router.get('/validate-token', protect, (req, res) => {
     }
   });
 });
+
+// Email verification routes
+router.get('/verify-email/:token', verifyEmail);
+router.post('/resend-verification', protect, resendVerification);
 
 export default router;
