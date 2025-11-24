@@ -16,10 +16,10 @@ const ForgotPassword = () => {
     try {
       // In a real application, you would call your API here:
       // await authAPI.sendResetLink({ email });
-      
+
       // We'll simulate the API call for now
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       toast.success('If an account with that email exists, a reset link has been sent.');
       setSubmitted(true); // Show a confirmation message
     } catch (error) {
@@ -33,7 +33,7 @@ const ForgotPassword = () => {
     <StyledWrapper>
       <div className="container">
         <div className="form-panel">
-          
+
           {submitted ? (
             <div className="confirmation-view">
               <h1 className="title">Check Your Email</h1>
@@ -48,20 +48,20 @@ const ForgotPassword = () => {
                 <h1 className="title">Forgot Password?</h1>
                 <p className="subtitle">No worries! Enter your email below and we'll send you a link to reset your password.</p>
               </div>
-              
+
               <form className="form" onSubmit={handleSubmit}>
                 <div className="input-field">
                   <label htmlFor="email">Email Address</label>
                   <div className="input-wrapper">
                     <AtSign size={18} className="input-icon" />
-                    <input 
-                        id="email" 
-                        name="email" 
-                        type="email" 
-                        placeholder="you@example.com" 
-                        value={email} 
-                        onChange={(e) => setEmail(e.target.value)} 
-                        required 
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
                     />
                   </div>
                 </div>
@@ -73,7 +73,7 @@ const ForgotPassword = () => {
 
               <p className="login-link">
                 <Link to="/login" className="text-link">
-                    <ArrowLeft size={14}/> Back to Login
+                  <ArrowLeft size={14} /> Back to Login
                 </Link>
               </p>
             </>
@@ -82,11 +82,11 @@ const ForgotPassword = () => {
         </div>
 
         <div className="image-panel">
-            <div className="image-overlay-text">
-                <p>RECLAIM.</p>
-                <p>RESET.</p>
-                <p>RETURN.</p>
-            </div>
+          <div className="image-overlay-text">
+            <p>RECLAIM.</p>
+            <p>RESET.</p>
+            <p>RETURN.</p>
+          </div>
         </div>
       </div>
     </StyledWrapper>

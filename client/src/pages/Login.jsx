@@ -38,12 +38,14 @@ const Login = () => {
     }
   };
 
-  // --- THE FIX IS HERE ---
-  // This function constructs the correct backend URL for Google login
-  // and redirects the user to it.
   const handleGoogleLogin = () => {
-    const googleLoginUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/google`;
-    // Redirecting the browser to the backend endpoint to start the OAuth flow
+    // Get current origin (e.g., http://localhost:5173 or https://book-hive-frontend.onrender.com)
+    const redirectUrl = window.location.origin;
+    
+    // Construct Google OAuth URL with redirect parameter
+    const googleLoginUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/google?redirect=${encodeURIComponent(redirectUrl)}`;
+    
+    // Redirect to backend Google OAuth endpoint
     window.location.href = googleLoginUrl;
   };
 

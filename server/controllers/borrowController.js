@@ -43,7 +43,11 @@ export const requestBook = async (req, res) => {
         .json({ message: 'You have already requested this book' });
     }
 
-    // Premium feature: Check multiple books limit
+    // ============================================
+    // PREMIUM FEATURE: DISABLED FOR DEVELOPMENT
+    // ============================================
+    // Uncomment this section when ready to enable premium limits
+    /*
     const User = (await import('../models/User.js')).default;
     const currentUser = await User.findById(req.user._id);
     const maxBooksLimit = currentUser.premiumFeatures?.maxBooksLimit || 1;
@@ -68,6 +72,7 @@ export const requestBook = async (req, res) => {
         isPremium: currentUser.isVerified || false
       });
     }
+    */
     const borrowRequest = new BorrowRequest({
       book: req.params.bookId,
       borrower: req.user._id,
@@ -509,23 +514,76 @@ export const markAsBorrowed = async (req, res) => {
       return res.status(404).json({ message: 'Borrow request not found' });
     }
 
+    if (!request.book) {
+      return res.status(400).json({ message: 'Book information not found for this request' });
+    }
+
+    console.log('Mark as borrowed - Request details:', {
+      requestId: request._id,
+      status: request.status,
+      depositStatus: request.depositStatus,
+      depositAmount: request.depositAmount,
+      bookId: request.book?._id,
+      ownerId: request.owner?._id,
+      currentUserId: req.user._id
+    });
+
     // Only owner can mark as borrowed
-    if (request.owner._id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized' });
+    const ownerId = request.owner?._id || request.owner;
+    const currentUserId = req.user._id;
+    
+    if (ownerId.toString() !== currentUserId.toString()) {
+      console.log('Authorization failed:', {
+        ownerId: ownerId.toString(),
+        currentUserId: currentUserId.toString()
+      });
+      return res.status(403).json({ message: 'Not authorized. Only the book owner can mark as borrowed.' });
+    }
+
+    // Check if already borrowed
+    if (request.status === 'borrowed') {
+      return res.status(400).json({ 
+        message: 'This book has already been marked as borrowed',
+        currentStatus: request.status
+      });
     }
 
     if (request.status !== 'approved') {
-      return res.status(400).json({ message: 'Request must be approved first' });
+      console.log('Cannot mark as borrowed - wrong status:', {
+        currentStatus: request.status,
+        expectedStatus: 'approved'
+      });
+      return res.status(400).json({ 
+        message: `Request must be approved first. Current status: ${request.status}`,
+        currentStatus: request.status
+      });
     }
 
-    // Check if deposit is required and paid
-    if (request.depositStatus === 'pending') {
+    // ============================================
+    // SECURITY DEPOSIT: DISABLED FOR DEVELOPMENT
+    // ============================================
+    // Uncomment this section when ready to enable deposit checks
+    /*
+    const requiresDeposit = request.depositAmount > 0;
+    const depositNotPaid = request.depositStatus === 'pending';
+    
+    if (requiresDeposit && depositNotPaid) {
+      console.log('Blocking mark as borrowed - deposit not paid:', {
+        depositAmount: request.depositAmount,
+        depositStatus: request.depositStatus
+      });
       return res.status(400).json({ 
         message: 'Security deposit must be paid before borrowing',
         requiresDeposit: true,
-        depositAmount: request.depositAmount
+        depositAmount: request.depositAmount,
+        depositStatus: request.depositStatus
       });
     }
+    */
+    
+    // Development mode: Skip deposit check
+    console.log('Development mode: Skipping deposit check');
+    console.log('Proceeding with mark as borrowed');
 
     // Update the request status and let the pre-save hook handle the rest
     const updatedRequest = await BorrowRequest.findById(req.params.requestId);

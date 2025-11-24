@@ -6,6 +6,7 @@ import { AuthContext } from '../context/AuthContext';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import { Loader, Shield } from 'lucide-react';
 import OptimizedAvatar from '../components/OptimizedAvatar';
+import UpgradeModal from '../components/ui/UpgradeModal';
 
 const PageWrapper = styled.div`
   background-color: #f9fafb;
@@ -134,6 +135,7 @@ const BookDetails = () => {
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [upgradeModalData, setUpgradeModalData] = useState(null);
 
   useEffect(() => {
     const fetchBook = async () => {
@@ -155,7 +157,18 @@ const BookDetails = () => {
       await borrowAPI.createRequest(id);
       alert('Borrow request sent successfully!');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to send borrow request.');
+      const errorData = err.response?.data;
+      
+      // Check if it's a borrow limit error
+      if (errorData?.code === 'BORROW_LIMIT_REACHED') {
+        setUpgradeModalData({
+          currentLimit: errorData.currentLimit,
+          activeBorrows: errorData.activeBorrows,
+          isPremium: errorData.isPremium
+        });
+      } else {
+        alert(errorData?.message || 'Failed to send borrow request.');
+      }
     }
   };
 
@@ -178,10 +191,19 @@ const BookDetails = () => {
   const isOwner = currentUser && currentUser.id === book.owner._id;
 
   return (
-    <PageWrapper>
-      <ContentWrapper>
-        <BookCoverImage src={getFullImageUrl(book.coverImage)} alt={`Cover of ${book.title}`} />
-        <DetailsContainer>
+    <>
+      <UpgradeModal
+        isOpen={!!upgradeModalData}
+        onClose={() => setUpgradeModalData(null)}
+        currentLimit={upgradeModalData?.currentLimit}
+        activeBorrows={upgradeModalData?.activeBorrows}
+        isPremium={upgradeModalData?.isPremium}
+      />
+      
+      <PageWrapper>
+        <ContentWrapper>
+          <BookCoverImage src={getFullImageUrl(book.coverImage)} alt={`Cover of ${book.title}`} />
+          <DetailsContainer>
           <Title>{book.title}</Title>
           <Author>by {book.author}</Author>
           <Description>{book.description || 'No description available.'}</Description>
@@ -240,6 +262,7 @@ const BookDetails = () => {
         </DetailsContainer>
       </ContentWrapper>
     </PageWrapper>
+    </>
   );
 };
 

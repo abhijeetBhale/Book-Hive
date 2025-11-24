@@ -9,6 +9,7 @@ import { getFullImageUrl } from '../utils/imageHelpers';
 import ReviewsModal from '../components/ReviewsModal';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
 import AnimatedButton from '../components/ui/AnimatedButton';
+import UpgradeModal from '../components/ui/UpgradeModal';
 
 
 // --- Keyframes for Animations ---
@@ -595,6 +596,7 @@ const UserProfile = () => {
   const [friendshipId, setFriendshipId] = useState(null);
   const [sendingFriendRequest, setSendingFriendRequest] = useState(false);
   const [showReviewsModal, setShowReviewsModal] = useState(false);
+  const [upgradeModalData, setUpgradeModalData] = useState(null);
 
 
   // ✨ ADDED: Effect to lock body scroll when a modal is open
@@ -700,8 +702,20 @@ const UserProfile = () => {
       toast.success(`📚 Borrow request sent for "${book?.title || 'this book'}"!`, { duration: 5000 });
       handleCloseDetailsModal();
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Failed to send borrow request.';
-      toast.error(`❌ ${errorMessage}`, { duration: 4000 });
+      const errorData = error.response?.data;
+      
+      // Check if it's a borrow limit error
+      if (errorData?.code === 'BORROW_LIMIT_REACHED') {
+        setUpgradeModalData({
+          currentLimit: errorData.currentLimit,
+          activeBorrows: errorData.activeBorrows,
+          isPremium: errorData.isPremium
+        });
+        handleCloseDetailsModal();
+      } else {
+        const errorMessage = errorData?.message || 'Failed to send borrow request.';
+        toast.error(`❌ ${errorMessage}`, { duration: 4000 });
+      }
     } finally {
       setBorrowing(null);
     }
@@ -838,8 +852,17 @@ const UserProfile = () => {
   const totalBooksCount = user.booksOwned?.length || 0;
 
   return (
-    <StyledWrapper>
-      <div className="profile-header-card">
+    <>
+      <UpgradeModal
+        isOpen={!!upgradeModalData}
+        onClose={() => setUpgradeModalData(null)}
+        currentLimit={upgradeModalData?.currentLimit}
+        activeBorrows={upgradeModalData?.activeBorrows}
+        isPremium={upgradeModalData?.isPremium}
+      />
+      
+      <StyledWrapper>
+        <div className="profile-header-card">
         <div className="avatar-section">
           <AvatarImage src={getFullImageUrl(user.avatar)} alt={user.name} />
         </div>
@@ -988,6 +1011,7 @@ const UserProfile = () => {
         userName={user.name}
       />
     </StyledWrapper>
+    </>
   );
 };
 

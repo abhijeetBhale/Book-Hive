@@ -23,76 +23,181 @@ export const getPublicEvents = async (req, res) => {
       limit = 20
     } = req.query;
 
-    // Build base query for public events
-    const query = buildEventQuery(req.user, {
-      status: 'published',
-      isPublic: true
-    });
-
-    // Date filters
-    if (startDate) {
-      query.startAt = { $gte: new Date(startDate) };
-    }
-    if (endDate) {
-      query.endAt = { $lte: new Date(endDate) };
-    }
-
-    // Event type filter
-    if (eventType) {
-      query.eventType = eventType;
-    }
-
-    // Tags filter
-    if (tags) {
-      const tagArray = tags.split(',').map(tag => tag.trim());
-      query.tags = { $in: tagArray };
-    }
-
-    // Search filter
-    if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    // Location-based filter
-    if (lat && lng) {
-      const radiusInMeters = radius * 1000;
-      query['location.coordinates'] = {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [parseFloat(lng), parseFloat(lat)]
-          },
-          $maxDistance: radiusInMeters
-        }
-      };
-    }
-
     const skip = (page - 1) * limit;
 
-    const events = await Event.find(query)
-      .populate('organizer', 'name avatar organizerProfile')
-      .sort({ startAt: 1 })
-      .skip(skip)
-      .limit(parseInt(limit));
+    // If location parameters are provided, use aggregation pipeline with $geoNear
+    if (lat && lng) {
+      const radiusInMeters = radius * 1000;
+      
+      // Build match conditions for aggregation
+      const matchConditions = {
+        status: 'published',
+        isPublic: true
+      };
 
-    const total = await Event.countDocuments(query);
-
-    // Sanitize events based on user role
-    const sanitizedEvents = events.map(event => sanitizeEventForRole(event, req.user));
-
-    res.json({
-      success: true,
-      data: sanitizedEvents,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
+      // Date filters
+      if (startDate) {
+        matchConditions.startAt = { $gte: new Date(startDate) };
       }
-    });
+      if (endDate) {
+        matchConditions.endAt = { $lte: new Date(endDate) };
+      }
+
+      // Event type filter
+      if (eventType) {
+        matchConditions.eventType = eventType;
+      }
+
+      // Tags filter
+      if (tags) {
+        const tagArray = tags.split(',').map(tag => tag.trim());
+        matchConditions.tags = { $in: tagArray };
+      }
+
+      // Search filter
+      if (search) {
+        matchConditions.$or = [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } }
+        ];
+      }
+
+      // Use aggregation pipeline with $geoNear
+      const pipeline = [
+        {
+          $geoNear: {
+            near: {
+              type: 'Point',
+              coordinates: [parseFloat(lng), parseFloat(lat)]
+            },
+            distanceField: 'distance',
+            maxDistance: radiusInMeters,
+            spherical: true,
+            query: matchConditions
+          }
+        },
+        {
+          $sort: { startAt: 1 }
+        },
+        {
+          $skip: skip
+        },
+        {
+          $limit: parseInt(limit)
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'organizer',
+            foreignField: '_id',
+            as: 'organizer'
+          }
+        },
+        {
+          $unwind: '$organizer'
+        },
+        {
+          $project: {
+            'organizer.password': 0,
+            'organizer.email': 0,
+            'organizer.__v': 0
+          }
+        }
+      ];
+
+      const events = await Event.aggregate(pipeline);
+
+      // Count total for pagination (without skip/limit)
+      const countPipeline = [
+        {
+          $geoNear: {
+            near: {
+              type: 'Point',
+              coordinates: [parseFloat(lng), parseFloat(lat)]
+            },
+            distanceField: 'distance',
+            maxDistance: radiusInMeters,
+            spherical: true,
+            query: matchConditions
+          }
+        },
+        {
+          $count: 'total'
+        }
+      ];
+
+      const countResult = await Event.aggregate(countPipeline);
+      const total = countResult.length > 0 ? countResult[0].total : 0;
+
+      // Sanitize events based on user role
+      const sanitizedEvents = events.map(event => sanitizeEventForRole(event, req.user));
+
+      res.json({
+        success: true,
+        data: sanitizedEvents,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      });
+    } else {
+      // No location filtering - use regular find query
+      const query = buildEventQuery(req.user, {
+        status: 'published',
+        isPublic: true
+      });
+
+      // Date filters
+      if (startDate) {
+        query.startAt = { $gte: new Date(startDate) };
+      }
+      if (endDate) {
+        query.endAt = { $lte: new Date(endDate) };
+      }
+
+      // Event type filter
+      if (eventType) {
+        query.eventType = eventType;
+      }
+
+      // Tags filter
+      if (tags) {
+        const tagArray = tags.split(',').map(tag => tag.trim());
+        query.tags = { $in: tagArray };
+      }
+
+      // Search filter
+      if (search) {
+        query.$or = [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } }
+        ];
+      }
+
+      const events = await Event.find(query)
+        .populate('organizer', 'name avatar organizerProfile')
+        .sort({ startAt: 1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+
+      const total = await Event.countDocuments(query);
+
+      // Sanitize events based on user role
+      const sanitizedEvents = events.map(event => sanitizeEventForRole(event, req.user));
+
+      res.json({
+        success: true,
+        data: sanitizedEvents,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      });
+    }
   } catch (error) {
     console.error('Get public events error:', error);
     res.status(500).json({ 

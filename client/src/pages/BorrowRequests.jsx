@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Loader, Check, X, ArrowRight, Inbox, CheckCircle, EyeOff, Eye, Trash2 } from 'lucide-react';
+import { Loader, Check, X, ArrowRight, Inbox, CheckCircle, EyeOff, Eye, Trash2, BookOpen, User, MessageSquare, Shield } from 'lucide-react';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import toast from 'react-hot-toast';
 import { borrowAPI, reviewsAPI } from '../utils/api';
 import { formatDate } from '../utils/dateHelpers';
 import ReviewModal from '../components/ReviewModal';
+import DepositPaymentModal from '../components/borrow/DepositPaymentModal';
 import { Link } from 'react-router-dom';
-import { MessageSquare } from 'lucide-react';
 
 const BorrowRequests = () => {
   const [receivedRequests, setReceivedRequests] = useState([]);
@@ -19,6 +19,8 @@ const BorrowRequests = () => {
 
   const [reviewModal, setReviewModal] = useState({ open: false, borrowRequestId: null, toUserId: null, counterpartName: '' });
   const [reviewedRequests, setReviewedRequests] = useState(new Set());
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState({ open: false, requestId: null, bookTitle: null });
+  const [depositModal, setDepositModal] = useState({ open: false, borrowRequest: null });
 
   const fetchData = async () => {
     setLoading(true);
@@ -69,7 +71,9 @@ const BorrowRequests = () => {
       toast.success('Book marked as borrowed! The borrower can now return it when done.');
       fetchData();
     } catch (error) {
-      toast.error('Failed to mark book as borrowed');
+      const errorMessage = error.response?.data?.message || 'Failed to mark book as borrowed';
+      console.error('Mark as borrowed error:', error.response?.data);
+      toast.error(errorMessage);
     }
   };
 
@@ -201,7 +205,12 @@ const BorrowRequests = () => {
                     Lending Duration: {req.book.lendingDuration} days
                   </div>
                 )}
+                <div className="role-indicator lender-role">
+                  <BookOpen size={16} />
+                  <span>You are the LENDER</span>
+                </div>
                 <div className="user-info">
+                  <div className="user-label">BORROWER:</div>
                   <img
                     src={req.borrower?.avatar || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K'}
                     alt={req.borrower?.name || 'User'}
@@ -210,9 +219,32 @@ const BorrowRequests = () => {
                       e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
                     }}
                   />
-                  <p>{req.borrower?.name || 'Unknown User'} wants to borrow this book.</p>
+                  <p><strong>{req.borrower?.name || 'Unknown User'}</strong> wants to borrow your book</p>
                 </div>
                 <p className="request-date">Requested on: {formatDate(req.createdAt)}</p>
+                <div style={{
+                  display: 'inline-block',
+                  padding: '0.25rem 0.75rem',
+                  borderRadius: '12px',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  marginTop: '0.5rem',
+                  backgroundColor: 
+                    req.status === 'pending' ? '#fef3c7' :
+                    req.status === 'approved' ? '#dbeafe' :
+                    req.status === 'borrowed' ? '#d1fae5' :
+                    req.status === 'returned' ? '#e0e7ff' :
+                    req.status === 'denied' ? '#fee2e2' : '#f3f4f6',
+                  color:
+                    req.status === 'pending' ? '#92400e' :
+                    req.status === 'approved' ? '#1e40af' :
+                    req.status === 'borrowed' ? '#065f46' :
+                    req.status === 'returned' ? '#3730a3' :
+                    req.status === 'denied' ? '#991b1b' : '#4b5563'
+                }}>
+                  Status: {req.status}
+                </div>
                 {req.status === 'pending' && (
                   <div className="card-actions">
                     <button onClick={() => handleStatusUpdate(req._id, 'denied')} className="btn deny-btn">
@@ -300,25 +332,74 @@ const BorrowRequests = () => {
                       Lending Duration: {req.book.lendingDuration} days
                     </div>
                   )}
+                  <div className="role-indicator borrower-role">
+                    <User size={16} />
+                    <span>You are the BORROWER</span>
+                  </div>
                   <div className="user-info">
+                    <div className="user-label">LENDER (Book Owner):</div>
                     <img
-                      src={req.owner?.avatar || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K'}
+                      src={req.owner?.avatar || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS2ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K'}
                       alt={req.owner?.name || 'User'}
                       className="user-avatar"
                       onError={(e) => {
                         e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
                       }}
                     />
-                    <p>Requested from {req.owner?.name || 'Unknown User'}.</p>
+                    <p>You requested from <strong>{req.owner?.name || 'Unknown User'}</strong></p>
                   </div>
                   <p className="request-date">Requested on: {formatDate(req.createdAt)}</p>
+                  
+                  {/* ============================================ */}
+                  {/* SECURITY DEPOSIT: DISABLED FOR DEVELOPMENT */}
+                  {/* ============================================ */}
+                  {/* Uncomment this section when ready to enable deposit payment UI */}
+                  {/*
+                  {req.status === 'approved' && req.depositStatus === 'pending' && req.depositAmount > 0 && (
+                    <div style={{
+                      backgroundColor: '#fef3c7',
+                      border: '1px solid #fbbf24',
+                      borderRadius: '8px',
+                      padding: '1rem',
+                      marginTop: '0.75rem',
+                      marginBottom: '0.75rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <Shield size={18} color="#92400e" />
+                        <strong style={{ color: '#92400e' }}>Security Deposit Required</strong>
+                      </div>
+                      <p style={{ fontSize: '0.875rem', color: '#78350f', margin: '0 0 0.75rem 0' }}>
+                        The owner requires a ₹{req.depositAmount} security deposit. This will be refunded when you return the book.
+                      </p>
+                      <button 
+                        onClick={() => setDepositModal({ open: true, borrowRequest: req })}
+                        className="btn"
+                        style={{
+                          backgroundColor: '#4F46E5',
+                          color: 'white',
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem'
+                        }}
+                      >
+                        <Shield size={16} />
+                        Pay Security Deposit (₹{req.depositAmount})
+                      </button>
+                    </div>
+                  )}
+                  */}
+
                   {req.status === 'approved' && (
                     <div className="card-actions">
                       <Link to={`/messages?userId=${req.owner._id}`} className="btn message-btn">
                         <MessageSquare size={16} /> Message {req.owner?.name}
                       </Link>
                       <div className="status-info">
-                        <span className="status-text">✅ Coordinate pickup details through messaging</span>
+                        <span className="status-text">
+                          ✅ Coordinate pickup details through messaging
+                        </span>
                       </div>
                     </div>
                   )}
@@ -377,7 +458,12 @@ const BorrowRequests = () => {
                   <h3 className="book-title">{req.book?.title || 'Unknown Book'}</h3>
                   {renderStatusBadge(req.status)}
                 </div>
+                <div className="role-indicator lender-role">
+                  <BookOpen size={16} />
+                  <span>Your Book (You were the LENDER)</span>
+                </div>
                 <div className="user-info">
+                  <div className="user-label">BORROWER:</div>
                   <img
                     src={req.borrower?.avatar || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K'}
                     alt={req.borrower?.name || 'User'}
@@ -386,7 +472,7 @@ const BorrowRequests = () => {
                       e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
                     }}
                   />
-                  <p>Returned by {req.borrower?.name || 'Unknown User'}</p>
+                  <p>Returned by <strong>{req.borrower?.name || 'Unknown User'}</strong></p>
                 </div>
                 <p className="request-date">Returned on: {formatDate(req.returnedDate || req.actualReturnDate || req.updatedAt)}</p>
                 
@@ -504,6 +590,16 @@ const BorrowRequests = () => {
         }}
       />
 
+      {/* Deposit Payment Modal */}
+      <DepositPaymentModal
+        isOpen={depositModal.open}
+        borrowRequest={depositModal.borrowRequest}
+        onClose={() => setDepositModal({ open: false, borrowRequest: null })}
+        onSuccess={() => {
+          fetchData(); // Refresh the data to show updated deposit status
+        }}
+      />
+
       {/* Denied Requests Modal */}
       {showDeniedModal && (
         <DeniedRequestsModal
@@ -516,7 +612,51 @@ const BorrowRequests = () => {
           onDelete={handleDeleteRequest}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmModal.open && (
+        <DeleteConfirmModal
+          isOpen={deleteConfirmModal.open}
+          bookTitle={deleteConfirmModal.bookTitle}
+          onClose={() => setDeleteConfirmModal({ open: false, requestId: null, bookTitle: null })}
+          onConfirm={() => {
+            handleDeleteRequest(deleteConfirmModal.requestId);
+            setDeleteConfirmModal({ open: false, requestId: null, bookTitle: null });
+          }}
+        />
+      )}
     </StyledWrapper>
+  );
+};
+
+// Delete Confirmation Modal Component
+const DeleteConfirmModal = ({ isOpen, bookTitle, onClose, onConfirm }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="delete-confirm-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="delete-modal-icon">
+          <Trash2 size={48} />
+        </div>
+        <h2 className="delete-modal-title">Delete Request?</h2>
+        <p className="delete-modal-message">
+          Are you sure you want to permanently delete this request from history?
+          {bookTitle && (
+            <span className="delete-modal-book"> This action will remove the request for "<strong>{bookTitle}</strong>".</span>
+          )}
+        </p>
+        <div className="delete-modal-actions">
+          <button onClick={onClose} className="delete-modal-cancel">
+            Cancel
+          </button>
+          <button onClick={onConfirm} className="delete-modal-confirm">
+            <Trash2 size={18} />
+            Delete Request
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -560,11 +700,7 @@ const DeniedRequestsModal = ({ requests, isReceived, onClose, onDelete }) => {
                     <p className="denied-date">Denied on: {formatDate(req.updatedAt || req.createdAt)}</p>
                   </div>
                   <button
-                    onClick={() => {
-                      if (window.confirm('Are you sure you want to delete this request from history?')) {
-                        onDelete(req._id);
-                      }
-                    }}
+                    onClick={() => setDeleteConfirmModal({ open: true, requestId: req._id, bookTitle: req.book?.title })}
                     className="delete-denied-btn"
                     title="Delete from history"
                   >
@@ -804,6 +940,29 @@ const StyledWrapper = styled.div`
     flex-shrink: 0;
   }
 
+  .role-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    
+    &.lender-role {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border: 1px solid #93c5fd;
+      color: #1e40af;
+    }
+    
+    &.borrower-role {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 1px solid #fcd34d;
+      color: #92400e;
+    }
+  }
+
   .user-info {
     display: flex;
     align-items: center;
@@ -811,6 +970,17 @@ const StyledWrapper = styled.div`
     color: #374151;
     font-size: 0.875rem;
     margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    
+    .user-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      width: 100%;
+      margin-bottom: 0.25rem;
+    }
   }
   
   .user-avatar {
@@ -1079,6 +1249,92 @@ const StyledWrapper = styled.div`
         background: #fee2e2;
         border-color: #fca5a5;
       }
+    }
+  }
+
+  /* Delete Confirmation Modal Styles */
+  .delete-confirm-modal {
+    background: white;
+    border-radius: 16px;
+    max-width: 450px;
+    width: 100%;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+
+  .delete-modal-icon {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    background: #fef2f2;
+    color: #dc2626;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+  }
+
+  .delete-modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 1rem 0;
+  }
+
+  .delete-modal-message {
+    font-size: 1rem;
+    color: #6b7280;
+    line-height: 1.6;
+    margin: 0 0 2rem 0;
+
+    .delete-modal-book {
+      display: block;
+      margin-top: 0.75rem;
+      font-size: 0.9rem;
+      color: #4b5563;
+    }
+  }
+
+  .delete-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+  }
+
+  .delete-modal-cancel {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    background: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #f3f4f6;
+    }
+  }
+
+  .delete-modal-confirm {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+
+    &:hover {
+      background: #b91c1c;
     }
   }
   .returned-card {

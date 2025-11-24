@@ -52,10 +52,14 @@ const Register = () => {
   };
 
   // --- THE UPDATE IS HERE ---
-  // This function constructs the correct backend URL for Google login/registration
-  // and redirects the user to it, just like on the login page.
   const handleGoogleRegister = () => {
-    const googleLoginUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/google`;
+    // Get current origin (e.g., http://localhost:5173 or https://book-hive-frontend.onrender.com)
+    const redirectUrl = window.location.origin;
+    
+    // Construct Google OAuth URL with redirect parameter
+    const googleLoginUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/google?redirect=${encodeURIComponent(redirectUrl)}`;
+    
+    // Redirect to backend Google OAuth endpoint
     window.location.href = googleLoginUrl;
   };
 

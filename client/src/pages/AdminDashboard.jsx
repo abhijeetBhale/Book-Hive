@@ -51,6 +51,8 @@ import BookSharingActivity from '../components/admin/BookSharingActivity';
 import TopCategories from '../components/admin/TopCategories';
 import RecentActivity from '../components/admin/RecentActivity';
 import TopBooks from '../components/admin/TopBooks';
+import OrganizerApplicationsTab from '../components/admin/OrganizerApplicationsTab';
+import EventsTab from '../components/admin/EventsTab';
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -3066,6 +3068,28 @@ const AdminDashboard = () => {
               <Users className="w-4 h-4 mr-3" />
               Book Clubs
             </button>
+            <button
+              onClick={() => setActiveTab('organizer-applications')}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'organizer-applications'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+            >
+              <UserCheck className="w-4 h-4 mr-3" />
+              Organizer Applications
+            </button>
+
+            <button
+              onClick={() => setActiveTab('events')}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'events'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+            >
+              <Calendar className="w-4 h-4 mr-3" />
+              Events
+            </button>
+
 
             <button
               onClick={() => setActiveTab('reviews')}
@@ -3199,6 +3223,8 @@ const AdminDashboard = () => {
           {activeTab === 'reports' && renderReports()}
           {activeTab === 'settings' && renderSettings()}
           {activeTab === 'help' && renderHelp()}
+          {activeTab === 'organizer-applications' && <OrganizerApplicationsTab />}
+          {activeTab === 'events' && <EventsTab />}
         </div>
       </div>
 

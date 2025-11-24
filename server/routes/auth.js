@@ -26,7 +26,17 @@ const router = express.Router();
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   router.get(
     '/google',
-    passport.authenticate('google', { scope: ['profile', 'email'], session: false })
+    (req, res, next) => {
+      // Store redirect URL in state parameter to pass through OAuth flow
+      const redirectUrl = req.query.redirect || process.env.CLIENT_URL;
+      const state = Buffer.from(redirectUrl).toString('base64');
+      
+      passport.authenticate('google', {
+        scope: ['profile', 'email'],
+        session: false,
+        state: state
+      })(req, res, next);
+    }
   );
 
   router.get(
@@ -66,7 +76,19 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             expiresIn: '7d',
           });
           console.log('✅ Google OAuth Success for user:', user.email);
-          res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
+          
+          // Decode redirect URL from state parameter, fallback to CLIENT_URL
+          let redirectUrl = process.env.CLIENT_URL;
+          if (req.query.state) {
+            try {
+              redirectUrl = Buffer.from(req.query.state, 'base64').toString('utf-8');
+            } catch (e) {
+              console.log('⚠️ Failed to decode state, using CLIENT_URL');
+            }
+          }
+          
+          console.log('🔄 Redirecting to:', redirectUrl);
+          res.redirect(`${redirectUrl}/auth/callback?token=${token}`);
         } catch (tokenError) {
           console.error('❌ JWT Token Error:', tokenError);
           res.status(500).json({

@@ -22,6 +22,8 @@ import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Pricing from './pages/Pricing';
 import VerifyEmail from './pages/VerifyEmail';
+import Events from './pages/Events';
+import BecomeOrganizer from './pages/BecomeOrganizer';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import { OnlineStatusProvider } from './context/OnlineStatusContext';
@@ -142,6 +144,8 @@ function App() {
                     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                     <Route path="/map" element={<ProtectedRoute><Map /></ProtectedRoute>} />
                     <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+                    <Route path="/events" element={<Events />} />
+                    <Route path="/become-organizer" element={<ProtectedRoute><BecomeOrganizer /></ProtectedRoute>} />
                   </Routes>
                 </Layout>
               } />
