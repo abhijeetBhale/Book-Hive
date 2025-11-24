@@ -410,7 +410,10 @@ const UserCard = ({ user, distance, priority, isOnline }) => {
           {user.name}
           {isOnline && <span className="online-badge">Online</span>}
         </h3>
-        <p className="user-tagline">Community Member</p>
+        <p className="user-tagline">
+          Community Member
+          {user.isOrganizer && <span style={{ color: '#8b5cf6', fontWeight: '600', marginLeft: '4px' }}> • Organizer</span>}
+        </p>
 
         <div className="stats-grid">
           <div className="stat-item">
@@ -471,7 +474,10 @@ const UserListItem = ({ user, distance, priority, isOnline }) => {
               {user.name}
               {isOnline && <span className="online-badge-list">Online</span>}
             </h3>
-            <p className="user-tagline-list">Community Member</p>
+            <p className="user-tagline-list">
+              Community Member
+              {user.isOrganizer && <span style={{ color: '#8b5cf6', fontWeight: '600', marginLeft: '4px' }}> • Organizer</span>}
+            </p>
           </div>
 
           <div className="user-stats-list">

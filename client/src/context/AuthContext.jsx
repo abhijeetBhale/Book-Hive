@@ -62,6 +62,7 @@ export const AuthProvider = ({ children }) => {
         avatar: data.avatar,
         location: data.location,
         role: data.role || 'user', // Include role for admin access checks
+        isOrganizer: data.isOrganizer || false, // Include organizer flag
         verified: data.verified || false, // Include verified status for organizer checks
         organizerProfile: data.organizerProfile || null, // Include organizer profile
       });

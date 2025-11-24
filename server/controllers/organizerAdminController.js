@@ -86,9 +86,9 @@ export const approveOrganizerApplication = async (req, res) => {
     application.reviewedAt = new Date();
     await application.save();
 
-    // Update user role and profile
+    // Update user to add organizer capabilities (keep role as 'user')
     const user = await User.findById(application.user);
-    user.role = 'organizer';
+    user.isOrganizer = true; // Add organizer flag instead of changing role
     user.verified = true;
     user.organizerProfile = {
       organizationName: application.organizationName,

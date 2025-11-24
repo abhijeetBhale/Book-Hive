@@ -1,19 +1,24 @@
 import { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { eventsAPI } from '../utils/api';
+import { eventsAPI, organizerAPI } from '../utils/api';
 import styled from 'styled-components';
-import { Calendar, MapPin, Users, Search, Filter, Loader, Clock, Tag } from 'lucide-react';
+import { Calendar, MapPin, Users, Search, Filter, Loader, Clock, Tag, Plus, Edit, Trash2, Eye, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import SEO from '../components/SEO';
 import { BASE_URL } from '../utils/seo';
+import CreateEventModal from '../components/events/CreateEventModal';
 
 const Events = () => {
   const { user } = useContext(AuthContext);
+  const [activeTab, setActiveTab] = useState('all'); // 'all' or 'my-events'
   const [events, setEvents] = useState([]);
+  const [myEvents, setMyEvents] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [filters, setFilters] = useState({
     eventType: '',
     startDate: '',
@@ -23,8 +28,12 @@ const Events = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    fetchEvents();
-  }, [filters]);
+    if (activeTab === 'all') {
+      fetchEvents();
+    } else if (activeTab === 'my-events') {
+      fetchMyEvents();
+    }
+  }, [filters, activeTab]);
 
   const fetchEvents = async () => {
     try {
@@ -50,9 +59,42 @@ const Events = () => {
     }
   };
 
+  const fetchMyEvents = async () => {
+    try {
+      setLoading(true);
+      const [eventsRes, statsRes] = await Promise.all([
+        organizerAPI.getOrganizerEvents({ status: filters.status || '' }),
+        organizerAPI.getOrganizerStats()
+      ]);
+      setMyEvents(eventsRes.data || []);
+      setStats(statsRes.data);
+    } catch (error) {
+      console.error('Failed to fetch my events:', error);
+      toast.error('Failed to load your events');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId) => {
+    if (!confirm('Are you sure you want to delete this event?')) return;
+    try {
+      await organizerAPI.deleteEvent(eventId);
+      toast.success('Event deleted successfully');
+      fetchMyEvents();
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+      toast.error(error.response?.data?.message || 'Failed to delete event');
+    }
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchEvents();
+    if (activeTab === 'all') {
+      fetchEvents();
+    } else {
+      fetchMyEvents();
+    }
   };
 
   const getEventTypeColor = (type) => {
@@ -79,17 +121,29 @@ const Events = () => {
       />
       <StyledWrapper>
         <div className="header">
-        <div className="header-content">
-          <h1>Discover Events</h1>
-          <p>Find book-related events happening near you</p>
+          <div className="header-content">
+            <h1>Events</h1>
+            <p>Discover and manage book-related events</p>
+          </div>
         </div>
-        {user?.role === 'organizer' && (
-          <Link to="/organizer/dashboard" className="btn-primary">
-            <Calendar size={18} />
-            Manage My Events
-          </Link>
+
+        {/* Tabs for organizers */}
+        {(user?.isOrganizer || user?.role === 'organizer') && (
+          <div className="tabs">
+            <button
+              className={`tab ${activeTab === 'all' ? 'active' : ''}`}
+              onClick={() => setActiveTab('all')}
+            >
+              All Events
+            </button>
+            <button
+              className={`tab ${activeTab === 'my-events' ? 'active' : ''}`}
+              onClick={() => setActiveTab('my-events')}
+            >
+              My Events
+            </button>
+          </div>
         )}
-      </div>
 
       <div className="search-section">
         <form onSubmit={handleSearch} className="search-form">
@@ -168,25 +222,22 @@ const Events = () => {
         )}
       </div>
 
-      {loading ? (
-        <div className="loading-container">
-          <Loader className="spinner" size={48} />
-          <p>Loading events...</p>
-        </div>
-      ) : events.length === 0 ? (
-        <div className="empty-state">
-          <Calendar size={64} />
-          <h3>No Events Found</h3>
-          <p>Try adjusting your search or filters</p>
-          {user?.role === 'organizer' && (
-            <Link to="/organizer/events/new" className="btn-primary">
-              Create Your First Event
-            </Link>
-          )}
-        </div>
-      ) : (
-        <div className="events-grid">
-          {events.map((event) => (
+      {activeTab === 'all' ? (
+        // All Events Tab
+        loading ? (
+          <div className="loading-container">
+            <Loader className="spinner" size={48} />
+            <p>Loading events...</p>
+          </div>
+        ) : events.length === 0 ? (
+          <div className="empty-state">
+            <Calendar size={64} />
+            <h3>No Events Found</h3>
+            <p>Try adjusting your search or filters</p>
+          </div>
+        ) : (
+          <div className="events-grid">
+            {events.map((event) => (
             <Link to={`/events/${event._id}`} key={event._id} className="event-card">
               {event.coverImage?.url && (
                 <div className="event-image">
@@ -236,7 +287,113 @@ const Events = () => {
             </Link>
           ))}
         </div>
+        )
+      ) : (
+        // My Events Tab (Organizer Dashboard)
+        <div className="organizer-section">
+          {stats && (
+            <div className="stats-grid">
+              <div className="stat-card">
+                <Calendar size={24} />
+                <div>
+                  <p className="stat-label">Total Events</p>
+                  <p className="stat-value">{stats.totalEvents || 0}</p>
+                </div>
+              </div>
+              <div className="stat-card">
+                <Users size={24} />
+                <div>
+                  <p className="stat-label">Total Registrations</p>
+                  <p className="stat-value">{stats.totalRegistrations || 0}</p>
+                </div>
+              </div>
+              <div className="stat-card">
+                <Eye size={24} />
+                <div>
+                  <p className="stat-label">Total Views</p>
+                  <p className="stat-value">{stats.totalViews || 0}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="my-events-header">
+            <h2>My Events</h2>
+            <button className="btn-primary" onClick={() => setShowCreateModal(true)}>
+              <Plus size={18} />
+              Create Event
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="loading-container">
+              <Loader className="spinner" size={48} />
+              <p>Loading your events...</p>
+            </div>
+          ) : myEvents.length === 0 ? (
+            <div className="empty-state">
+              <Calendar size={64} />
+              <h3>No Events Yet</h3>
+              <p>Create your first event to get started</p>
+              <button className="btn-primary" onClick={() => setShowCreateModal(true)}>
+                <Plus size={18} />
+                Create Event
+              </button>
+            </div>
+          ) : (
+            <div className="my-events-list">
+              {myEvents.map((event) => (
+                <div key={event._id} className="my-event-card">
+                  {event.coverImage?.url && (
+                    <img src={event.coverImage.url} alt={event.title} className="event-thumbnail" />
+                  )}
+                  <div className="event-info">
+                    <div className="event-header">
+                      <h3>{event.title}</h3>
+                      <span className={`status-badge ${event.status}`}>{event.status}</span>
+                    </div>
+                    <p className="event-date">
+                      <Calendar size={16} />
+                      {format(new Date(event.startAt), 'MMM dd, yyyy • h:mm a')}
+                    </p>
+                    <p className="event-location">
+                      <MapPin size={16} />
+                      {event.location?.address}
+                    </p>
+                    <p className="event-registrations">
+                      <Users size={16} />
+                      {event.currentRegistrations || 0} registrations
+                      {event.capacity > 0 && ` / ${event.capacity}`}
+                    </p>
+                  </div>
+                  <div className="event-actions">
+                    <button className="action-btn" title="View">
+                      <Eye size={18} />
+                    </button>
+                    <button className="action-btn" title="Edit" onClick={() => toast('Edit form coming soon!', { icon: 'ℹ️' })}>
+                      <Edit size={18} />
+                    </button>
+                    <button className="action-btn delete" title="Delete" onClick={() => handleDeleteEvent(event._id)}>
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
+
+      {/* Create Event Modal */}
+      <CreateEventModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          if (activeTab === 'my-events') {
+            fetchMyEvents();
+          }
+        }}
+      />
       </StyledWrapper>
     </>
   );
@@ -247,11 +404,39 @@ const StyledWrapper = styled.div`
   margin: 0 auto;
   padding: 2rem;
 
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #e2e8f0;
+
+    .tab {
+      padding: 0.75rem 1.5rem;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: #64748b;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: -2px;
+
+      &:hover {
+        color: #4F46E5;
+      }
+
+      &.active {
+        color: #4F46E5;
+        border-bottom-color: #4F46E5;
+      }
+    }
+  }
+
   .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
 
     .header-content {
       h1 {
@@ -546,6 +731,181 @@ const StyledWrapper = styled.div`
 
     .events-grid {
       grid-template-columns: 1fr;
+    }
+  }
+  .organizer-section {
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+
+      .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+
+        svg {
+          color: #4F46E5;
+        }
+
+        .stat-label {
+          font-size: 0.875rem;
+          color: #64748b;
+          margin-bottom: 0.25rem;
+        }
+
+        .stat-value {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #1e293b;
+        }
+      }
+    }
+
+    .my-events-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+
+      h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1e293b;
+      }
+    }
+
+    .my-events-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+
+      .my-event-card {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        display: flex;
+        gap: 1.5rem;
+        align-items: center;
+        transition: all 0.2s;
+
+        &:hover {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .event-thumbnail {
+          width: 120px;
+          height: 120px;
+          object-fit: cover;
+          border-radius: 0.5rem;
+          flex-shrink: 0;
+        }
+
+        .event-info {
+          flex: 1;
+
+          .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.75rem;
+
+            h3 {
+              font-size: 1.25rem;
+              font-weight: 600;
+              color: #1e293b;
+              margin: 0;
+            }
+
+            .status-badge {
+              padding: 0.25rem 0.75rem;
+              border-radius: 1rem;
+              font-size: 0.75rem;
+              font-weight: 600;
+              text-transform: capitalize;
+
+              &.published {
+                background: #dcfce7;
+                color: #166534;
+              }
+
+              &.draft {
+                background: #f3f4f6;
+                color: #4b5563;
+              }
+
+              &.cancelled {
+                background: #fee2e2;
+                color: #991b1b;
+              }
+            }
+          }
+
+          p {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #64748b;
+            margin: 0.5rem 0;
+
+            svg {
+              flex-shrink: 0;
+            }
+          }
+        }
+
+        .event-actions {
+          display: flex;
+          gap: 0.5rem;
+
+          .action-btn {
+            padding: 0.5rem;
+            background: #f1f5f9;
+            border: none;
+            border-radius: 0.375rem;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+
+            &:hover {
+              background: #e2e8f0;
+              color: #1e293b;
+            }
+
+            &.delete:hover {
+              background: #fee2e2;
+              color: #dc2626;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: #4F46E5;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #4338ca;
+      transform: translateY(-2px);
     }
   }
 `;

@@ -244,16 +244,8 @@ const Navbar = () => {
       { to: '/map', text: 'Map', icon: <Map size={24} />, badgeKey: 'map', showForAll: true },
     ];
 
-    // Organizer-specific links
-    if (user?.role === 'organizer') {
-      return [
-        ...baseLinks,
-        { to: '/organizer/dashboard', text: 'My Events', icon: <Calendar size={24} />, badgeKey: 'organizerEvents' },
-      ];
-    }
-
-    // Regular user links
-    return [
+    // Regular user links (always shown for authenticated users)
+    const userLinks = [
       ...baseLinks,
       { to: '/users', text: 'Community', icon: <Users size={24} />, badgeKey: 'community' },
       { to: '/my-books', text: 'My Books', icon: <BookMarked size={24} />, badgeKey: 'myBooks' },
@@ -261,6 +253,11 @@ const Navbar = () => {
       { to: '/messages', text: 'Messages', icon: <MessageSquare size={24} />, badgeKey: 'messages' },
       { to: '/friends', text: 'Friends', icon: <Heart size={24} />, badgeKey: 'friends' },
     ];
+
+    // Organizers access "My Events" through the Events page tabs
+    // No separate navigation item needed
+
+    return userLinks;
   };
 
   const navLinks = getNavLinks();

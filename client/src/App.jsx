@@ -23,7 +23,9 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import Pricing from './pages/Pricing';
 import VerifyEmail from './pages/VerifyEmail';
 import Events from './pages/Events';
+import EventDetails from './pages/EventDetails';
 import BecomeOrganizer from './pages/BecomeOrganizer';
+import OrganizerDashboard from './pages/OrganizerDashboard';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import { OnlineStatusProvider } from './context/OnlineStatusContext';
@@ -145,7 +147,9 @@ function App() {
                     <Route path="/map" element={<ProtectedRoute><Map /></ProtectedRoute>} />
                     <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
                     <Route path="/events" element={<Events />} />
+                    <Route path="/events/:id" element={<EventDetails />} />
                     <Route path="/become-organizer" element={<ProtectedRoute><BecomeOrganizer /></ProtectedRoute>} />
+                    <Route path="/organizer/dashboard" element={<ProtectedRoute><OrganizerDashboard /></ProtectedRoute>} />
                   </Routes>
                 </Layout>
               } />

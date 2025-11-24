@@ -100,7 +100,8 @@ export const requireOrganizer = (req, res, next) => {
     return next();
   }
   
-  if (req.user.role !== 'organizer') {
+  // Check if user has organizer flag or organizer role
+  if (!req.user.isOrganizer && req.user.role !== 'organizer') {
     return res.status(403).json({ message: 'Access denied. Organizer privileges required.' });
   }
   
@@ -120,7 +121,7 @@ export const requireOrganizerOrAdmin = (req, res, next) => {
     return res.status(401).json({ message: 'Not authorized, no user found' });
   }
   
-  if (req.user.role === 'organizer' || req.user.role === 'admin' || req.user.role === 'superadmin') {
+  if (req.user.isOrganizer || req.user.role === 'organizer' || req.user.role === 'admin' || req.user.role === 'superadmin') {
     return next();
   }
   

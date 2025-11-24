@@ -58,7 +58,7 @@ const Map = () => {
       setLoading(true);
       try {
         // If user is an organizer, fetch their events instead of users
-        if (currentUser?.role === 'organizer') {
+        if (currentUser?.isOrganizer || currentUser?.role === 'organizer') {
           try {
             const { organizerAPI } = await import('../utils/api');
             const response = await organizerAPI.getOrganizerEventsForMap();

@@ -211,6 +211,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isOrganizer: {
+    type: Boolean,
+    default: false
+  },
   organizerProfile: {
     organizationName: {
       type: String,

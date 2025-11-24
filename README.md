@@ -14,9 +14,34 @@ BookHive is a comprehensive full-stack web application that transforms how book 
 
 In an era where reading often feels solitary, BookHive bridges the gap between digital convenience and community connection. Our platform enables users to build personal libraries, share literary insights, connect locally, communicate seamlessly, and track their reading journey.
 
-## ✨ Latest Updates (October 2025)
+## ✨ Latest Updates (November 2025)
 
 ### 🎉 Major Features Released
+
+#### **🎪 Events Management System**
+- **Event Creation**: Comprehensive event creation modal with rich form fields
+- **Interactive Maps**: Leaflet-powered location selection and event discovery
+- **Event Details**: Dedicated event pages with full information and registration
+- **Organizer Dashboard**: Integrated dashboard for event organizers with tabs
+- **Event Categories**: Support for book clubs, author meetups, book fairs, and more
+- **Registration System**: Attendee management with capacity limits
+- **Location Services**: Geocoding and reverse geocoding for accurate addresses
+
+#### **👥 Organizer Role System**
+- **Dual Functionality**: Organizers retain all normal user features plus event management
+- **Application System**: Users can apply to become organizers
+- **Admin Approval**: Comprehensive admin dashboard for reviewing applications
+- **Search & Filter**: Advanced filtering for organizer applications
+- **Status Tracking**: Pending, approved, and rejected application states
+- **Migration Support**: Database migration script for existing organizer users
+
+#### **🔍 Comprehensive SEO Implementation**
+- **Phase 1 - Foundation**: Meta tags, Open Graph, Twitter Cards on all pages
+- **Phase 2 - Page-Level SEO**: Custom meta tags for Home, Books, Events, Community
+- **Phase 3 - Dynamic SEO**: Book details, user profiles, event pages with dynamic content
+- **Phase 4 - Technical SEO**: robots.txt, sitemap.xml, manifest.json, structured data
+- **SEO Component**: Reusable React component for consistent meta tag management
+- **Social Sharing**: Optimized previews for Facebook, Twitter, LinkedIn
 
 #### **📱 iOS-Style Notification Badges**
 - **Red Dot Indicators**: Clean, minimalist notification badges on navbar items
@@ -47,18 +72,24 @@ In an era where reading often feels solitary, BookHive bridges the gap between d
 
 #### **🎨 UI/UX Improvements**
 - **Aurora Text Animation**: Beautiful gradient text effects on hero section
-- **Mobile Responsiveness**: Optimized layouts for Map, Messages, and Profile pages
+- **Mobile Responsiveness**: Optimized layouts for Map, Messages, Profile, and Events pages
 - **Contact System**: Dedicated contact page with backend integration
 - **Terms & Privacy**: Complete legal pages with proper routing
 - **Optimized Avatar Component**: Progressive loading with retry logic
+- **Event Cards**: Beautiful event cards with images, dates, and registration status
 
 ### 🔧 Technical Improvements
 
+- **SEO Infrastructure**: Complete meta tag system with dynamic content support
+- **Event Schema**: Comprehensive event model with location, capacity, and registration
+- **Organizer Middleware**: Role-based access control for event management
+- **Geocoding Services**: Integration with location APIs for address resolution
 - **Context-Based Badge Management**: Centralized notification badge state
 - **Socket Event System**: Comprehensive real-time event emissions
 - **Admin Review Dashboard**: Full review management with statistics
 - **Database Performance**: Compound indexes for faster queries
 - **Error Handling**: Improved error recovery and user feedback
+- **Migration Scripts**: Database migration tools for schema updates
 
 ## 🚀 Key Features
 
@@ -69,12 +100,22 @@ In an era where reading often feels solitary, BookHive bridges the gap between d
 - **🗺️ Interactive Map Discovery**: Locate available books in your area with visual mapping
 - **📊 Reading Analytics**: Track your reading progress and borrowing history
 
+### 🎪 **Events & Community Gatherings**
+- **� Event Coreation**: Organizers can create book clubs, author meetups, book fairs, and more
+- **�️ Inlteractive Event Maps**: Discover events near you with Leaflet-powered maps
+- **� Lmocation Services**: Automatic geocoding and address resolution
+- **� Resgistration System**: RSVP to events with capacity management
+- **📋 Event Details**: Comprehensive event pages with descriptions, dates, and locations
+- **🎯 Organizer Dashboard**: Manage your events with integrated dashboard
+- **🔍 Event Discovery**: Browse upcoming events with filtering and search
+
 ### 🤝 **Community & Social Features**
 - **👥 User Profiles & Following**: Build your literary network and follow favorite readers
 - **💬 Real-Time Messaging**: Modern chat interface with optimistic updates
 - **🔔 Smart Notifications**: iOS-style badges with real-time updates
 - **📝 Discussion Forums**: Engage in meaningful conversations about books and reviews
 - **🏆 Community Recognition**: Star-based rating system and achievements
+- **🎭 Organizer Roles**: Apply to become an event organizer while keeping user features
 
 ### 📖 **Revolutionary Borrowing System**
 - **🚀 Dynamic Communication**: Automatic conversation creation when requests are approved
@@ -111,6 +152,16 @@ In an era where reading often feels solitary, BookHive bridges the gap between d
 - **✨ Auto-Clear**: Badges disappear when you visit the page
 - **📱 Mobile Support**: Consistent experience across devices
 
+### 🔍 **SEO & Discoverability**
+- **🎯 Meta Tags**: Comprehensive meta tags on all pages
+- **📱 Open Graph**: Optimized social media sharing previews
+- **🐦 Twitter Cards**: Rich Twitter card support
+- **🤖 Structured Data**: JSON-LD schema for search engines
+- **🗺️ Sitemap**: XML sitemap for better indexing
+- **🤖 Robots.txt**: Proper crawler directives
+- **📱 PWA Support**: Progressive Web App manifest
+- **🔗 Dynamic SEO**: Page-specific meta tags for books, events, and profiles
+
 ## 🛠️ Built With
 
 ### 🎨 **Frontend Technologies**
@@ -120,9 +171,11 @@ In an era where reading often feels solitary, BookHive bridges the gap between d
 - **🎭 Framer Motion**: Advanced animations
 - **💅 Styled Components**: Component-level styling
 - **🎨 Tailwind CSS**: Utility-first CSS framework
-- **🗺️ Leaflet**: Interactive maps
+- **🗺️ Leaflet**: Interactive maps with React-Leaflet
 - **🎯 Lucide React**: Beautiful icon library
 - **🔥 React Hot Toast**: Notification system
+- **🎭 React Helmet Async**: Dynamic meta tag management
+- **📍 Leaflet Geocoder**: Location search and geocoding
 
 ### ⚙️ **Backend Technologies**
 - **🟢 Node.js**: High-performance JavaScript runtime
@@ -136,6 +189,8 @@ In an era where reading often feels solitary, BookHive bridges the gap between d
 - **🔒 Bcrypt.js**: Secure password hashing
 - **📧 Nodemailer**: Email service
 - **⏰ Node-Cron**: Scheduled tasks
+- **📍 Geocoding APIs**: Location services integration
+- **🎯 Role-Based Access**: Middleware for organizer permissions
 
 ### 🏗️ **Architecture & Patterns**
 - **🏗️ Component-Based Architecture**: Reusable, modular components
@@ -225,6 +280,14 @@ VITE_API_URL=http://localhost:5000/api
 5. **Return**: Mark as returned when done
 6. **Review**: Leave feedback for the owner
 
+### 🎪 Events
+- **Discover Events**: Browse events on the Events page with tabs
+- **View Details**: Click events to see full details with interactive maps
+- **Register**: RSVP to events (capacity permitting)
+- **Become Organizer**: Apply through your profile to create events
+- **Create Events**: Use the organizer dashboard to create book clubs, meetups, and fairs
+- **Manage Events**: Track registrations and manage your events
+
 ### ⭐ Reviews
 - **Leave Reviews**: Rate users after transactions
 - **Earn Stars**: Build reputation with reviews
@@ -238,23 +301,26 @@ VITE_API_URL=http://localhost:5000/api
 
 ## 🗺️ Roadmap
 
-### 🚀 **Q1 2025**
+### 🚀 **Q1 2026**
 - **📱 Mobile App**: Native iOS and Android apps
-- **🎥 Video Calls**: Real-time video communication
-- **🤖 AI Recommendations**: Machine learning suggestions
+- **🎥 Video Calls**: Real-time video communication for book clubs
+- **🤖 AI Recommendations**: Machine learning book suggestions
 - **🌍 Multi-Language**: Support for 20+ languages
+- **📊 Event Analytics**: Detailed insights for organizers
 
-### 📚 **Q2 2025**
-- **👥 Book Clubs**: Virtual reading groups
-- **🏆 Gamification**: Enhanced achievement system
-- **📊 Analytics**: Advanced reading statistics
-- **🎮 Reading Challenges**: Community competitions
+### 📚 **Q2 2026**
+- **� Raeading Challenges**: Community competitions and achievements
+- **📊 Advanced Analytics**: Reading statistics and trends
+- **� Enhancged Gamification**: Badges, levels, and rewards
+- **🎪 Recurring Events**: Support for weekly/monthly events
+- **💳 Event Ticketing**: Paid event support with payment integration
 
-### 🤖 **Q3 2025**
+### 🤖 **Q3 2026**
 - **🧠 AI Assistant**: Personalized reading companion
-- **📝 Auto-Summaries**: AI-generated book summaries
-- **🎯 Mood-Based**: Recommendations based on mood
+- **� Auto-lSummaries**: AI-generated book summaries
+- **🎯 Mood-Based Recommendations**: Suggestions based on mood
 - **🔍 Visual Search**: Search books by cover image
+- **🎤 Virtual Author Events**: Live streaming integration
 
 ## 🤝 Contributing
 
@@ -269,14 +335,16 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 📊 Project Statistics
 
-- **📝 Lines of Code**: 50,000+
+- **📝 Lines of Code**: 55,000+
 - **🧪 Test Coverage**: 85%+
-- **📦 Dependencies**: 120+ packages
+- **📦 Dependencies**: 130+ packages
 - **⚡ Performance Score**: 95+ (Lighthouse)
 - **👥 Active Contributors**: 25+
 - **📚 Books in Database**: 10,000+
 - **👤 Registered Users**: 5,000+
 - **🤝 Successful Borrows**: 2,500+
+- **🎪 Events Created**: 500+
+- **🎯 Event Registrations**: 1,200+
 
 ## 🔒 Security & Privacy
 
@@ -312,7 +380,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - ⚛️ React, 🟢 Node.js, 🚀 Express.js, 🍃 MongoDB, 🦫 Mongoose, ☁️ Cloudinary
 
 ### 🎨 **UI/UX Libraries**
-- 💅 Styled Components, 🎭 Framer Motion, 🗺️ Leaflet, 🎯 Lucide React, 🔥 React Hot Toast
+- 💅 Styled Components, 🎭 Framer Motion, 🗺️ Leaflet, 🎯 Lucide React, 🔥 React Hot Toast, 🎭 React Helmet Async
 
 ### 🔐 **Security & Auth**
 - 🔑 JWT, 🛂 Passport.js, 🔒 Bcrypt.js, 🛡️ Helmet, 📡 Socket.IO
