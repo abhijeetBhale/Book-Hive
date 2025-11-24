@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { contactAPI } from '../utils/api';
 import { Mail, Phone, MapPin, Send, ArrowLeft } from 'lucide-react';
+import SEO from '../components/SEO';
+import { PAGE_SEO } from '../utils/seo';
 
 const Contact = () => {
   const [contactForm, setContactForm] = useState({
@@ -47,8 +49,15 @@ const Contact = () => {
   };
 
   return (
-    <StyledWrapper>
-      <div className="contact-container">
+    <>
+      <SEO 
+        title={PAGE_SEO.contact.title}
+        description={PAGE_SEO.contact.description}
+        keywords={PAGE_SEO.contact.keywords}
+        url={PAGE_SEO.contact.url}
+      />
+      <StyledWrapper>
+        <div className="contact-container">
         <div className="back-link">
           <Link to="/">
             <ArrowLeft size={20} />
@@ -210,7 +219,8 @@ const Contact = () => {
           </div>
         </footer>
       </div>
-    </StyledWrapper>
+      </StyledWrapper>
+    </>
   );
 };
 

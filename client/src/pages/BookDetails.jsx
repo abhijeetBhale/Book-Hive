@@ -7,6 +7,8 @@ import { getFullImageUrl } from '../utils/imageHelpers';
 import { Loader, Shield } from 'lucide-react';
 import OptimizedAvatar from '../components/OptimizedAvatar';
 import UpgradeModal from '../components/ui/UpgradeModal';
+import SEO from '../components/SEO';
+import { BASE_URL, generateStructuredData } from '../utils/seo';
 
 const PageWrapper = styled.div`
   background-color: #f9fafb;
@@ -190,8 +192,42 @@ const BookDetails = () => {
 
   const isOwner = currentUser && currentUser.id === book.owner._id;
 
+  // Generate dynamic SEO for book
+  const bookSEO = {
+    title: `${book.title} by ${book.author} | BookHive`,
+    description: book.description || `Borrow ${book.title} by ${book.author} on BookHive. Connect with book lovers and discover your next read.`,
+    keywords: `${book.title}, ${book.author}, ${book.genre || 'book'}, borrow book, book sharing`,
+    image: getFullImageUrl(book.coverImage),
+    url: `${BASE_URL}/books/${book._id}`,
+    type: 'book'
+  };
+
+  // Generate structured data for the book
+  const bookStructuredData = generateStructuredData('Book', {
+    title: book.title,
+    author: book.author,
+    isbn: book.isbn,
+    description: book.description,
+    image: getFullImageUrl(book.coverImage),
+    genre: book.genre
+  });
+
   return (
     <>
+      <SEO 
+        title={bookSEO.title}
+        description={bookSEO.description}
+        keywords={bookSEO.keywords}
+        image={bookSEO.image}
+        url={bookSEO.url}
+        type={bookSEO.type}
+        structuredData={bookStructuredData}
+        breadcrumbs={[
+          { name: 'Home', url: BASE_URL },
+          { name: 'Books', url: `${BASE_URL}/books` },
+          { name: book.title, url: `${BASE_URL}/books/${book._id}` }
+        ]}
+      />
       <UpgradeModal
         isOpen={!!upgradeModalData}
         onClose={() => setUpgradeModalData(null)}

@@ -8,11 +8,22 @@ import User from '../models/User.js';
  */
 export const getOrganizerApplications = async (req, res) => {
   try {
-    const { status, page = 1, limit = 20 } = req.query;
+    const { status, search, page = 1, limit = 20 } = req.query;
     
     const query = {};
-    if (status) {
+    
+    // Filter by status
+    if (status && status !== 'all') {
       query.status = status;
+    }
+    
+    // Search by organization name or email
+    if (search) {
+      query.$or = [
+        { organizationName: { $regex: search, $options: 'i' } },
+        { contactEmail: { $regex: search, $options: 'i' } },
+        { organizationType: { $regex: search, $options: 'i' } }
+      ];
     }
 
     const skip = (page - 1) * limit;

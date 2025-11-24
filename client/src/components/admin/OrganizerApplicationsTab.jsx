@@ -21,11 +21,21 @@ const OrganizerApplicationsTab = () => {
     const fetchApplications = async () => {
         try {
             setLoading(true);
-            const response = await organizerAPI.getApplications(filters);
+            // Build query params
+            const params = {};
+            if (filters.status && filters.status !== 'all') {
+                params.status = filters.status;
+            }
+            if (filters.search) {
+                params.search = filters.search;
+            }
+            
+            const response = await organizerAPI.getApplications(params);
+            console.log('Applications response:', response);
             setApplications(response.data || []);
         } catch (error) {
             console.error('Error fetching applications:', error);
-            toast.error('Failed to load organizer applications');
+            toast.error(error.response?.data?.message || 'Failed to load organizer applications');
         } finally {
             setLoading(false);
         }
@@ -232,17 +242,32 @@ const OrganizerApplicationsTab = () => {
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-sm font-medium text-gray-500">Organization Name</label>
-                                    <p className="text-gray-900">{selectedApplication.organizationName}</p>
+                                    <p className="text-gray-900 font-semibold text-lg">{selectedApplication.organizationName}</p>
                                 </div>
 
-                                <div>
-                                    <label className="text-sm font-medium text-gray-500">Organization Type</label>
-                                    <p className="text-gray-900">{selectedApplication.organizationType}</p>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-500">Organization Type</label>
+                                        <p className="text-gray-900">{selectedApplication.organizationType}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-500">Status</label>
+                                        <span
+                                            className={`inline-flex px-2 py-1 text-xs rounded-full ${selectedApplication.status === 'approved'
+                                                    ? 'bg-green-100 text-green-800'
+                                                    : selectedApplication.status === 'rejected'
+                                                        ? 'bg-red-100 text-red-800'
+                                                        : 'bg-yellow-100 text-yellow-800'
+                                                }`}
+                                        >
+                                            {selectedApplication.status}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <div>
                                     <label className="text-sm font-medium text-gray-500">Description</label>
-                                    <p className="text-gray-900 whitespace-pre-wrap">{selectedApplication.description}</p>
+                                    <p className="text-gray-900 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg">{selectedApplication.description}</p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -263,36 +288,76 @@ const OrganizerApplicationsTab = () => {
                                             href={selectedApplication.website}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-blue-600 hover:underline"
+                                            className="text-blue-600 hover:underline block"
                                         >
                                             {selectedApplication.website}
                                         </a>
                                     </div>
                                 )}
 
-                                <div>
+                                {selectedApplication.verificationDocuments && selectedApplication.verificationDocuments.length > 0 && (
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-500 mb-2 block">Verification Documents</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {selectedApplication.verificationDocuments.map((doc, index) => (
+                                                <a
+                                                    key={index}
+                                                    href={doc.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+                                                >
+                                                    <Eye className="w-4 h-4 text-blue-600" />
+                                                    <span className="text-sm text-gray-700 truncate">
+                                                        {doc.name || `Document ${index + 1}`}
+                                                    </span>
+                                                </a>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="border-t pt-4">
                                     <label className="text-sm font-medium text-gray-500">Applied By</label>
-                                    <p className="text-gray-900">{selectedApplication.user?.name} ({selectedApplication.user?.email})</p>
+                                    <div className="flex items-center gap-3 mt-2">
+                                        {selectedApplication.user?.avatar && (
+                                            <img
+                                                src={selectedApplication.user.avatar}
+                                                alt={selectedApplication.user.name}
+                                                className="w-10 h-10 rounded-full"
+                                            />
+                                        )}
+                                        <div>
+                                            <p className="text-gray-900 font-medium">{selectedApplication.user?.name}</p>
+                                            <p className="text-sm text-gray-500">{selectedApplication.user?.email}</p>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div>
-                                    <label className="text-sm font-medium text-gray-500">Status</label>
-                                    <span
-                                        className={`inline-flex px-2 py-1 text-xs rounded-full ${selectedApplication.status === 'approved'
-                                                ? 'bg-green-100 text-green-800'
-                                                : selectedApplication.status === 'rejected'
-                                                    ? 'bg-red-100 text-red-800'
-                                                    : 'bg-yellow-100 text-yellow-800'
-                                            }`}
-                                    >
-                                        {selectedApplication.status}
-                                    </span>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-500">Applied On</label>
+                                        <p className="text-gray-900">{format(new Date(selectedApplication.createdAt), 'PPP')}</p>
+                                    </div>
+                                    {selectedApplication.reviewedAt && (
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-500">Reviewed On</label>
+                                            <p className="text-gray-900">{format(new Date(selectedApplication.reviewedAt), 'PPP')}</p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {selectedApplication.status === 'rejected' && selectedApplication.rejectionReason && (
+                                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                        <label className="text-sm font-medium text-red-800 block mb-1">Rejection Reason</label>
+                                        <p className="text-red-700">{selectedApplication.rejectionReason}</p>
+                                    </div>
+                                )}
+
+                                {selectedApplication.reviewedBy && (
                                     <div>
-                                        <label className="text-sm font-medium text-gray-500">Rejection Reason</label>
-                                        <p className="text-red-600">{selectedApplication.rejectionReason}</p>
+                                        <label className="text-sm font-medium text-gray-500">Reviewed By</label>
+                                        <p className="text-gray-900">{selectedApplication.reviewedBy.name}</p>
                                     </div>
                                 )}
                             </div>

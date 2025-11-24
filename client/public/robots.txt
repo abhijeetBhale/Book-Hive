@@ -1,40 +1,31 @@
-# Robots.txt for BookHive - Book Sharing Platform
+# BookHive Robots.txt
 # Allow all search engines to crawl the site
 
 User-agent: *
 Allow: /
 
-# Disallow private/protected routes
+# Disallow admin and private pages
 Disallow: /admin-dashboard-secure
-Disallow: /api/
 Disallow: /profile
 Disallow: /my-books
 Disallow: /messages
+Disallow: /friends
 Disallow: /borrow-requests
 Disallow: /calendar
+Disallow: /become-organizer
 
 # Allow public pages
 Allow: /
-Allow: /login
-Allow: /register
 Allow: /books
 Allow: /users
+Allow: /map
+Allow: /events
+Allow: /login
+Allow: /register
 Allow: /contact
 Allow: /terms
 Allow: /privacy
+Allow: /pricing
 
 # Sitemap location
 Sitemap: https://book-hive-frontend.onrender.com/sitemap.xml
-
-# Crawl delay (be nice to servers)
-Crawl-delay: 1
-
-# Specific bot rules
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Slurp
-Allow: /

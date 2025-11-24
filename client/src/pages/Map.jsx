@@ -7,6 +7,8 @@ import { useOnlineStatus } from '../context/OnlineStatusContext';
 import toast from 'react-hot-toast';
 import MapView from '../components/map/MapView';
 import { Loader, MapPin, Search, Calendar, UserCheck, Sliders, ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import SEO from '../components/SEO';
+import { PAGE_SEO } from '../utils/seo';
 
 
 
@@ -168,8 +170,15 @@ const Map = () => {
 
 
   return (
-    <StyledWrapper>
-      <div className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+    <>
+      <SEO 
+        title={PAGE_SEO.map.title}
+        description={PAGE_SEO.map.description}
+        keywords={PAGE_SEO.map.keywords}
+        url={PAGE_SEO.map.url}
+      />
+      <StyledWrapper>
+        <div className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         <button
           className="collapse-btn"
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -333,7 +342,8 @@ const Map = () => {
           )}
         </div>
       </div>
-    </StyledWrapper>
+      </StyledWrapper>
+    </>
   );
 };
 

@@ -8,6 +8,8 @@ import AdvancedSearchModal from '../components/search/AdvancedSearchModal';
 import ErrorBoundary from '../components/ui/ErrorBoundary';
 import toast from 'react-hot-toast';
 import { getFullImageUrl, preloadImages } from '../utils/imageHelpers';
+import SEO from '../components/SEO';
+import { PAGE_SEO } from '../utils/seo';
 
 // --- DATA FOR FILTERS ---
 
@@ -324,9 +326,16 @@ const Books = () => {
 
 
     return (
-        <PageWrapper>
-            <HeaderSection>
-                <Title>Our Expansive Collection</Title>
+        <>
+            <SEO 
+                title={PAGE_SEO.books.title}
+                description={PAGE_SEO.books.description}
+                keywords={PAGE_SEO.books.keywords}
+                url={PAGE_SEO.books.url}
+            />
+            <PageWrapper>
+                <HeaderSection>
+                    <Title>Our Expansive Collection</Title>
                 <Subtitle>
                     Dive into a universe of stories. Search for your next adventure or browse through the shelves of our community's library.
                 </Subtitle>
@@ -493,7 +502,8 @@ const Books = () => {
                     />
                 </ErrorBoundary>
             )}
-        </PageWrapper>
+            </PageWrapper>
+        </>
     );
 };
 

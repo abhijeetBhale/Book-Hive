@@ -1,7 +1,7 @@
 {
   "name": "BookHive - Share Your Thoughts",
   "short_name": "BookHive",
-  "description": "A revolutionary platform for book lovers to connect, share, and discover new literary adventures through seamless borrowing and real-time communication.",
+  "description": "Join BookHive, the revolutionary platform for book lovers to connect, share, and discover new literary adventures.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -13,11 +13,46 @@
       "sizes": "100x100",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/src/assets/icons8-bee-100.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/src/assets/icons8-bee-100.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
-  "categories": ["books", "social", "lifestyle", "education"],
-  "lang": "en-US",
-  "dir": "ltr",
-  "scope": "/",
-  "prefer_related_applications": false
+  "categories": ["books", "social", "lifestyle"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Browse Books",
+      "short_name": "Books",
+      "description": "Browse available books in your area",
+      "url": "/books",
+      "icons": [
+        {
+          "src": "/src/assets/icons8-bee-100.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Find Users",
+      "short_name": "Users",
+      "description": "Connect with book lovers nearby",
+      "url": "/users",
+      "icons": [
+        {
+          "src": "/src/assets/icons8-bee-100.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
 }

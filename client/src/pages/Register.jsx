@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import styled from 'styled-components';
 import { Loader, User, AtSign, Eye, EyeOff, CheckSquare, Square, KeyRound } from 'lucide-react';
 import { authAPI } from '../utils/api';
+import SEO from '../components/SEO';
+import { PAGE_SEO } from '../utils/seo';
 
 const GoogleIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -64,8 +66,15 @@ const Register = () => {
   };
 
   return (
-    <StyledWrapper>
-      <div className="register-container">
+    <>
+      <SEO 
+        title={PAGE_SEO.register.title}
+        description={PAGE_SEO.register.description}
+        keywords={PAGE_SEO.register.keywords}
+        url={PAGE_SEO.register.url}
+      />
+      <StyledWrapper>
+        <div className="register-container">
         <div className="form-panel">
           <div className="form-header">
             <h1 className="title">Create account</h1>
@@ -144,7 +153,8 @@ const Register = () => {
             </div>
         </div>
       </div>
-    </StyledWrapper>
+      </StyledWrapper>
+    </>
   );
 };
 

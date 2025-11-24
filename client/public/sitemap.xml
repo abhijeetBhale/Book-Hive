@@ -4,71 +4,92 @@
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
 
-  <!-- Homepage - Highest Priority -->
+  <!-- Homepage -->
   <url>
     <loc>https://book-hive-frontend.onrender.com/</loc>
-    <lastmod>2024-11-21</lastmod>
+    <lastmod>2025-01-01</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 
-  <!-- Public Pages - High Priority -->
+  <!-- Books Page -->
   <url>
     <loc>https://book-hive-frontend.onrender.com/books</loc>
-    <lastmod>2024-11-21</lastmod>
+    <lastmod>2025-01-01</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
 
+  <!-- Users/Community Page -->
   <url>
     <loc>https://book-hive-frontend.onrender.com/users</loc>
-    <lastmod>2024-11-21</lastmod>
+    <lastmod>2025-01-01</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
 
+  <!-- Map Page -->
   <url>
     <loc>https://book-hive-frontend.onrender.com/map</loc>
-    <lastmod>2024-11-21</lastmod>
+    <lastmod>2025-01-01</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
   </url>
 
-  <!-- Authentication Pages -->
+  <!-- Events Page -->
+  <url>
+    <loc>https://book-hive-frontend.onrender.com/events</loc>
+    <lastmod>2025-01-01</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Login Page -->
   <url>
     <loc>https://book-hive-frontend.onrender.com/login</loc>
-    <lastmod>2024-11-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://book-hive-frontend.onrender.com/register</loc>
-    <lastmod>2024-11-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <!-- Information Pages -->
-  <url>
-    <loc>https://book-hive-frontend.onrender.com/contact</loc>
-    <lastmod>2024-11-21</lastmod>
+    <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
+  <!-- Register Page -->
+  <url>
+    <loc>https://book-hive-frontend.onrender.com/register</loc>
+    <lastmod>2025-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Contact Page -->
+  <url>
+    <loc>https://book-hive-frontend.onrender.com/contact</loc>
+    <lastmod>2025-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- Terms of Service -->
   <url>
     <loc>https://book-hive-frontend.onrender.com/terms</loc>
-    <lastmod>2024-11-21</lastmod>
-    <changefreq>yearly</changefreq>
+    <lastmod>2025-01-01</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
 
+  <!-- Privacy Policy -->
   <url>
     <loc>https://book-hive-frontend.onrender.com/privacy</loc>
-    <lastmod>2024-11-21</lastmod>
-    <changefreq>yearly</changefreq>
+    <lastmod>2025-01-01</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.4</priority>
+  </url>
+
+  <!-- Pricing Page -->
+  <url>
+    <loc>https://book-hive-frontend.onrender.com/pricing</loc>
+    <lastmod>2025-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
 
 </urlset>

@@ -6,6 +6,8 @@ import styled from 'styled-components';
 import { Calendar, MapPin, Users, Search, Filter, Loader, Clock, Tag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import SEO from '../components/SEO';
+import { BASE_URL } from '../utils/seo';
 
 const Events = () => {
   const { user } = useContext(AuthContext);
@@ -68,8 +70,15 @@ const Events = () => {
   };
 
   return (
-    <StyledWrapper>
-      <div className="header">
+    <>
+      <SEO 
+        title="Book Events Near You | BookHive"
+        description="Discover book readings, author meetups, literary festivals, and book club events happening near you. Join the BookHive community at exciting literary events."
+        keywords="book events, author meetups, book readings, literary festivals, book clubs, reading events, book community events"
+        url={`${BASE_URL}/events`}
+      />
+      <StyledWrapper>
+        <div className="header">
         <div className="header-content">
           <h1>Discover Events</h1>
           <p>Find book-related events happening near you</p>
@@ -228,7 +237,8 @@ const Events = () => {
           ))}
         </div>
       )}
-    </StyledWrapper>
+      </StyledWrapper>
+    </>
   );
 };
 

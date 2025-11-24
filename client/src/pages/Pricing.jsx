@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import { Check, X } from 'lucide-react';
 import VerificationPaymentModal from '../components/profile/VerificationPaymentModal';
 import PremiumPaymentModal from '../components/profile/PremiumPaymentModal';
+import SEO from '../components/SEO';
+import { PAGE_SEO } from '../utils/seo';
 
 const Pricing = () => {
     const [activeModal, setActiveModal] = useState(null); // 'verify', 'premium', or null
@@ -96,8 +98,15 @@ const Pricing = () => {
     };
 
     return (
-        <PricingContainer>
-            <Header>
+        <>
+            <SEO 
+                title={PAGE_SEO.pricing?.title || "Pricing Plans | BookHive"}
+                description={PAGE_SEO.pricing?.description || "Choose the perfect plan for your reading journey. From free to premium, unlock more features as you grow with the BookHive community."}
+                keywords={PAGE_SEO.pricing?.keywords || "bookhive pricing, book sharing plans, premium membership, verified reader, book community subscription"}
+                url={PAGE_SEO.pricing?.url || "https://book-hive-frontend.onrender.com/pricing"}
+            />
+            <PricingContainer>
+                <Header>
                 <Title>Choose Your Reading Journey</Title>
                 <Subtitle>Unlock more features as you grow with the BookHive community</Subtitle>
             </Header>
@@ -154,7 +163,8 @@ const Pricing = () => {
                 onClose={handleCloseModal}
                 onSuccess={handleSuccess}
             />
-        </PricingContainer>
+            </PricingContainer>
+        </>
     );
 };
 

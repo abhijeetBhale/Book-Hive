@@ -4,6 +4,8 @@ import styled from 'styled-components';
 import { Loader, AtSign, Eye, EyeOff, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AuthContext } from '../context/AuthContext';
+import SEO from '../components/SEO';
+import { PAGE_SEO } from '../utils/seo';
 
 const GoogleIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -50,8 +52,15 @@ const Login = () => {
   };
 
   return (
-    <StyledWrapper>
-      <div className="login-container">
+    <>
+      <SEO 
+        title={PAGE_SEO.login.title}
+        description={PAGE_SEO.login.description}
+        keywords={PAGE_SEO.login.keywords}
+        url={PAGE_SEO.login.url}
+      />
+      <StyledWrapper>
+        <div className="login-container">
         <div className="form-panel">
           <div className="form-header">
             <h1 className="title">Welcome Back!</h1>
@@ -108,7 +117,8 @@ const Login = () => {
             </div>
         </div>
       </div>
-    </StyledWrapper>
+      </StyledWrapper>
+    </>
   );
 };
 
