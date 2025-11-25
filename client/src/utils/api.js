@@ -283,6 +283,9 @@ export const messagesAPI = {
   getConversations: () => api.get('/messages/conversations'),
   getConversationWith: (userId) => api.get(`/messages/with/${userId}`),
   clearConversation: (conversationId) => api.delete(`/messages/conversation/${conversationId}`),
+  blockUser: (userId) => api.post(`/messages/block/${userId}`),
+  unblockUser: (userId) => api.post(`/messages/unblock/${userId}`),
+  getBlockedUsers: () => api.get('/messages/blocked'),
 };
 
 export const reportAPI = {

@@ -15,6 +15,19 @@ export const sendMessage = async (req, res) => {
     const { recipientId } = req.params;
     const senderId = req.user.id;
 
+    // Check if either user has blocked the other
+    const [sender, recipient] = await Promise.all([
+      User.findById(senderId).select('blockedUsers').lean(),
+      User.findById(recipientId).select('blockedUsers').lean()
+    ]);
+
+    const senderBlockedRecipient = (sender?.blockedUsers || []).some(id => id.toString() === recipientId);
+    const recipientBlockedSender = (recipient?.blockedUsers || []).some(id => id.toString() === senderId);
+
+    if (senderBlockedRecipient || recipientBlockedSender) {
+      return res.status(403).json({ message: 'Cannot send message to this user' });
+    }
+
     // Create message immediately without waiting for conversation
     const newMessage = new Message({
       senderId,
@@ -97,6 +110,15 @@ export const sendMessage = async (req, res) => {
 export const getConversations = async (req, res) => {
     try {
         const loggedInUserId = req.user.id;
+        
+        // Get current user's blocked users list
+        const currentUser = await User.findById(loggedInUserId).select('blockedUsers').lean();
+        const blockedUserIds = (currentUser?.blockedUsers || []).map(id => id.toString());
+        
+        // Also get users who have blocked the current user
+        const usersWhoBlockedMe = await User.find({ blockedUsers: loggedInUserId }).select('_id').lean();
+        const blockedByUserIds = usersWhoBlockedMe.map(u => u._id.toString());
+        
         const conversations = await Conversation.find({ participants: loggedInUserId })
           .populate({
             path: 'participants',
@@ -112,7 +134,17 @@ export const getConversations = async (req, res) => {
           })
           .lean(); // Use lean() for better performance
 
-        const withCounts = conversations.map((c) => {
+        // Filter out conversations with blocked users
+        const filteredConversations = conversations.filter((c) => {
+          const otherParticipant = c.participants.find(p => p._id.toString() !== loggedInUserId.toString());
+          if (!otherParticipant) return false;
+          
+          const otherUserId = otherParticipant._id.toString();
+          // Hide conversation if user is blocked or has blocked current user
+          return !blockedUserIds.includes(otherUserId) && !blockedByUserIds.includes(otherUserId);
+        });
+
+        const withCounts = filteredConversations.map((c) => {
           // Filter out messages soft-deleted by this user
           c.messages = (c.messages || []).filter((m) => !(m.deletedBy || []).some(id => id?.toString() === loggedInUserId.toString()));
           c.unreadCount = (c.messages || []).filter((m) => {
@@ -399,5 +431,83 @@ export const clearConversation = async (req, res) => {
   } catch (error) {
     console.error('Error in clearConversation controller: ', error.message);
     res.status(500).json({ message: 'Server error clearing conversation' });
+  }
+};
+
+// @desc    Block a user
+// @route   POST /api/messages/block/:userId
+export const blockUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const currentUserId = req.user.id;
+
+    if (userId === currentUserId) {
+      return res.status(400).json({ message: 'You cannot block yourself' });
+    }
+
+    // Check if user exists
+    const userToBlock = await User.findById(userId);
+    if (!userToBlock) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Add to blocked users list
+    await User.findByIdAndUpdate(currentUserId, {
+      $addToSet: { blockedUsers: userId }
+    });
+
+    // Emit socket event to notify both users
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user:${currentUserId}`).emit('user:blocked', { userId });
+      io.to(`user:${userId}`).emit('user:blocked_by', { userId: currentUserId });
+    }
+
+    res.status(200).json({ message: 'User blocked successfully', blockedUserId: userId });
+  } catch (error) {
+    console.error('Error in blockUser controller: ', error.message);
+    res.status(500).json({ message: 'Server error blocking user' });
+  }
+};
+
+// @desc    Unblock a user
+// @route   POST /api/messages/unblock/:userId
+export const unblockUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const currentUserId = req.user.id;
+
+    // Remove from blocked users list
+    await User.findByIdAndUpdate(currentUserId, {
+      $pull: { blockedUsers: userId }
+    });
+
+    // Emit socket event
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user:${currentUserId}`).emit('user:unblocked', { userId });
+    }
+
+    res.status(200).json({ message: 'User unblocked successfully', unblockedUserId: userId });
+  } catch (error) {
+    console.error('Error in unblockUser controller: ', error.message);
+    res.status(500).json({ message: 'Server error unblocking user' });
+  }
+};
+
+// @desc    Get list of blocked users
+// @route   GET /api/messages/blocked
+export const getBlockedUsers = async (req, res) => {
+  try {
+    const currentUserId = req.user.id;
+
+    const user = await User.findById(currentUserId)
+      .populate('blockedUsers', 'name email avatar')
+      .lean();
+
+    res.status(200).json({ blockedUsers: user?.blockedUsers || [] });
+  } catch (error) {
+    console.error('Error in getBlockedUsers controller: ', error.message);
+    res.status(500).json({ message: 'Server error getting blocked users' });
   }
 };

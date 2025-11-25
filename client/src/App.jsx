@@ -9,6 +9,7 @@ import MyBooks from './pages/MyBooks';
 import Users from './pages/Users';
 import UserProfile from './pages/UserProfile';
 import Messages from './pages/Messages';
+import BlockedUsers from './pages/BlockedUsers';
 import Friends from './pages/Friends';
 import BorrowRequests from './pages/BorrowRequests';
 import Profile from './pages/Profile';
@@ -141,6 +142,7 @@ function App() {
                     <Route path="/users/:id" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
                     <Route path="/profile/:id" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
                     <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+                    <Route path="/blocked-users" element={<ProtectedRoute><BlockedUsers /></ProtectedRoute>} />
                     <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
                     <Route path="/borrow-requests" element={<ProtectedRoute><BorrowRequests /></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

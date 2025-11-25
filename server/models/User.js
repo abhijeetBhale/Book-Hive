@@ -300,6 +300,11 @@ const userSchema = new mongoose.Schema({
   deactivationReason: {
     type: String
   },
+  // Blocked users for chat safety
+  blockedUsers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
 }, {
   timestamps: true
 })

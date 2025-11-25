@@ -2,10 +2,10 @@ import React, { useEffect, useState, useContext, useRef, Fragment } from 'react'
 import styled from 'styled-components';
 import { messagesAPI, usersAPI } from '../utils/api';
 import { importPrivateKeyFromIndexedDB, encryptMessage, decryptMessage } from '../utils/crypto';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { io } from 'socket.io-client';
-import { Search, Phone, Video, MoreHorizontal, Send, Paperclip, Smile, Check, CheckCheck, Trash2, Palette, X, Image, File, ArrowLeft } from 'lucide-react';
+import { Search, MoreHorizontal, Send, Paperclip, Smile, Check, CheckCheck, Trash2, Palette, X, Image, File, ArrowLeft, UserX } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 
 // Modern Messages Page Design
@@ -47,11 +47,17 @@ const SidebarHeader = styled.div`
   padding: 20px;
   border-bottom: 1px solid #e2e8f0;
   
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  
   .user-info {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 16px;
   }
   
   .user-avatar {
@@ -65,6 +71,39 @@ const SidebarHeader = styled.div`
     font-size: 18px;
     font-weight: 600;
     color: #1a202c;
+  }
+  
+  .blocked-users-btn {
+    background: none;
+    border: none;
+    color: #718096;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    position: relative;
+    
+    &:hover {
+      background: #f7fafc;
+      color: #e53e3e;
+    }
+    
+    .blocked-count {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: #e53e3e;
+      color: white;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 5px;
+      border-radius: 10px;
+      min-width: 16px;
+      text-align: center;
+    }
   }
   
   .search-container {
@@ -1121,6 +1160,8 @@ const MessagesPage = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showComingSoon, setShowComingSoon] = useState(false);
   const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('chatTheme') || 'default');
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState(new Set());
 
   // Mobile responsive state
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -1206,6 +1247,15 @@ const MessagesPage = () => {
       try { setPrivateKey(await importPrivateKeyFromIndexedDB()); } catch { }
       const { data } = await messagesAPI.getConversations();
       setConversations(data);
+      
+      // Fetch blocked users
+      try {
+        const { data: blockedData } = await messagesAPI.getBlockedUsers();
+        setBlockedUsers(new Set(blockedData.blockedUsers.map(u => u._id)));
+      } catch (error) {
+        console.error('Failed to fetch blocked users:', error);
+      }
+      
       const preselectId = searchParams.get('userId');
       const storedId = localStorage.getItem('lastActiveUserId');
       const targetId = preselectId || storedId;
@@ -1377,6 +1427,57 @@ const MessagesPage = () => {
         setConversations(data);
       } catch (error) {
         console.error('Failed to refresh conversations after clear:', error);
+      }
+    });
+
+    // Handle user blocked event
+    socket.on('user:blocked', async ({ userId }) => {
+      setBlockedUsers(prev => new Set([...prev, userId]));
+      
+      // Remove conversation from list
+      setConversations(prev => prev.filter(c => {
+        const peer = c.participants?.find(p => p._id !== currentUser?._id);
+        return peer?._id !== userId;
+      }));
+      
+      // Clear active conversation if it's with the blocked user
+      const currentActive = activeRef.current;
+      const currentOther = currentActive?.participants?.find(p => p._id !== currentUser?._id);
+      if (currentOther?._id === userId) {
+        setActive(null);
+      }
+    });
+
+    // Handle when someone blocks you
+    socket.on('user:blocked_by', async ({ userId }) => {
+      // Remove conversation from list
+      setConversations(prev => prev.filter(c => {
+        const peer = c.participants?.find(p => p._id !== currentUser?._id);
+        return peer?._id !== userId;
+      }));
+      
+      // Clear active conversation if it's with the user who blocked you
+      const currentActive = activeRef.current;
+      const currentOther = currentActive?.participants?.find(p => p._id !== currentUser?._id);
+      if (currentOther?._id === userId) {
+        setActive(null);
+      }
+    });
+
+    // Handle user unblocked event
+    socket.on('user:unblocked', async ({ userId }) => {
+      setBlockedUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
+      
+      // Refresh conversations to show the unblocked user's conversation
+      try {
+        const { data } = await messagesAPI.getConversations();
+        setConversations(data);
+      } catch (error) {
+        console.error('Failed to refresh conversations after unblock:', error);
       }
     });
 
@@ -1568,6 +1669,51 @@ const MessagesPage = () => {
     setShowThemeModal(false);
   };
 
+  const handleBlockUser = async () => {
+    if (!other?._id) return;
+    setShowBlockModal(false);
+    setShowDropdown(false);
+
+    try {
+      await messagesAPI.blockUser(other._id);
+      setBlockedUsers(prev => new Set([...prev, other._id]));
+      
+      // Remove conversation from list
+      setConversations(prev => prev.filter(c => {
+        const peer = c.participants?.find(p => p._id !== currentUser?._id);
+        return peer?._id !== other._id;
+      }));
+      
+      // Clear active conversation
+      setActive(null);
+      
+      alert(`${other.name} has been blocked. You will no longer receive messages from this user.`);
+    } catch (error) {
+      console.error('Failed to block user:', error);
+      alert('Failed to block user. Please try again.');
+    }
+  };
+
+  const handleUnblockUser = async (userId) => {
+    try {
+      await messagesAPI.unblockUser(userId);
+      setBlockedUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(userId);
+        return newSet;
+      });
+      
+      // Refresh conversations
+      const { data } = await messagesAPI.getConversations();
+      setConversations(data);
+      
+      alert('User has been unblocked successfully.');
+    } catch (error) {
+      console.error('Failed to unblock user:', error);
+      alert('Failed to unblock user. Please try again.');
+    }
+  };
+
   const handleFileAttach = () => {
     setShowFileModal(true);
   };
@@ -1729,13 +1875,25 @@ const MessagesPage = () => {
     <Wrapper>
       <Sidebar $showOnMobile={showSidebar}>
         <SidebarHeader>
-          <div className="user-info">
-            <img
-              className="user-avatar"
-              src={currentUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'User')}&background=4299e1&color=fff`}
-              alt={currentUser?.name}
-            />
-            <div className="user-name">{currentUser?.name || 'User'}</div>
+          <div className="header-top">
+            <div className="user-info">
+              <img
+                className="user-avatar"
+                src={currentUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'User')}&background=4299e1&color=fff`}
+                alt={currentUser?.name}
+              />
+              <div className="user-name">{currentUser?.name || 'User'}</div>
+            </div>
+            <button
+              className="blocked-users-btn"
+              onClick={() => window.location.href = '/blocked-users'}
+              title="Blocked Users"
+            >
+              <UserX size={20} />
+              {blockedUsers.size > 0 && (
+                <span className="blocked-count">{blockedUsers.size}</span>
+              )}
+            </button>
           </div>
           <div className="search-container">
             <Search className="search-icon" size={16} />
@@ -1755,18 +1913,6 @@ const MessagesPage = () => {
             onClick={() => handleTabChange('all')}
           >
             All Chats
-          </button>
-          <button
-            className={`tab ${activeTab === 'groups' ? 'active' : ''}`}
-            onClick={() => handleTabChange('groups')}
-          >
-            Groups
-          </button>
-          <button
-            className={`tab ${activeTab === 'calls' ? 'active' : ''}`}
-            onClick={() => handleTabChange('calls')}
-          >
-            Last Calls
           </button>
         </ChatTabs>
 
@@ -1863,20 +2009,6 @@ const MessagesPage = () => {
               </div>
 
               <div className="chat-actions">
-                <button
-                  className="action-btn"
-                  title="Voice call"
-                  onClick={() => handleComingSoon('Voice Call')}
-                >
-                  <Phone size={18} />
-                </button>
-                <button
-                  className="action-btn"
-                  title="Video call"
-                  onClick={() => handleComingSoon('Video Call')}
-                >
-                  <Video size={18} />
-                </button>
                 <div style={{ position: 'relative' }} ref={dropdownRef}>
                   <button
                     className="action-btn"
@@ -1893,6 +2025,13 @@ const MessagesPage = () => {
                       >
                         <Palette size={16} />
                         Change Theme
+                      </button>
+                      <button
+                        className="dropdown-item danger"
+                        onClick={() => setShowBlockModal(true)}
+                      >
+                        <X size={16} />
+                        Block User
                       </button>
                       <button
                         className="dropdown-item danger"
@@ -2239,6 +2378,51 @@ const MessagesPage = () => {
             </div>
           </div>
         </FileUploadModal>
+      )}
+
+      {/* Block User Confirmation Modal */}
+      {showBlockModal && (
+        <ModalOverlay onClick={() => setShowBlockModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">Block User</div>
+              <button className="close-btn" onClick={() => setShowBlockModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="modal-text">
+                Are you sure you want to block {other?.name}?
+              </div>
+              <div className="modal-text">
+                • You won't receive messages from this user
+              </div>
+              <div className="modal-text">
+                • This user won't be able to send you messages
+              </div>
+              <div className="modal-text">
+                • The conversation will be removed from your chat list
+              </div>
+              <div className="modal-text">
+                • You can unblock this user anytime from your blocked users list
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowBlockModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={handleBlockUser}
+              >
+                Block User
+              </button>
+            </div>
+          </ModalContent>
+        </ModalOverlay>
       )}
 
       {/* Coming Soon Toast */}

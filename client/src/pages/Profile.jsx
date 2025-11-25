@@ -959,7 +959,7 @@ const Profile = () => {
                 <div className="verification-status not-verified">
                   <div className="status-content">
                     <h5>Get Verified</h5>
-                    <p>Stand out with a verified badge next to your name. One-time payment of ₹50.</p>
+                    <p>Stand out with a verified badge next to your name. One-time payment of ₹99.</p>
                     <ul className="verification-benefits">
                       <li>✓ Blue verified badge on your profile</li>
                       <li>✓ Increased trust from other users</li>
@@ -971,7 +971,7 @@ const Profile = () => {
                       onClick={() => setShowVerificationModal(true)}
                     >
                       <BadgeCheck size={16} />
-                      Get Verified for ₹50
+                      Get Verified for ₹99
                     </button>
                   </div>
                 </div>

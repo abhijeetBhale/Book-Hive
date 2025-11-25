@@ -11,7 +11,7 @@ import {
   Heart,
   Bell,
   Trash2,
-  Calendar,
+  LibraryBig,
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { useNotificationBadges } from '../../context/NotificationBadgeContext';
@@ -240,7 +240,7 @@ const Navbar = () => {
   // Conditional navigation based on user role
   const getNavLinks = () => {
     const baseLinks = [
-      { to: '/events', text: 'Events', icon: <Calendar size={24} />, badgeKey: 'events', showForAll: true },
+      { to: '/events', text: 'Events', icon: <LibraryBig size={24} />, badgeKey: 'events', showForAll: true },
       { to: '/map', text: 'Map', icon: <Map size={24} />, badgeKey: 'map', showForAll: true },
     ];
 

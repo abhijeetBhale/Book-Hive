@@ -7,6 +7,9 @@ import {
   getReceivedMessages,
   deleteMessage,
   clearConversation,
+  blockUser,
+  unblockUser,
+  getBlockedUsers,
 } from '../controllers/messageController.js';
 import { protect } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
@@ -19,6 +22,11 @@ router.get('/with/:userId', protect, getConversationWithUser);
 
 // This route gets received messages for notifications
 router.get('/received', protect, getReceivedMessages);
+
+// Block/unblock user routes
+router.post('/block/:userId', protect, blockUser);
+router.post('/unblock/:userId', protect, unblockUser);
+router.get('/blocked', protect, getBlockedUsers);
 
 // This route sends a message to a specific user
 router.post('/send/:recipientId', protect, sendMessage);

@@ -74,7 +74,7 @@ const FloatingVerificationButton = () => {
           </Subtitle>
 
           <ActionButton onClick={handleOpenModal}>
-            Get Verified for ₹50
+            Get Verified for ₹99
             <ArrowIcon>→</ArrowIcon>
           </ActionButton>
         </CardContent>

@@ -44,7 +44,7 @@ const Pricing = () => {
         },
         {
             name: 'Verified Reader',
-            price: '₹50',
+            price: '₹99',
             period: 'One-time',
             description: 'Stand out with a verified badge and unlock enhanced features for active readers.',
             features: [

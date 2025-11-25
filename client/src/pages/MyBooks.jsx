@@ -147,7 +147,7 @@ const StyledBookForm = styled.form`
   .upload-placeholder { text-align: center; color: #6b7280; }
   .file-input-label { cursor: pointer; padding: 0.6rem 1.2rem; border-radius: 0.5rem; background-color: white; color: #374151; font-weight: 600; border: 1px solid #d1d5db; &:hover { background-color: #f9fafb; } }
   .camera-options { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
-  .camera-btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background: white; color: #374151; font-weight: 500; cursor: pointer; transition: all 0.2s; &:hover { background-color: #f9fafb; } }
+  .camera-btn { display: flex; align-items: center; gap: 0.5rem;margin-bottom: 8px;padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background: white; color: #374151; font-weight: 500; cursor: pointer; transition: all 0.2s; &:hover:not(:disabled) { background-color: #f9fafb; } &:disabled { opacity: 0.6; cursor: not-allowed; } }
   .checkbox-group { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.75rem; }
   .checkbox-item { display: flex; align-items: center; background-color: #f9fafb; padding: 1rem; border-radius: 0.5rem; border: 1px solid #f3f4f6; }
   .checkbox-item input { width: auto; margin-right: 0.75rem; accent-color: #4F46E5;}
@@ -172,11 +172,19 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
   const [searchResults, setSearchResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [cameraLoading, setCameraLoading] = useState(false);
   const coverImageFile = watch('coverImage');
   const titleValue = watch('title');
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const searchContainerRef = useRef(null);
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
   useEffect(() => {
     if (initialData) {
@@ -191,7 +199,7 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
       // Map category to available options
       const mapCategory = (apiCategory) => {
         if (!apiCategory) return '';
-        
+
         const categoryMap = {
           'Fiction': 'Fiction',
           'Non-Fiction': 'Non-Fiction',
@@ -214,10 +222,10 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
           'Comics': 'Comics',
           'Graphic Novel': 'Comics'
         };
-        
+
         return categoryMap[apiCategory] || 'Other';
       };
-      
+
       const bookData = {
         title: selectedGoogleBook.title || '',
         author: selectedGoogleBook.author || '',
@@ -236,12 +244,12 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
         setImagePreview(selectedGoogleBook.coverImage);
       }
     } else {
-      reset({ 
-        isAvailable: true, 
+      reset({
+        isAvailable: true,
         forBorrowing: true,
         forSelling: false,
         lendingDuration: 14,
-        condition: 'Good' 
+        condition: 'Good'
       });
       setImagePreview(null);
     }
@@ -329,27 +337,58 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
   const clearSelection = () => {
     setSelectedGoogleBook(null);
     setImagePreview(null);
-    reset({ 
-      isAvailable: true, 
+    reset({
+      isAvailable: true,
       forBorrowing: true,
       forSelling: false,
       lendingDuration: 14,
-      condition: 'Good' 
+      condition: 'Good'
     });
   };
 
   const startCamera = async () => {
+    setCameraLoading(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' } // Use back camera if available
+        video: {
+          facingMode: 'environment', // Use back camera if available
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
       });
       setShowCamera(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+
+      // Wait for next tick to ensure video element is rendered
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          // Explicitly play the video
+          videoRef.current.play()
+            .then(() => {
+              setCameraLoading(false);
+              toast.success('Camera ready! Position your book cover in the frame.');
+            })
+            .catch(err => {
+              console.error('Error playing video:', err);
+              setCameraLoading(false);
+              toast.error('Error starting camera preview.');
+            });
+        }
+      }, 100);
     } catch (error) {
       console.error('Error accessing camera:', error);
-      toast.error('Could not access camera. Please check permissions.');
+      setCameraLoading(false);
+      setShowCamera(false);
+
+      if (error.name === 'NotAllowedError') {
+        toast.error('Camera access denied. Please allow camera permissions in your browser settings.');
+      } else if (error.name === 'NotFoundError') {
+        toast.error('No camera found on this device.');
+      } else if (error.name === 'NotReadableError') {
+        toast.error('Camera is already in use by another application.');
+      } else {
+        toast.error('Could not access camera. Please check permissions and try again.');
+      }
     }
   };
 
@@ -394,6 +433,7 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
       videoRef.current.srcObject = null;
     }
     setShowCamera(false);
+    setCameraLoading(false);
   };
 
   const submitButtonText = isSubmitting ? (initialData ? 'Saving Changes...' : 'Saving...') : (initialData ? 'Save Changes' : 'Add Book');
@@ -404,10 +444,10 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
         <div className="form-group">
           <label htmlFor="title">Title <span className="required-star">*</span></label>
           <div className="search-container" ref={searchContainerRef}>
-            <input 
-              id="title" 
-              placeholder="Enter book title (auto-search enabled)" 
-              {...register('title', { required: true })} 
+            <input
+              id="title"
+              placeholder="Enter book title (auto-search enabled)"
+              {...register('title', { required: true })}
               disabled={!!initialData}
               onFocus={() => {
                 if (searchResults.length > 0 && titleValue && titleValue.length >= 3) {
@@ -470,9 +510,10 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
                   type="button"
                   onClick={startCamera}
                   className="camera-btn"
+                  disabled={cameraLoading || showCamera}
                 >
                   <Camera size={16} />
-                  Take Photo
+                  {cameraLoading ? 'Starting Camera...' : 'Take Photo'}
                 </button>
                 <label htmlFor="coverImage" className="file-input-label">
                   Choose File
@@ -495,63 +536,143 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
           </div>
 
           {showCamera && (
-            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                style={{ width: '100%', maxWidth: '400px', borderRadius: '0.5rem' }}
-              />
+            <div style={{
+              marginTop: '1rem',
+              padding: '1rem',
+              backgroundColor: '#f9fafb',
+              borderRadius: '0.75rem',
+              border: '2px solid #e5e7eb'
+            }}>
+              <div style={{
+                position: 'relative',
+                width: '100%',
+                maxWidth: '500px',
+                margin: '0 auto',
+                backgroundColor: '#000',
+                borderRadius: '0.5rem',
+                overflow: 'hidden'
+              }}>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    display: 'block',
+                    minHeight: '300px'
+                  }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  top: '1rem',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                  color: 'white',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.9rem',
+                  fontWeight: '500'
+                }}>
+                  📸 Position your book cover in the frame
+                </div>
+              </div>
               <canvas ref={canvasRef} style={{ display: 'none' }} />
-              <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                <button type="button" onClick={capturePhoto} className="camera-btn">
+              <div style={{
+                marginTop: '1rem',
+                display: 'flex',
+                gap: '0.75rem',
+                justifyContent: 'center',
+                flexWrap: 'wrap'
+              }}>
+                <button
+                  type="button"
+                  onClick={capturePhoto}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#4F46E5',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#4338ca'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#4F46E5'}
+                >
+                  <Camera size={18} />
                   Capture Photo
                 </button>
-                <button type="button" onClick={stopCamera} className="camera-btn">
+                <button
+                  type="button"
+                  onClick={stopCamera}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#dc2626'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#ef4444'}
+                >
+                  <X size={18} />
                   Cancel
                 </button>
               </div>
             </div>
           )}
         </div>
-        
+
         {/* Lending Duration and Selling Price */}
         {(watch('forBorrowing') || watch('forSelling')) && (
           <>
             {watch('forBorrowing') && (
               <div className="form-group">
                 <label htmlFor="lendingDuration">Lending Duration (Days)</label>
-                <input 
+                <input
                   id="lendingDuration"
-                  type="number" 
-                  min="1" 
+                  type="number"
+                  min="1"
                   max="365"
                   defaultValue="14"
                   placeholder="e.g., 14"
-                  {...register('lendingDuration', { 
+                  {...register('lendingDuration', {
                     min: { value: 1, message: 'Minimum 1 day' },
                     max: { value: 365, message: 'Maximum 365 days' }
-                  })} 
+                  })}
                 />
                 <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
                   How many days can borrowers keep this book?
                 </p>
               </div>
             )}
-            
+
             {watch('forSelling') && (
               <div className="form-group">
                 <label htmlFor="sellingPrice">Selling Price (₹) <span className="required-star">*</span></label>
-                <input 
+                <input
                   id="sellingPrice"
-                  type="number" 
+                  type="number"
                   step="0.01"
                   min="0.01"
                   placeholder="e.g., 15.99"
-                  {...register('sellingPrice', { 
+                  {...register('sellingPrice', {
                     required: watch('forSelling') ? 'Selling price is required when selling' : false,
                     min: { value: 0.01, message: 'Price must be greater than $0' }
-                  })} 
+                  })}
                 />
                 <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
                   BookHive promotes affordable books. Price will be validated against market rates.
@@ -724,7 +845,7 @@ const BookCard = ({ book, onEdit, onDelete }) => {
         <p className="book-author">by {book.author}</p>
         <p className="book-category">{book.category}</p>
         <div className="availability-section">
-          <AnimatedButton 
+          <AnimatedButton
             text={buttonConfig.text}
             variant={buttonConfig.variant}
             disabled={true}
@@ -930,7 +1051,7 @@ const MyBooks = () => {
         title="Delete Book"
         message="Are you sure you want to permanently delete this book from your bookshelf? This action cannot be undone."
       />
-      
+
       {/* Book Search Modal */}
       <BookSearchModal
         isOpen={isBookSearchOpen}
