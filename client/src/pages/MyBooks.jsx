@@ -201,29 +201,140 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
         if (!apiCategory) return '';
 
         const categoryMap = {
+          // Fiction categories
           'Fiction': 'Fiction',
+          'Literary Fiction': 'Fiction',
+          'General Fiction': 'Fiction',
+          
+          // Non-Fiction
           'Non-Fiction': 'Non-Fiction',
           'Nonfiction': 'Non-Fiction',
+          
+          // Genre Fiction
           'Mystery': 'Mystery',
+          'Thriller': 'Thriller',
+          'Crime': 'Mystery',
+          'Detective': 'Mystery',
+          
           'Romance': 'Romance',
-          'Science Fiction': 'Sci-Fi',
+          'Love Stories': 'Romance',
+          
+          'Science Fiction': 'Science Fiction',
+          'Sci-Fi': 'Science Fiction',
+          'Scifi': 'Science Fiction',
+          
           'Fantasy': 'Fantasy',
+          'Epic Fantasy': 'Fantasy',
+          'Urban Fantasy': 'Fantasy',
+          
+          'Horror': 'Horror',
+          'Suspense': 'Thriller',
+          
+          // Non-Fiction categories
           'Biography': 'Biography',
           'Autobiography': 'Biography',
+          'Memoir': 'Biography',
+          'Biography & Autobiography': 'Biography',
+          
           'History': 'History',
+          'Historical': 'History',
+          
           'Science': 'Science',
+          'Nature': 'Science',
+          'Mathematics': 'Science',
+          'Physics': 'Science',
+          'Chemistry': 'Science',
+          'Biology': 'Science',
+          
           'Technology': 'Technology',
+          'Computers': 'Technology',
+          'Programming': 'Technology',
+          'Engineering': 'Technology',
+          
           'Business': 'Business',
+          'Economics': 'Business',
+          'Finance': 'Business',
+          'Management': 'Business',
+          'Entrepreneurship': 'Business',
+          
           'Self-Help': 'Self-Help',
+          'Self Help': 'Self-Help',
+          'Personal Development': 'Self-Help',
+          'Motivational': 'Self-Help',
+          'Psychology': 'Self-Help',
+          
+          'Health': 'Health & Wellness',
+          'Fitness': 'Health & Wellness',
+          'Wellness': 'Health & Wellness',
+          'Medical': 'Health & Wellness',
+          
+          'Cooking': 'Cooking',
+          'Food': 'Cooking',
+          'Recipes': 'Cooking',
+          
+          'Travel': 'Travel',
+          'Adventure': 'Travel',
+          
+          'Religion': 'Religion & Spirituality',
+          'Spirituality': 'Religion & Spirituality',
+          'Philosophy': 'Philosophy',
+          
+          'Art': 'Art & Photography',
+          'Photography': 'Art & Photography',
+          'Design': 'Art & Photography',
+          
+          // Literature & Poetry
           'Poetry': 'Poetry',
+          'Poems': 'Poetry',
           'Drama': 'Drama',
+          'Plays': 'Drama',
+          'Literature': 'Literature',
+          'Classic': 'Literature',
+          'Classics': 'Literature',
+          
+          // Young Readers
           'Children': 'Children',
+          'Juvenile Fiction': 'Children',
+          'Picture Books': 'Children',
+          
           'Young Adult': 'Young Adult',
-          'Comics': 'Comics',
-          'Graphic Novel': 'Comics'
+          'Teen': 'Young Adult',
+          'YA': 'Young Adult',
+          
+          // Comics & Graphic Novels
+          'Comics': 'Comics & Graphic Novels',
+          'Graphic Novel': 'Comics & Graphic Novels',
+          'Graphic Novels': 'Comics & Graphic Novels',
+          'Manga': 'Comics & Graphic Novels',
+          
+          // Education
+          'Education': 'Education',
+          'Textbook': 'Education',
+          'Academic': 'Education',
+          'Reference': 'Reference'
         };
 
-        return categoryMap[apiCategory] || 'Other';
+        // Try exact match first
+        if (categoryMap[apiCategory]) {
+          return categoryMap[apiCategory];
+        }
+
+        // Try case-insensitive match
+        const lowerCategory = apiCategory.toLowerCase();
+        for (const [key, value] of Object.entries(categoryMap)) {
+          if (key.toLowerCase() === lowerCategory) {
+            return value;
+          }
+        }
+
+        // Try partial match
+        for (const [key, value] of Object.entries(categoryMap)) {
+          if (lowerCategory.includes(key.toLowerCase()) || key.toLowerCase().includes(lowerCategory)) {
+            return value;
+          }
+        }
+
+        return 'Other';
       };
 
       const bookData = {
@@ -324,12 +435,154 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
       const year = new Date(book.publishedDate).getFullYear();
       if (!isNaN(year)) { setValue('publicationYear', year); }
     }
+    
+    // Map category using the same comprehensive mapping function
     if (book.categories && book.categories.length > 0) {
+      const mapCategory = (apiCategory) => {
+        if (!apiCategory) return '';
+
+        const categoryMap = {
+          // Fiction categories
+          'Fiction': 'Fiction',
+          'Literary Fiction': 'Fiction',
+          'General Fiction': 'Fiction',
+          
+          // Non-Fiction
+          'Non-Fiction': 'Non-Fiction',
+          'Nonfiction': 'Non-Fiction',
+          
+          // Genre Fiction
+          'Mystery': 'Mystery',
+          'Thriller': 'Thriller',
+          'Crime': 'Mystery',
+          'Detective': 'Mystery',
+          
+          'Romance': 'Romance',
+          'Love Stories': 'Romance',
+          
+          'Science Fiction': 'Science Fiction',
+          'Sci-Fi': 'Science Fiction',
+          'Scifi': 'Science Fiction',
+          
+          'Fantasy': 'Fantasy',
+          'Epic Fantasy': 'Fantasy',
+          'Urban Fantasy': 'Fantasy',
+          
+          'Horror': 'Horror',
+          'Suspense': 'Thriller',
+          
+          // Non-Fiction categories
+          'Biography': 'Biography',
+          'Autobiography': 'Biography',
+          'Memoir': 'Biography',
+          'Biography & Autobiography': 'Biography',
+          
+          'History': 'History',
+          'Historical': 'History',
+          
+          'Science': 'Science',
+          'Nature': 'Science',
+          'Mathematics': 'Science',
+          'Physics': 'Science',
+          'Chemistry': 'Science',
+          'Biology': 'Science',
+          
+          'Technology': 'Technology',
+          'Computers': 'Technology',
+          'Programming': 'Technology',
+          'Engineering': 'Technology',
+          
+          'Business': 'Business',
+          'Economics': 'Business',
+          'Finance': 'Business',
+          'Management': 'Business',
+          'Entrepreneurship': 'Business',
+          
+          'Self-Help': 'Self-Help',
+          'Self Help': 'Self-Help',
+          'Personal Development': 'Self-Help',
+          'Motivational': 'Self-Help',
+          'Psychology': 'Self-Help',
+          
+          'Health': 'Health & Wellness',
+          'Fitness': 'Health & Wellness',
+          'Wellness': 'Health & Wellness',
+          'Medical': 'Health & Wellness',
+          
+          'Cooking': 'Cooking',
+          'Food': 'Cooking',
+          'Recipes': 'Cooking',
+          
+          'Travel': 'Travel',
+          'Adventure': 'Travel',
+          
+          'Religion': 'Religion & Spirituality',
+          'Spirituality': 'Religion & Spirituality',
+          'Philosophy': 'Philosophy',
+          
+          'Art': 'Art & Photography',
+          'Photography': 'Art & Photography',
+          'Design': 'Art & Photography',
+          
+          // Literature & Poetry
+          'Poetry': 'Poetry',
+          'Poems': 'Poetry',
+          'Drama': 'Drama',
+          'Plays': 'Drama',
+          'Literature': 'Literature',
+          'Classic': 'Literature',
+          'Classics': 'Literature',
+          
+          // Young Readers
+          'Children': 'Children',
+          'Juvenile Fiction': 'Children',
+          'Picture Books': 'Children',
+          
+          'Young Adult': 'Young Adult',
+          'Teen': 'Young Adult',
+          'YA': 'Young Adult',
+          
+          // Comics & Graphic Novels
+          'Comics': 'Comics & Graphic Novels',
+          'Graphic Novel': 'Comics & Graphic Novels',
+          'Graphic Novels': 'Comics & Graphic Novels',
+          'Manga': 'Comics & Graphic Novels',
+          
+          // Education
+          'Education': 'Education',
+          'Textbook': 'Education',
+          'Academic': 'Education',
+          'Reference': 'Reference'
+        };
+
+        // Try exact match first
+        if (categoryMap[apiCategory]) {
+          return categoryMap[apiCategory];
+        }
+
+        // Try case-insensitive match
+        const lowerCategory = apiCategory.toLowerCase();
+        for (const [key, value] of Object.entries(categoryMap)) {
+          if (key.toLowerCase() === lowerCategory) {
+            return value;
+          }
+        }
+
+        // Try partial match
+        for (const [key, value] of Object.entries(categoryMap)) {
+          if (lowerCategory.includes(key.toLowerCase()) || key.toLowerCase().includes(lowerCategory)) {
+            return value;
+          }
+        }
+
+        return 'Other';
+      };
+
       const category = book.categories[0];
-      const categoryMap = { 'Fiction': 'Fiction', 'Science Fiction': 'Science Fiction', 'Fantasy': 'Fantasy', 'Mystery': 'Mystery', 'Biography': 'Non-Fiction', 'History': 'Non-Fiction', 'Science': 'Non-Fiction', 'Technology': 'Non-Fiction' };
-      const mappedCategory = categoryMap[category] || 'Fiction';
+      const mappedCategory = mapCategory(category);
       setValue('category', mappedCategory);
     }
+    
     if (book.coverImage) { setImagePreview(book.coverImage); }
     toast.success('Book details auto-filled from Google Books!');
   };
@@ -478,7 +731,7 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
           </div>
         </div>
         <div className="form-group"><label htmlFor="author">Author <span className="required-star">*</span></label><input id="author" placeholder="Enter author name" {...register('author', { required: true })} /></div>
-        <div className="form-group"><label htmlFor="category">Category <span className="required-star">*</span></label><select id="category" {...register('category', { required: true })}><option value="">Select a category</option><option value="Fiction">Fiction</option><option value="Non-Fiction">Non-Fiction</option><option value="Science Fiction">Science Fiction</option><option value="Fantasy">Fantasy</option><option value="Mystery">Mystery</option></select></div>
+        <div className="form-group"><label htmlFor="category">Category <span className="required-star">*</span></label><select id="category" {...register('category', { required: true })}><option value="">Select a category</option><option value="Fiction">Fiction</option><option value="Non-Fiction">Non-Fiction</option><option value="Science Fiction">Science Fiction</option><option value="Fantasy">Fantasy</option><option value="Mystery">Mystery</option><option value="Thriller">Thriller</option><option value="Romance">Romance</option><option value="Horror">Horror</option><option value="Biography">Biography</option><option value="History">History</option><option value="Science">Science</option><option value="Technology">Technology</option><option value="Business">Business</option><option value="Self-Help">Self-Help</option><option value="Health & Wellness">Health & Wellness</option><option value="Cooking">Cooking</option><option value="Travel">Travel</option><option value="Religion & Spirituality">Religion & Spirituality</option><option value="Philosophy">Philosophy</option><option value="Art & Photography">Art & Photography</option><option value="Poetry">Poetry</option><option value="Drama">Drama</option><option value="Literature">Literature</option><option value="Children">Children</option><option value="Young Adult">Young Adult</option><option value="Comics & Graphic Novels">Comics & Graphic Novels</option><option value="Education">Education</option><option value="Reference">Reference</option><option value="Other">Other</option></select></div>
         <div className="form-group"><label htmlFor="publicationYear">Publication Year</label><input id="publicationYear" placeholder="e.g., 2020" type="number" {...register('publicationYear')} /></div>
         <div className="form-group"><label htmlFor="isbn">ISBN (optional)</label><input id="isbn" placeholder="Enter ISBN" {...register('isbn')} /></div>
         <div className="form-group"><label htmlFor="condition">Book Condition</label><select id="condition" {...register('condition')}><option value="New">New</option><option value="Like New">Like New</option><option value="Very Good">Very Good</option><option value="Good">Good</option><option value="Fair">Fair</option><option value="Poor">Poor</option></select></div>

@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled, { css } from 'styled-components';
 import { booksAPI } from '../utils/api';
 import BookCard from '../components/books/BookCard';
 import { Loader, X, ChevronDown, SlidersHorizontal, Search as SearchIcon } from 'lucide-react';
 import StyledSearchInput from '../components/ui/StyledSearchInput';
-import AdvancedSearchModal from '../components/search/AdvancedSearchModal';
-import ErrorBoundary from '../components/ui/ErrorBoundary';
 import toast from 'react-hot-toast';
 import { getFullImageUrl, preloadImages } from '../utils/imageHelpers';
 import SEO from '../components/SEO';
@@ -254,24 +252,30 @@ const Books = () => {
     const [pagination, setPagination] = useState({});
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [sortOrder, setSortOrder] = useState('title-asc');
     const [selectedGenre, setSelectedGenre] = useState('All');
     const [selectedLanguage, setSelectedLanguage] = useState('All');
     const [filterAvailable, setFilterAvailable] = useState(false);
-    const [currentFilters, setCurrentFilters] = useState({});
 
+    // Debounce search query
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            fetchBooks();
+        }, 500); // Wait 500ms after user stops typing
+
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery]);
+
+    // Fetch books immediately when filters change (no debounce needed)
     useEffect(() => {
         fetchBooks();
-    }, [currentFilters]);
+    }, [selectedGenre, selectedLanguage, filterAvailable, sortOrder]);
 
-    const fetchBooks = async (filters = {}) => {
+    const fetchBooks = async () => {
         try {
             setLoading(true);
             const searchParams = {
-                ...currentFilters,
-                ...filters,
                 search: searchQuery,
                 category: selectedGenre !== 'All' ? selectedGenre : '',
                 language: selectedLanguage !== 'All' ? selectedLanguage : '',
@@ -309,18 +313,12 @@ const Books = () => {
         }
     };
 
-    const handleAdvancedSearch = (filters) => {
-        try {
-            setCurrentFilters(filters);
-            // Reset basic filters when using advanced search
-            setSearchQuery(filters.search || '');
-            setSelectedGenre(filters.category || 'All');
-            setSelectedLanguage(filters.language || 'All');
-            setFilterAvailable(filters.isAvailable === 'true');
-            setSortOrder(`${filters.sortBy || 'createdAt'}-${filters.sortOrder || 'desc'}`);
-        } catch (error) {
-            toast.error('Error applying search filters');
-        }
+    const clearAllFilters = () => {
+        setSearchQuery('');
+        setSelectedGenre('All');
+        setSelectedLanguage('All');
+        setFilterAvailable(false);
+        setSortOrder('title-asc');
     };
 
 
@@ -339,36 +337,21 @@ const Books = () => {
                 <Subtitle>
                     Dive into a universe of stories. Search for your next adventure or browse through the shelves of our community's library.
                 </Subtitle>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', maxWidth: '600px', margin: '0 auto' }}>
                     <StyledSearchInput
-                        placeholder="Search by title or author..."
+                        placeholder="Search by title, author, or category..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
-                    <button
-                        onClick={() => setIsAdvancedSearchOpen(true)}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            padding: '0.75rem 1.5rem',
-                            background: '#4F46E5',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '12px',
-                            fontSize: '0.875rem',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                        }}
-                        onMouseOver={(e) => e.target.style.background = '#4338ca'}
-                        onMouseOut={(e) => e.target.style.background = '#4F46E5'}
-                    >
-                        <SearchIcon size={16} />
-                        Advanced Search
-                    </button>
                 </div>
+                <p style={{ 
+                    marginTop: '1rem', 
+                    fontSize: '0.875rem', 
+                    color: '#6b7280',
+                    fontStyle: 'italic'
+                }}>
+                    💡 Use the filters on the left to narrow down your search
+                </p>
             </HeaderSection>
             
             <SidebarToggle onClick={() => setIsSidebarOpen(true)}>
@@ -432,7 +415,7 @@ const Books = () => {
                         <ErrorMessage>{error}</ErrorMessage>
                     ) : (
                         <>
-                            {Object.keys(currentFilters).length > 0 && (
+                            {(searchQuery || selectedGenre !== 'All' || selectedLanguage !== 'All' || filterAvailable) && (
                                 <div style={{ 
                                     padding: '1rem', 
                                     background: '#f0f9ff', 
@@ -440,31 +423,41 @@ const Books = () => {
                                     marginBottom: '1rem',
                                     border: '1px solid #bae6fd'
                                 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                                         <span style={{ fontSize: '0.875rem', color: '#0369a1', fontWeight: '500' }}>
-                                            Advanced filters applied • {books.length} results
+                                            {books.length} {books.length === 1 ? 'book' : 'books'} found
+                                            {searchQuery && ` for "${searchQuery}"`}
+                                            {selectedGenre !== 'All' && ` in ${selectedGenre}`}
                                         </span>
                                         <button
-                                            onClick={() => {
-                                                setCurrentFilters({});
-                                                setSearchQuery('');
-                                                setSelectedGenre('All');
-                                                setSelectedLanguage('All');
-                                                setFilterAvailable(false);
-                                                setSortOrder('title-asc');
-                                            }}
+                                            onClick={clearAllFilters}
                                             style={{
                                                 background: 'none',
                                                 border: 'none',
                                                 color: '#0369a1',
                                                 fontSize: '0.875rem',
                                                 cursor: 'pointer',
-                                                textDecoration: 'underline'
+                                                textDecoration: 'underline',
+                                                fontWeight: '500'
                                             }}
                                         >
-                                            Clear filters
+                                            Clear all filters
                                         </button>
                                     </div>
+                                </div>
+                            )}
+                            {books.length === 0 && !loading && (
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: '3rem 1rem',
+                                    color: '#6b7280'
+                                }}>
+                                    <p style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                        No books found
+                                    </p>
+                                    <p style={{ fontSize: '0.875rem' }}>
+                                        Try adjusting your search or filters
+                                    </p>
                                 </div>
                             )}
                             <BookGrid>
@@ -490,18 +483,6 @@ const Books = () => {
                     )}
                 </BookGridContainer>
             </MainContent>
-
-            {/* Advanced Search Modal */}
-            {isAdvancedSearchOpen && (
-                <ErrorBoundary>
-                    <AdvancedSearchModal
-                        isOpen={isAdvancedSearchOpen}
-                        onClose={() => setIsAdvancedSearchOpen(false)}
-                        onSearch={handleAdvancedSearch}
-                        initialFilters={currentFilters}
-                    />
-                </ErrorBoundary>
-            )}
             </PageWrapper>
         </>
     );

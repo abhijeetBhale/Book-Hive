@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useContext } from 'react';
 import styled from 'styled-components';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { usersAPI, borrowAPI } from '../utils/api';
+import { usersAPI, borrowAPI, eventsAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import { useOnlineStatus } from '../context/OnlineStatusContext';
 import toast from 'react-hot-toast';
@@ -57,78 +57,98 @@ const Map = () => {
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        // If user is an organizer, fetch their events instead of users
-        if (currentUser?.isOrganizer || currentUser?.role === 'organizer') {
+        let allMarkers = [];
+
+        // Fetch ALL public events for everyone to see
+        try {
+          const response = await eventsAPI.getPublicEvents();
+          console.log('Events API Response:', response); // Debug log
+          // Backend returns 'data' field, not 'events'
+          const eventsData = response.data || response.events || [];
+          console.log('Events Data:', eventsData); // Debug log
+          // Transform events to match user structure for map display
+          const eventMarkers = eventsData.filter(event => 
+            event.location?.coordinates && 
+            event.location.coordinates.length === 2
+          ).map(event => ({
+            _id: event._id,
+            name: event.title,
+            location: event.location,
+            isEvent: true,
+            eventData: event,
+            distanceFromCurrentUser: 0 // Events don't have distance
+          }));
+          console.log('Event Markers:', eventMarkers); // Debug log
+          allMarkers = [...eventMarkers];
+        } catch (error) {
+          console.error('Failed to load events:', error);
+          // Don't show error toast, just continue without events
+        }
+
+        // Fetch regular users for everyone (including organizers)
+        if (currentUser?.location?.coordinates && currentUser.location.coordinates.length === 2) {
           try {
-            const { organizerAPI } = await import('../utils/api');
-            const response = await organizerAPI.getOrganizerEventsForMap();
-            // Transform events to match user structure for map display
-            const eventMarkers = (response.data || []).map(event => ({
-              _id: event._id,
-              name: event.title,
-              location: event.location,
-              isEvent: true,
-              eventData: event
-            }));
-            setUsers(eventMarkers);
-            setSelectedUserIds(eventMarkers.map(e => e._id));
+            const { data } = await usersAPI.getUsersWithBooks();
+            let usersWithCoords = data.users.filter(user =>
+              user.location?.coordinates &&
+              user.location.coordinates.length === 2 &&
+              user._id !== currentUser?._id
+            );
+
+            const currentUserLat = currentUser.location.coordinates[1];
+            const currentUserLon = currentUser.location.coordinates[0];
+
+            usersWithCoords = usersWithCoords.map(user => {
+              const userLat = user.location.coordinates[1];
+              const userLon = user.location.coordinates[0];
+              const distance = calculateDistance(currentUserLat, currentUserLon, userLat, userLon);
+
+              return {
+                ...user,
+                distanceFromCurrentUser: distance,
+                isOnline: isUserOnline(user._id),
+                isEvent: false
+              };
+            });
+
+            if (distanceFilter > 0) {
+              usersWithCoords = usersWithCoords.filter(user =>
+                user.distanceFromCurrentUser <= distanceFilter
+              );
+            }
+
+            if (ratingFilter > 0) {
+              usersWithCoords = usersWithCoords.filter(user =>
+                user.rating?.value >= ratingFilter
+              );
+            }
+
+            usersWithCoords.sort((a, b) => a.distanceFromCurrentUser - b.distanceFromCurrentUser);
+
+            // Combine events and users
+            allMarkers = [...allMarkers, ...usersWithCoords];
           } catch (error) {
-            console.error('Failed to load organizer events:', error);
-            toast.error('Failed to load your events');
-            setUsers([]);
+            console.error('Failed to load user locations:', error);
+            if (allMarkers.length === 0) {
+              toast.error('Failed to load user locations.');
+            }
           }
-          setLoading(false);
-          return;
+        } else {
+          // User has no location, but events can still be shown
+          if (allMarkers.length === 0) {
+            toast.error('Please set your location in your profile to see nearby users and events.');
+          } else {
+            toast.info('Set your location to see nearby users. Events are visible on the map.');
+          }
         }
 
-        if (!currentUser?.location?.coordinates || currentUser.location.coordinates.length !== 2) {
-          toast.error('Please set your location in your profile to use distance filtering.');
-          setUsers([]);
-          setLoading(false);
-          return;
-        }
-
-        const { data } = await usersAPI.getUsersWithBooks();
-        let usersWithCoords = data.users.filter(user =>
-          user.location?.coordinates &&
-          user.location.coordinates.length === 2 &&
-          user._id !== currentUser?._id
-        );
-
-        const currentUserLat = currentUser.location.coordinates[1];
-        const currentUserLon = currentUser.location.coordinates[0];
-
-        usersWithCoords = usersWithCoords.map(user => {
-          const userLat = user.location.coordinates[1];
-          const userLon = user.location.coordinates[0];
-          const distance = calculateDistance(currentUserLat, currentUserLon, userLat, userLon);
-
-          return {
-            ...user,
-            distanceFromCurrentUser: distance,
-            isOnline: isUserOnline(user._id)
-          };
-        });
-
-        if (distanceFilter > 0) {
-          usersWithCoords = usersWithCoords.filter(user =>
-            user.distanceFromCurrentUser <= distanceFilter
-          );
-        }
-
-        if (ratingFilter > 0) {
-          usersWithCoords = usersWithCoords.filter(user =>
-            user.rating?.value >= ratingFilter
-          );
-        }
-
-        usersWithCoords.sort((a, b) => a.distanceFromCurrentUser - b.distanceFromCurrentUser);
-
-        setUsers(usersWithCoords);
-        setSelectedUserIds(usersWithCoords.map(u => u._id));
+        console.log('Final allMarkers (events + users):', allMarkers); // Debug log
+        console.log('Events in allMarkers:', allMarkers.filter(m => m.isEvent)); // Debug log
+        setUsers(allMarkers);
+        setSelectedUserIds(allMarkers.map(u => u._id));
       } catch (error) {
-        console.error('Failed to load user locations:', error);
-        toast.error('Failed to load user locations.');
+        console.error('Failed to load map data:', error);
+        toast.error('Failed to load map data.');
         setUsers([]);
       } finally {
         setLoading(false);
@@ -152,6 +172,7 @@ const Map = () => {
 
   const sidebarFilteredUsers = useMemo(() =>
     users.filter(user =>
+      !user.isEvent && // Exclude events from sidebar
       user.name.toLowerCase().includes(searchTerm.toLowerCase())
     ),
     [users, searchTerm]
@@ -578,6 +599,20 @@ const StyledWrapper = styled.div`
       }
     }
 
+    &.event-item {
+      border-left: 3px solid #f59e0b;
+      background-color: #fffbeb;
+
+      &:hover {
+        background-color: #fef3c7;
+      }
+
+      &.selected {
+        background-color: #fef3c7;
+        border-left-color: #d97706;
+      }
+    }
+
     .checkbox {
       width: 20px;
       height: 20px;
@@ -598,6 +633,20 @@ const StyledWrapper = styled.div`
       text-decoration: none;
       color: inherit;
       
+      .event-icon-container {
+        position: relative;
+        margin-right: 0.75rem;
+        width: 44px;
+        height: 44px;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+      }
+
       .avatar-container {
         position: relative;
         margin-right: 0.75rem;
@@ -671,6 +720,21 @@ const StyledWrapper = styled.div`
             inset 0 1px 0 rgba(255, 255, 255, 0.2);
           border: 1px solid rgba(255, 255, 255, 0.2);
         }
+
+        .event-badge {
+          font-size: 0.65rem;
+          background: #f59e0b;
+          color: white;
+          padding: 0.2rem 0.5rem;
+          border-radius: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          box-shadow: 
+            0 2px 4px rgba(245, 158, 11, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
       }
 
       .user-stats {
@@ -706,6 +770,15 @@ const StyledWrapper = styled.div`
         padding: 0.125rem 0.375rem;
         border-radius: 0.25rem;
         display: inline-block;
+
+        &.event-location {
+          color: #92400e;
+          background-color: #fef3c7;
+          max-width: 200px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
       }
     }
   }

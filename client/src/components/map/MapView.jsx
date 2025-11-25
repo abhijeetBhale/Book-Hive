@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { BookOpen, Star, X } from 'lucide-react';
+import { AuthContext } from '../../context/AuthContext';
+import { eventsAPI } from '../../utils/api';
+import toast from 'react-hot-toast';
 import 'leaflet/dist/leaflet.css';
 
 // Error Boundary Component
@@ -306,10 +309,13 @@ const MapBoundsAdjuster = ({ allUsers, userToShowPopup }) => {
 
 
 const MapView = ({ userGroups, userToShowPopup }) => {
+    const { user: currentUser } = useContext(AuthContext);
+    const navigate = useNavigate();
     const defaultPosition = [22.7196, 75.8577]; // Default center for Indore
     const [selectedPin, setSelectedPin] = useState(null);
     const [mapKey, setMapKey] = useState(() => `map-${Date.now()}-${Math.random()}`);
     const [hasProcessedUserToShow, setHasProcessedUserToShow] = useState(false);
+    const [registering, setRegistering] = useState(false);
 
     // Flatten userGroups to individual users for clustering
     const allUsers = userGroups.flat();
@@ -364,6 +370,27 @@ const MapView = ({ userGroups, userToShowPopup }) => {
 
 
     const createUserIcon = (user) => {
+        // Create event icon if this is an event
+        if (user.isEvent) {
+            return L.divIcon({
+                html: `
+                    <div class="custom-event-marker">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                    </div>
+                `,
+                className: '',
+                iconSize: [50, 50],
+                iconAnchor: [25, 50],
+                popupAnchor: [0, -52]
+            });
+        }
+
+        // Create user icon
         const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&color=fff`;
         const onlineClass = user.isOnline ? 'online' : 'offline';
 
@@ -381,6 +408,40 @@ const MapView = ({ userGroups, userToShowPopup }) => {
     };
 
     const customMarkerStyles = `
+        .custom-event-marker {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            box-shadow: 
+              0 0 0 3px rgba(245, 158, 11, 0.3),
+              0 4px 12px rgba(245, 158, 11, 0.5);
+            transition: transform 0.2s ease;
+            animation: pulse-event 2s infinite;
+        }
+
+        @keyframes pulse-event {
+            0%, 100% {
+                box-shadow: 
+                  0 0 0 3px rgba(245, 158, 11, 0.3),
+                  0 4px 12px rgba(245, 158, 11, 0.5);
+            }
+            50% {
+                box-shadow: 
+                  0 0 0 6px rgba(245, 158, 11, 0.4),
+                  0 6px 16px rgba(245, 158, 11, 0.6);
+            }
+        }
+
+        .leaflet-marker-icon:hover .custom-event-marker {
+            transform: scale(1.1);
+        }
+
         .custom-marker-wrapper {
             position: relative;
             width: 50px;
@@ -522,6 +583,26 @@ const MapView = ({ userGroups, userToShowPopup }) => {
         setSelectedPin(null);
     }
 
+    const handleRegisterForEvent = async (eventId) => {
+        if (!currentUser) {
+            toast.error('Please login to register for events');
+            navigate('/login');
+            return;
+        }
+
+        setRegistering(true);
+        try {
+            await eventsAPI.registerForEvent(eventId);
+            toast.success('Successfully registered for event!');
+            setSelectedPin(null); // Close popup after registration
+        } catch (error) {
+            console.error('Failed to register:', error);
+            toast.error(error.response?.data?.message || 'Failed to register for event');
+        } finally {
+            setRegistering(false);
+        }
+    }
+
     return (
         <MapErrorBoundary>
             <style>{customMarkerStyles}</style>
@@ -600,60 +681,206 @@ const MapView = ({ userGroups, userToShowPopup }) => {
                                 >
                                     <X size={16} />
                                 </button>
-                                <div className="card-header">
-                                    <div className="avatar-wrapper">
-                                        <img src={selectedPin.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedPin.name)}&background=random&color=fff`} alt={selectedPin.name} className="avatar" />
-                                    </div>
-                                </div>
-                                <div className="card-body">
-                                    <h2>{selectedPin.name}</h2>
-                                    <div className="member-status">
-                                        <span>Community Member</span>
-                                        <div className={`status-indicator ${selectedPin.isOnline ? 'online' : 'offline'}`}>
-                                            <div className="status-dot"></div>
-                                            <span>{selectedPin.isOnline ? 'Online' : 'Offline'}</span>
+                                {selectedPin.isEvent ? (
+                                    // Event Popup
+                                    <>
+                                        <div className="card-header">
+                                            <div className="avatar-wrapper" style={{ background: 'linear-gradient(45deg, #f59e0b, #d97706)' }}>
+                                                <div style={{ width: '90px', height: '90px', borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                                                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                                                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                                                    </svg>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
+                                        <div className="card-body">
+                                            <h2>{selectedPin.name}</h2>
+                                            <div className="member-status">
+                                                <span style={{ color: '#f59e0b', fontWeight: '600' }}>
+                                                    {selectedPin.eventData?.eventType ? selectedPin.eventData.eventType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'BookHive Event'}
+                                                </span>
+                                                <div className="status-indicator" style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)', color: '#92400e', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                                                    <div className="status-dot" style={{ background: '#f59e0b' }}></div>
+                                                    <span>
+                                                        {selectedPin.eventData?.startAt 
+                                                            ? new Date(selectedPin.eventData.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                                            : 'Date TBD'}
+                                                    </span>
+                                                </div>
+                                            </div>
 
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 1.5rem 0', padding: '0 0', gap: '0.2rem', fontSize: '0.8rem', color: '#6b7280' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                                            <span style={{ fontWeight: '600', color: '#111827', fontSize: '0.9rem' }}>
-                                                {selectedPin.friendsCount || 0}
-                                            </span>
-                                            <span>Followers</span>
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                                            <span style={{ fontWeight: '600', color: '#111827', fontSize: '0.9rem' }}>
-                                                {selectedPin.contributions || 0}
-                                            </span>
-                                            <span>Contributions</span>
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                                            <span style={{ fontWeight: '600', color: '#111827', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
-                                                {selectedPin.createdAt ? new Date(selectedPin.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : 'Recent'}
-                                            </span>
-                                            <span>Joined</span>
-                                        </div>
-                                    </div>
+                                            {selectedPin.eventData?.description && (
+                                                <div style={{ margin: '1rem 0', padding: '1rem', background: '#f8fafc', borderRadius: '0.75rem', fontSize: '0.875rem', color: '#4b5563', lineHeight: '1.5', maxHeight: '80px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {selectedPin.eventData.description.length > 120 
+                                                        ? selectedPin.eventData.description.substring(0, 120) + '...' 
+                                                        : selectedPin.eventData.description}
+                                                </div>
+                                            )}
 
-                                    <div className="stats">
-                                        <div className="stat-item">
-                                            <BookOpen size={18} />
-                                            <strong>{(selectedPin.booksOwned || []).length}</strong>
-                                            <span>Books</span>
+                                            {selectedPin.eventData?.location?.venue && (
+                                                <div style={{ margin: '0.75rem 0', padding: '0.75rem', background: '#fef3c7', borderRadius: '0.5rem', fontSize: '0.8rem', color: '#92400e', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                                        <circle cx="12" cy="10" r="3"></circle>
+                                                    </svg>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ fontWeight: '600' }}>{selectedPin.eventData.location.venue}</div>
+                                                        {selectedPin.eventData.location.address && (
+                                                            <div style={{ fontSize: '0.75rem', marginTop: '0.125rem' }}>{selectedPin.eventData.location.address}</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div className="stats">
+                                                <div className="stat-item">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                                        <circle cx="12" cy="7" r="4"></circle>
+                                                    </svg>
+                                                    <strong>{selectedPin.eventData?.currentRegistrations || 0}</strong>
+                                                    <span>Registered</span>
+                                                </div>
+                                                <div className="stat-item">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <circle cx="12" cy="12" r="10"></circle>
+                                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                                    </svg>
+                                                    <strong>
+                                                        {selectedPin.eventData?.startAt 
+                                                            ? new Date(selectedPin.eventData.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                                                            : 'TBD'}
+                                                    </strong>
+                                                    <span>Start Time</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="stat-item">
-                                            <Star size={18} />
-                                            <strong>{selectedPin.rating?.value ? selectedPin.rating.value.toFixed(1) : 'N/A'}</strong>
-                                            <span>Rating</span>
+                                        <div className="card-footer">
+                                            {(() => {
+                                                const isOrganizer = currentUser && selectedPin.eventData?.organizer && 
+                                                    (currentUser._id === selectedPin.eventData.organizer._id || currentUser._id === selectedPin.eventData.organizer);
+                                                const isRegistered = selectedPin.eventData?.registrations?.some(reg => reg.user === currentUser?._id || reg.user?._id === currentUser?._id);
+                                                const isFull = selectedPin.eventData?.capacity > 0 && selectedPin.eventData?.currentRegistrations >= selectedPin.eventData?.capacity;
+                                                const isPast = selectedPin.eventData?.endAt && new Date(selectedPin.eventData.endAt) < new Date();
+
+                                                if (isOrganizer) {
+                                                    return (
+                                                        <Link to={`/events/${selectedPin._id}`} className="profile-btn" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
+                                                            Manage Event
+                                                        </Link>
+                                                    );
+                                                } else if (isPast) {
+                                                    return (
+                                                        <Link to={`/events/${selectedPin._id}`} className="profile-btn" style={{ background: '#6b7280' }}>
+                                                            View Past Event
+                                                        </Link>
+                                                    );
+                                                } else if (isRegistered) {
+                                                    return (
+                                                        <Link to={`/events/${selectedPin._id}`} className="profile-btn" style={{ background: '#10b981' }}>
+                                                            ✓ Registered - View Details
+                                                        </Link>
+                                                    );
+                                                } else if (isFull) {
+                                                    return (
+                                                        <Link to={`/events/${selectedPin._id}`} className="profile-btn" style={{ background: '#6b7280' }}>
+                                                            Event Full - View Details
+                                                        </Link>
+                                                    );
+                                                } else {
+                                                    return (
+                                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                            <button 
+                                                                onClick={() => handleRegisterForEvent(selectedPin._id)} 
+                                                                disabled={registering}
+                                                                className="profile-btn" 
+                                                                style={{ 
+                                                                    background: 'linear-gradient(135deg, #10b981, #059669)', 
+                                                                    flex: 1,
+                                                                    opacity: registering ? 0.7 : 1,
+                                                                    cursor: registering ? 'not-allowed' : 'pointer'
+                                                                }}
+                                                            >
+                                                                {registering ? 'Registering...' : 'Register Now'}
+                                                            </button>
+                                                            <Link 
+                                                                to={`/events/${selectedPin._id}`} 
+                                                                className="profile-btn" 
+                                                                style={{ 
+                                                                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                                                    flex: 1
+                                                                }}
+                                                            >
+                                                                View Details
+                                                            </Link>
+                                                        </div>
+                                                    );
+                                                }
+                                            })()}
                                         </div>
-                                    </div>
-                                </div>
-                                <div className="card-footer">
-                                    <Link to={`/profile/${selectedPin._id}`} className="profile-btn">
-                                        View Profile
-                                    </Link>
-                                </div>
+                                    </>
+                                ) : (
+                                    // User Popup
+                                    <>
+                                        <div className="card-header">
+                                            <div className="avatar-wrapper">
+                                                <img src={selectedPin.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedPin.name)}&background=random&color=fff`} alt={selectedPin.name} className="avatar" />
+                                            </div>
+                                        </div>
+                                        <div className="card-body">
+                                            <h2>{selectedPin.name}</h2>
+                                            <div className="member-status">
+                                                <span>Community Member</span>
+                                                <div className={`status-indicator ${selectedPin.isOnline ? 'online' : 'offline'}`}>
+                                                    <div className="status-dot"></div>
+                                                    <span>{selectedPin.isOnline ? 'Online' : 'Offline'}</span>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 1.5rem 0', padding: '0 0', gap: '0.2rem', fontSize: '0.8rem', color: '#6b7280' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                                                    <span style={{ fontWeight: '600', color: '#111827', fontSize: '0.9rem' }}>
+                                                        {selectedPin.friendsCount || 0}
+                                                    </span>
+                                                    <span>Followers</span>
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                                                    <span style={{ fontWeight: '600', color: '#111827', fontSize: '0.9rem' }}>
+                                                        {selectedPin.contributions || 0}
+                                                    </span>
+                                                    <span>Contributions</span>
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                                                    <span style={{ fontWeight: '600', color: '#111827', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                                                        {selectedPin.createdAt ? new Date(selectedPin.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : 'Recent'}
+                                                    </span>
+                                                    <span>Joined</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="stats">
+                                                <div className="stat-item">
+                                                    <BookOpen size={18} />
+                                                    <strong>{(selectedPin.booksOwned || []).length}</strong>
+                                                    <span>Books</span>
+                                                </div>
+                                                <div className="stat-item">
+                                                    <Star size={18} />
+                                                    <strong>{selectedPin.rating?.value ? selectedPin.rating.value.toFixed(1) : 'N/A'}</strong>
+                                                    <span>Rating</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="card-footer">
+                                            <Link to={`/profile/${selectedPin._id}`} className="profile-btn">
+                                                View Profile
+                                            </Link>
+                                        </div>
+                                    </>
+                                )}
                             </PopupCard>
                         </Popup>
                     )}
