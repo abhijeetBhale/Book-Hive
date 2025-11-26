@@ -412,7 +412,9 @@ const UserCard = ({ user, distance, priority, isOnline }) => {
         </h3>
         <p className="user-tagline">
           Community Member
-          {user.isOrganizer && <span style={{ color: '#8b5cf6', fontWeight: '600', marginLeft: '4px' }}> • Organizer</span>}
+          {user.isOrganizer && (
+            <span style={{ color: '#8b5cf6', fontWeight: '600', marginLeft: '4px' }}> • Organizer</span>
+          )}
         </p>
 
         <div className="stats-grid">
@@ -476,7 +478,9 @@ const UserListItem = ({ user, distance, priority, isOnline }) => {
             </h3>
             <p className="user-tagline-list">
               Community Member
-              {user.isOrganizer && <span style={{ color: '#8b5cf6', fontWeight: '600', marginLeft: '4px' }}> • Organizer</span>}
+              {user.isOrganizer && (
+                <span style={{ color: '#8b5cf6', fontWeight: '600', marginLeft: '4px' }}> • Organizer</span>
+              )}
             </p>
           </div>
 

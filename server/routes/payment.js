@@ -10,7 +10,9 @@ import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/create-order', protect, createVerificationOrder); // Assuming createOrder maps to createVerificationOrder
+// Verification Badge Payment Routes
+router.post('/create-verification-order', protect, createVerificationOrder);
+router.post('/create-order', protect, createVerificationOrder); // Legacy support
 router.post('/verify-payment', protect, verifyPayment);
 router.get('/verification-status', protect, getVerificationStatus);
 

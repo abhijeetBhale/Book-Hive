@@ -23,6 +23,7 @@ import {
   Star,
   X,
   MessageCircle,
+  Calendar
 } from 'lucide-react';
 import { AvatarCircles } from '../components/ui/avatar-circles';
 import { AuroraText } from '../components/ui/aurora-text';
@@ -528,6 +529,85 @@ const Home = () => {
                 <div className="user-pin" style={{ top: '86%', left: '20%' }}></div>
                 <div className="user-pin main-user-pin" style={{ top: '70%', left: '49%' }}></div>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Become an Organizer Section */}
+      <section className="become-organizer-section">
+        <div className="content-container">
+          <div className="organizer-grid">
+            <div className="organizer-visual">
+              <div className="organizer-image-wrapper">
+                <div className="organizer-icon-large">
+                  <Calendar className="icon-large" />
+                </div>
+                <div className="floating-badge badge-1">
+                  <BookOpen size={20} />
+                  <span>Create Events</span>
+                </div>
+                <div className="floating-badge badge-2">
+                  <Users size={20} />
+                  <span>Build Community</span>
+                </div>
+                <div className="floating-badge badge-3">
+                  <Star size={20} />
+                  <span>Get Verified</span>
+                </div>
+              </div>
+            </div>
+            <div className="organizer-content">
+              <div className="section-header">
+                <h2 className="section-title">Become an Organizer</h2>
+                <p className="section-subtitle">
+                  Take your passion for books to the next level. As an organizer, you can create and host reading events, 
+                  build your own community, and connect with book lovers in meaningful ways.
+                </p>
+              </div>
+              <ul className="organizer-features-list">
+                <li>
+                  <div className="feature-icon-wrapper">
+                    <BookOpen className="feature-icon" />
+                  </div>
+                  <div>
+                    <h4>Create & Host Events</h4>
+                    <p>Organize book clubs, reading sessions, author meetups, and literary discussions in your area.</p>
+                  </div>
+                </li>
+                <li>
+                  <div className="feature-icon-wrapper">
+                    <Users className="feature-icon" />
+                  </div>
+                  <div>
+                    <h4>Grow Your Community</h4>
+                    <p>Build a dedicated following of readers who share your interests and passion for literature.</p>
+                  </div>
+                </li>
+                {/* <li>
+                  <div className="feature-icon-wrapper">
+                    <Star className="feature-icon" />
+                  </div>
+                  <div>
+                    <h4>Get Verified Badge</h4>
+                    <p>Stand out with an official organizer badge that showcases your commitment to the community.</p>
+                  </div>
+                </li> */}
+                <li>
+                  <div className="feature-icon-wrapper">
+                    <Shield className="feature-icon" />
+                  </div>
+                  <div>
+                    <h4>Access Exclusive Tools</h4>
+                    <p>Use advanced features to manage events, track attendance, and engage with your community members.</p>
+                  </div>
+                </li>
+              </ul>
+              <Link to={user ? '/become-organizer' : '/register'} className="btn primary-btn group">
+                <Users className="btn-icon" />
+                {user ? 'Become an Organizer' : 'Join to Become an Organizer'}
+                <ArrowRight className="arrow-icon" />
+              </Link>
             </div>
           </div>
         </div>
@@ -1359,6 +1439,196 @@ const StyledWrapper = styled.div`
     height: 20px;
     animation-duration: 1.5s;
     animation: ${mapPulse} 1.5s infinite;
+  }
+}
+
+/* Become an Organizer Section */
+.become-organizer-section {
+  padding: 6rem 0;
+  background-color: #f9fafb;
+
+  .organizer-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4rem;
+    align-items: center;
+
+    @media (min-width: 1024px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .organizer-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    @media (min-width: 1024px) {
+      order: 2;
+    }
+  }
+
+  .organizer-image-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .organizer-icon-large {
+    width: 200px;
+    height: 200px;
+    background: linear-gradient(135deg, #4F46E5, #7c3aed);
+    border-radius: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.4);
+    transform: rotate(-5deg);
+    transition: transform 0.5s ease;
+
+    &:hover {
+      transform: rotate(0deg) scale(1.05);
+    }
+
+    .icon-large {
+      width: 100px;
+      height: 100px;
+      color: white;
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+
+  .floating-badge {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 9999px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+    animation: float 3s ease-in-out infinite;
+
+    svg {
+      color: #4F46E5;
+    }
+
+    &.badge-1 {
+      top: 10%;
+      left: -5%;
+      animation-delay: 0s;
+    }
+
+    &.badge-2 {
+      top: 50%;
+      right: -10%;
+      animation-delay: 1s;
+    }
+
+    &.badge-3 {
+      bottom: 15%;
+      left: 5%;
+      animation-delay: 2s;
+    }
+  }
+
+  .organizer-content {
+    @media (min-width: 1024px) {
+      order: 1;
+    }
+
+    .section-header {
+      text-align: left;
+      margin-bottom: 2.5rem;
+    }
+
+    .section-title {
+      font-size: 3rem;
+      font-weight: 900;
+      color: #111827;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-subtitle {
+      font-size: 1.25rem;
+      color: #374151;
+      line-height: 1.75;
+      font-weight: 500;
+      max-width: none;
+      margin: 0;
+    }
+  }
+
+  .organizer-features-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2.5rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+
+    li {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.5rem;
+    }
+
+    .feature-icon-wrapper {
+      flex-shrink: 0;
+      width: 3rem;
+      height: 3rem;
+      background-color: #eef2ff;
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background-color: #4F46E5;
+        transform: scale(1.1);
+
+        .feature-icon {
+          color: white;
+        }
+      }
+    }
+
+    .feature-icon {
+      width: 1.5rem;
+      height: 1.5rem;
+      color: #4F46E5;
+      transition: color 0.3s ease;
+    }
+
+    h4 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 0.5rem 0;
+    }
+
+    p {
+      color: #374151;
+      line-height: 1.625;
+      margin: 0;
+      font-size: 1rem;
+    }
   }
 }
 

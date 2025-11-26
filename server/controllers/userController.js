@@ -158,7 +158,7 @@ export const getUsersWithBooks = async (req, res) => {
     }
     
     const users = await User.find(query)
-      .select('name email avatar location booksOwned rating createdAt');
+      .select('name email avatar location booksOwned rating createdAt isOrganizer');
     
     const usersWithBooks = await Promise.all(users.map(async (user) => {
       const books = await Book.find({ owner: user._id })
@@ -209,7 +209,7 @@ export const getUserProfile = async (req, res) => {
     const { userId } = req.params;
     
     const user = await User.findById(userId)
-      .select('name email avatar location booksOwned publicKeyJwk rating')
+      .select('name email avatar location booksOwned publicKeyJwk rating isOrganizer')
       .populate({
         path: 'booksOwned',
         select: '_id title author coverImage isAvailable forBorrowing'

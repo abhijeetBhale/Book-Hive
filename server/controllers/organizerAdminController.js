@@ -103,6 +103,20 @@ export const approveOrganizerApplication = async (req, res) => {
     };
     await user.save();
 
+    // Create notification for the user
+    const Notification = (await import('../models/Notification.js')).default;
+    await Notification.create({
+      user: user._id,
+      type: 'organizer_approved',
+      title: 'Organizer Application Approved! 🎉',
+      message: 'Congratulations! Your organizer application has been approved. You can now create and manage events.',
+      read: false,
+      data: {
+        applicationId: application._id,
+        organizationName: application.organizationName
+      }
+    });
+
     res.json({
       success: true,
       message: 'Application approved successfully',

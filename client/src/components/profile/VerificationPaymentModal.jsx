@@ -72,6 +72,7 @@ const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
         currency: data.order.currency,
         name: 'BookHive',
         description: 'Verified Account Badge',
+        image: 'https://res.cloudinary.com/db9yzzhvm/image/upload/v1234567890/bookhive-logo.png', // Optional: Add your logo
         order_id: data.order.id,
         handler: async function (response) {
           try {
@@ -97,6 +98,8 @@ const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
               toast.success('🎉 Verification badge activated!');
               if (onSuccess) onSuccess();
               onClose();
+              // Reload page to show updated verification status
+              setTimeout(() => window.location.reload(), 1500);
             } else {
               toast.error('Payment verification failed. Please contact support.');
             }
@@ -108,17 +111,33 @@ const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
           }
         },
         prefill: {
-          name: '',
-          email: '',
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: user?.phone || ''
+        },
+        notes: {
+          purpose: 'verification_badge',
+          user_id: user?._id || ''
         },
         theme: {
-          color: '#4F46E5'
+          color: '#4F46E5',
+          backdrop_color: 'rgba(0, 0, 0, 0.5)'
         },
         modal: {
           ondismiss: function() {
             setLoading(false);
-          }
-        }
+            toast.info('Payment cancelled');
+          },
+          escape: true,
+          animation: true,
+          confirm_close: false
+        },
+        retry: {
+          enabled: true,
+          max_count: 3
+        },
+        timeout: 300, // 5 minutes
+        remember_customer: false
       };
 
       const razorpay = new window.Razorpay(options);

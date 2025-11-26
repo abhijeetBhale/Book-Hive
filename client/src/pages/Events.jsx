@@ -11,7 +11,7 @@ import { BASE_URL } from '../utils/seo';
 import CreateEventModal from '../components/events/CreateEventModal';
 
 const Events = () => {
-  const { user } = useContext(AuthContext);
+  const { user, fetchProfile } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('all'); // 'all' or 'my-events'
   const [events, setEvents] = useState([]);
   const [myEvents, setMyEvents] = useState([]);
@@ -26,6 +26,22 @@ const Events = () => {
     radius: 50
   });
   const [showFilters, setShowFilters] = useState(false);
+
+  // Refresh user profile on mount to get latest organizer status
+  useEffect(() => {
+    if (fetchProfile) {
+      fetchProfile();
+    }
+
+    // Poll for profile updates every 30 seconds to catch organizer approval
+    const pollInterval = setInterval(() => {
+      if (fetchProfile) {
+        fetchProfile();
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [fetchProfile]);
 
   useEffect(() => {
     if (activeTab === 'all') {
@@ -125,7 +141,39 @@ const Events = () => {
             <h1>Events</h1>
             <p>Discover and manage book-related events</p>
           </div>
+          {!user?.isOrganizer && user?.role !== 'organizer' && (
+            <button 
+              className="btn-refresh" 
+              onClick={() => {
+                fetchProfile();
+                toast.success('Profile refreshed!');
+              }}
+              title="Refresh your profile to check organizer status"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+              Refresh Status
+            </button>
+          )}
         </div>
+
+        {/* Welcome banner for new organizers */}
+        {(user?.isOrganizer || user?.role === 'organizer') && user?.organizerProfile?.approvedAt && (
+          new Date() - new Date(user.organizerProfile.approvedAt) < 7 * 24 * 60 * 60 * 1000 // Show for 7 days
+        ) && (
+          <div className="welcome-banner">
+            <div className="welcome-content">
+              <h3>🎉 Welcome to the Organizer Community!</h3>
+              <p>Your application has been approved. You can now create and manage events to connect with book lovers in your community.</p>
+            </div>
+            <button className="btn-primary" onClick={() => setActiveTab('my-events')}>
+              Get Started
+            </button>
+          </div>
+        )}
 
         {/* Tabs for organizers */}
         {(user?.isOrganizer || user?.role === 'organizer') && (
@@ -404,6 +452,55 @@ const StyledWrapper = styled.div`
   margin: 0 auto;
   padding: 2rem;
 
+  .welcome-banner {
+    background: linear-gradient(135deg, #4F46E5 0%, #7c3aed 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+
+    .welcome-content {
+      flex: 1;
+
+      h3 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+
+      p {
+        font-size: 1rem;
+        opacity: 0.95;
+        margin: 0;
+      }
+    }
+
+    .btn-primary {
+      background: white;
+      color: #4F46E5;
+      white-space: nowrap;
+
+      &:hover {
+        background: #f8fafc;
+        transform: translateY(-2px);
+      }
+    }
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: 1rem;
+      text-align: center;
+
+      .btn-primary {
+        width: 100%;
+      }
+    }
+  }
+
   .tabs {
     display: flex;
     gap: 0.5rem;
@@ -468,6 +565,39 @@ const StyledWrapper = styled.div`
         background: #4338ca;
         transform: translateY(-2px);
       }
+    }
+
+    .btn-refresh {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      background: white;
+      color: #4F46E5;
+      border: 2px solid #4F46E5;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        background: #4F46E5;
+        color: white;
+        transform: translateY(-2px);
+      }
+
+      svg {
+        animation: none;
+      }
+
+      &:active svg {
+        animation: spin 0.5s linear;
+      }
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
     }
   }
 

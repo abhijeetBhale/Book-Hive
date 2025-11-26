@@ -89,9 +89,10 @@ export const createVerificationOrder = async (req, res) => {
     const receipt = `ver_${userIdShort}_${timestamp}`; // Format: ver_12345678_12345678 (max 27 chars)
     
     const options = {
-      amount: VERIFICATION_PRICE, // amount in paise (50 rupees = 5000 paise)
+      amount: VERIFICATION_PRICE, // amount in paise (99 rupees = 9900 paise)
       currency: 'INR',
       receipt: receipt,
+      payment_capture: 1, // Auto capture payment
       notes: {
         userId: userId.toString(),
         purpose: 'verification_badge',
@@ -103,21 +104,30 @@ export const createVerificationOrder = async (req, res) => {
     console.log('📤 Creating Razorpay order with options:', {
       amount: options.amount,
       currency: options.currency,
-      receipt: options.receipt
+      receipt: options.receipt,
+      payment_capture: options.payment_capture
     });
 
     const order = await razorpay.orders.create(options);
     
     console.log('✅ Razorpay order created successfully:', order.id);
+    console.log('Order details:', JSON.stringify(order, null, 2));
 
     res.json({
       success: true,
       order: {
         id: order.id,
+        entity: order.entity,
         amount: order.amount,
-        currency: order.currency
+        amount_paid: order.amount_paid,
+        amount_due: order.amount_due,
+        currency: order.currency,
+        receipt: order.receipt,
+        status: order.status
       },
-      key: process.env.RAZORPAY_KEY_ID
+      key: process.env.RAZORPAY_KEY_ID,
+      contact: user.email,
+      email: user.email
     });
   } catch (error) {
     console.error('❌ Create verification order error:', error);
@@ -143,8 +153,12 @@ export const createVerificationOrder = async (req, res) => {
 // @route   POST /api/payment/verify-payment
 export const verifyPayment = async (req, res) => {
   try {
+    console.log('🔍 Verify payment request received');
+    console.log('Request body:', req.body);
+    
     // Check if Razorpay is configured
     if (!process.env.RAZORPAY_KEY_SECRET) {
+      console.error('❌ Razorpay secret not configured');
       return res.status(503).json({ 
         success: false,
         message: 'Payment service is not configured. Please contact support.'
@@ -154,6 +168,12 @@ export const verifyPayment = async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
     const userId = req.user._id;
 
+    console.log('Payment details:', {
+      order_id: razorpay_order_id,
+      payment_id: razorpay_payment_id,
+      user_id: userId
+    });
+
     // Verify signature
     const body = razorpay_order_id + '|' + razorpay_payment_id;
     const expectedSignature = crypto
@@ -161,12 +181,21 @@ export const verifyPayment = async (req, res) => {
       .update(body.toString())
       .digest('hex');
 
+    console.log('Signature verification:', {
+      received: razorpay_signature,
+      expected: expectedSignature,
+      match: expectedSignature === razorpay_signature
+    });
+
     if (expectedSignature !== razorpay_signature) {
+      console.error('❌ Signature mismatch');
       return res.status(400).json({ 
         success: false,
-        message: 'Payment verification failed' 
+        message: 'Payment verification failed - Invalid signature' 
       });
     }
+
+    console.log('✅ Signature verified successfully');
 
     // Payment is verified, update user with premium features
     const user = await User.findByIdAndUpdate(

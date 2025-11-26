@@ -165,6 +165,9 @@ export const getProfile = async (req, res) => {
         avatar: userObj.avatar,
         location: userObj.location,
         role: userObj.role || 'user', // Include role for admin access checks
+        isOrganizer: userObj.isOrganizer || false, // Include organizer flag
+        verified: userObj.verified || false, // Include verified status
+        organizerProfile: userObj.organizerProfile || null, // Include organizer profile
         isVerified: userObj.isVerified || false, // Premium verification
         contactVerification: {
           email: {
