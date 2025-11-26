@@ -35,16 +35,18 @@ import {
   PieChart,
   BarChart,
   LineChart,
-  ChevronRight
+  ChevronRight,
+  Home
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { adminAPIService } from '../utils/adminAPI';
 import { reviewsAPI } from '../utils/api';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import ReportActionModal from '../components/admin/ReportActionModal';
 import toast from 'react-hot-toast';
 import ActionSuccessModal from '../components/admin/ActionSuccessModal';
 import ReportDetailsModal from '../components/admin/ReportDetailsModal';
+import beeIcon from '../assets/icons8-bee-100.png';
 
 // Import new admin components
 import BookSharingActivity from '../components/admin/BookSharingActivity';
@@ -56,6 +58,7 @@ import EventsTab from '../components/admin/EventsTab';
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [dashboardData, setDashboardData] = useState(null);
   const [users, setUsers] = useState([]);
@@ -120,11 +123,13 @@ const AdminDashboard = () => {
   });
 
   // Check if user has admin access - let server validate
+  // Always allow access for the super admin email, let server handle final validation
   const hasAdminAccess = user && (
     user.role === 'superadmin' ||
     user.role === 'admin' ||
     user.email === import.meta.env.VITE_SUPER_ADMIN_EMAIL ||
-    user.email === 'abhijeetbhale7@gmail.com' // Fallback for super admin
+    user.email === 'abhijeetbhale7@gmail.com' || // Hardcoded super admin
+    user._id === '690a061350f4b9339e16884c' // Hardcoded super admin ID as fallback
   );
 
   useEffect(() => {
@@ -485,7 +490,34 @@ const AdminDashboard = () => {
     setDetailsModal({ isOpen: false, report: null });
   };
 
-  // Redirect if not admin
+  // Show error if access denied by server
+  if (error && error.includes('Access denied')) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md p-8 bg-white rounded-xl shadow-lg">
+          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-500">If you believe this is an error, try:</p>
+            <ul className="text-sm text-left text-gray-600 space-y-2">
+              <li>• Logging out and logging back in</li>
+              <li>• Clearing your browser cache</li>
+              <li>• Contacting the system administrator</li>
+            </ul>
+          </div>
+          <button
+            onClick={() => window.location.href = '/'}
+            className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Return to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect if not admin (client-side check)
   if (!hasAdminAccess) {
     return <Navigate to="/" replace />;
   }
@@ -2990,11 +3022,20 @@ const AdminDashboard = () => {
       <div className="w-64 bg-white shadow-lg flex flex-col">
         {/* Logo */}
         <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
-              <BookOpen className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-grey-600 rounded-lg flex items-center justify-center mr-3 border-2">
+                <img src={beeIcon} alt="BookHive" className="w-5 h-5" />
+              </div>
+              <span className="text-xl font-bold text-gray-900">BookHive</span>
             </div>
-            <span className="text-xl font-bold text-gray-900">BookHive</span>
+            <button
+              onClick={() => navigate('/')}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Go to Home"
+            >
+              <Home className="w-5 h-5 text-gray-600" />
+            </button>
           </div>
         </div>
 

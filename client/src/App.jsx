@@ -115,8 +115,9 @@ function App() {
         <NotificationBadgeProvider>
           <OnlineStatusProvider>
             <Routes>
-              {/* Hidden Admin Route - Completely separate from main app layout */}
+              {/* Admin Routes - Completely separate from main app layout */}
               <Route path="/admin-dashboard-secure" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+              {/* <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} /> */}
 
               {/* Main App Routes with Layout */}
               <Route path="/*" element={

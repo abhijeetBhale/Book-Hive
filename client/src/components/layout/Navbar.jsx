@@ -327,6 +327,22 @@ const Navbar = () => {
             <div className="hidden min-[1201px]:block">
               {user ? (
                 <div className="flex items-center gap-4">
+                  {/* Admin Dashboard Button - Only for superadmin */}
+                  {/* {user.email === 'abhijeetbhale7@gmail.com' && (user.role === 'admin' || user.role === 'superadmin') && (
+                    <Link
+                      to="/admin-dashboard-secure"
+                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2"
+                      title="Admin Dashboard"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                        <path d="M2 17l10 5 10-5"></path>
+                        <path d="M2 12l10 5 10-5"></path>
+                      </svg>
+                      Admin
+                    </Link>
+                  )} */}
+                  
                   {/* Real-time Notification Bell */}
                   <div className="relative" style={{ zIndex: 10000 }}>
                     <button
@@ -463,6 +479,21 @@ const Navbar = () => {
                   <Button onClick={logout} variant="secondary" className="cursor-pointer">
                     Logout
                   </Button>
+                  {/* Admin Dashboard Button - Only for superadmin */}
+                  {user.email === 'abhijeetbhale7@gmail.com' && (user.role === 'admin' || user.role === 'superadmin') && (
+                    <Link
+                      to="/admin-dashboard-secure"
+                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2"
+                      title="Admin Dashboard"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                        <path d="M2 17l10 5 10-5"></path>
+                        <path d="M2 12l10 5 10-5"></path>
+                      </svg>
+                      Admin
+                    </Link>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -561,6 +592,22 @@ const Navbar = () => {
                     </span>
                     <span>Profile</span>
                   </Link>
+
+                  {/* Admin Dashboard Button - Mobile - Only for superadmin */}
+                  {user.email === 'abhijeetbhale7@gmail.com' && (user.role === 'admin' || user.role === 'superadmin') && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center gap-3 py-2 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 shadow-md"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                        <path d="M2 17l10 5 10-5"></path>
+                        <path d="M2 12l10 5 10-5"></path>
+                      </svg>
+                      <span className="font-semibold">Admin Dashboard</span>
+                    </Link>
+                  )}
                 </div>
               )}
               <div className="mt-4 pt-4 border-t border-gray-200">

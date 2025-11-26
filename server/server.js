@@ -126,11 +126,10 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/organizer', organizerRoutes);
 
-
-// Error handler
+// Error handler middleware
 app.use(errorHandler);
 
-// 404 handler
+// 404 handler - must be last
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });

@@ -6,13 +6,12 @@ import { Loader, User, AtSign, Eye, EyeOff, CheckSquare, Square, KeyRound } from
 import { authAPI } from '../utils/api';
 import SEO from '../components/SEO';
 import { PAGE_SEO } from '../utils/seo';
-
 const GoogleIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M22.56 12.25C22.56 11.45 22.49 10.68 22.36 9.92H12V14.45H18.02C17.72 15.93 16.92 17.21 15.61 18.06V20.69H19.5C21.49 18.88 22.56 15.89 22.56 12.25Z" fill="#4285F4"/>
-    <path d="M12 23C15.08 23 17.73 21.93 19.5 20.14L15.61 17.51C14.58 18.22 13.38 18.63 12 18.63C9.43 18.63 7.23 16.95 6.38 14.6H2.38V17.22C4.24 20.73 7.82 23 12 23Z" fill="#34A853"/>
-    <path d="M6.38 14.05C6.13 13.35 6 12.6 6 11.85C6 11.1 6.13 10.35 6.38 9.65V7.03H2.38C1.52 8.63 1 10.19 1 11.85C1 13.51 1.52 15.07 2.38 16.67L6.38 14.05Z" fill="#FBBC05"/>
-    <path d="M12 5.38C13.51 5.38 14.83 5.91 15.85 6.86L19.58 3.25C17.73 1.56 15.08 0.5 12 0.5C7.82 0.5 4.24 2.77 2.38 6.28L6.38 8.9C7.23 6.55 9.43 4.88 12 4.88V5.38Z" fill="#EA4335"/>
+    <path d="M22.56 12.25C22.56 11.45 22.49 10.68 22.36 9.92H12V14.45H18.02C17.72 15.93 16.92 17.21 15.61 18.06V20.69H19.5C21.49 18.88 22.56 15.89 22.56 12.25Z" fill="#4285F4" />
+    <path d="M12 23C15.08 23 17.73 21.93 19.5 20.14L15.61 17.51C14.58 18.22 13.38 18.63 12 18.63C9.43 18.63 7.23 16.95 6.38 14.6H2.38V17.22C4.24 20.73 7.82 23 12 23Z" fill="#34A853" />
+    <path d="M6.38 14.05C6.13 13.35 6 12.6 6 11.85C6 11.1 6.13 10.35 6.38 9.65V7.03H2.38C1.52 8.63 1 10.19 1 11.85C1 13.51 1.52 15.07 2.38 16.67L6.38 14.05Z" fill="#FBBC05" />
+    <path d="M12 5.38C13.51 5.38 14.83 5.91 15.85 6.86L19.58 3.25C17.73 1.56 15.08 0.5 12 0.5C7.82 0.5 4.24 2.77 2.38 6.28L6.38 8.9C7.23 6.55 9.43 4.88 12 4.88V5.38Z" fill="#EA4335" />
   </svg>
 );
 
@@ -32,15 +31,15 @@ const Register = () => {
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!agreedToTerms) {
-        toast.error("You must agree to the Privacy Policy and Terms of Service.");
-        return;
+      toast.error("You must agree to the Privacy Policy and Terms of Service.");
+      return;
     }
     setLoading(true);
-    
+
     try {
       const { fullName, username, email, password } = formData;
       await authAPI.register({ name: fullName, username, email, password });
@@ -53,21 +52,20 @@ const Register = () => {
     }
   };
 
-  // --- THE UPDATE IS HERE ---
   const handleGoogleRegister = () => {
     // Get current origin (e.g., http://localhost:5173 or https://book-hive-frontend.onrender.com)
     const redirectUrl = window.location.origin;
-    
+
     // Construct Google OAuth URL with redirect parameter
     const googleLoginUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/google?redirect=${encodeURIComponent(redirectUrl)}`;
-    
+
     // Redirect to backend Google OAuth endpoint
     window.location.href = googleLoginUrl;
   };
 
   return (
     <>
-      <SEO 
+      <SEO
         title={PAGE_SEO.register.title}
         description={PAGE_SEO.register.description}
         keywords={PAGE_SEO.register.keywords}
@@ -75,84 +73,84 @@ const Register = () => {
       />
       <StyledWrapper>
         <div className="register-container">
-        <div className="form-panel">
-          <div className="form-header">
-            <h1 className="title">Create account</h1>
-          </div>
-          
-          <button type="button" className="google-btn" onClick={handleGoogleRegister}>
-            <GoogleIcon />
-            Continue with Google
-          </button>
+          <div className="form-panel">
+            <div className="form-header">
+              <h1 className="title">Create account</h1>
+            </div>
 
-          <div className="separator">
-            <span>Or fill in the form to create an account</span>
-          </div>
-          
-          <form className="form" onSubmit={handleSubmit}>
-            <div className="input-grid">
-              <div className="input-field">
-                <label htmlFor="fullName">Full Name</label>
-                <div className="input-wrapper">
-                  <User size={18} className="input-icon" />
-                  <input id="fullName" name="fullName" type="text" placeholder="Your full name" value={formData.fullName} onChange={handleChange} required />
+            <button type="button" className="google-btn" onClick={handleGoogleRegister}>
+              <GoogleIcon />
+              Continue with Google
+            </button>
+
+            <div className="separator">
+              <span>Or fill in the form to create an account</span>
+            </div>
+
+            <form className="form" onSubmit={handleSubmit}>
+              <div className="input-grid">
+                <div className="input-field">
+                  <label htmlFor="fullName">Full Name</label>
+                  <div className="input-wrapper">
+                    <User size={18} className="input-icon" />
+                    <input id="fullName" name="fullName" type="text" placeholder="Your full name" value={formData.fullName} onChange={handleChange} required />
+                  </div>
+                </div>
+                <div className="input-field">
+                  <label htmlFor="username">Username</label>
+                  <div className="input-wrapper">
+                    <AtSign size={18} className="input-icon" />
+                    <input id="username" name="username" type="text" placeholder="@yourusername" value={formData.username} onChange={handleChange} required />
+                  </div>
                 </div>
               </div>
+
               <div className="input-field">
-                <label htmlFor="username">Username</label>
+                <label htmlFor="email">Email Address</label>
                 <div className="input-wrapper">
                   <AtSign size={18} className="input-icon" />
-                  <input id="username" name="username" type="text" placeholder="@yourusername" value={formData.username} onChange={handleChange} required />
+                  <input id="email" name="email" type="email" placeholder="you@example.com" value={formData.email} onChange={handleChange} required />
                 </div>
               </div>
-            </div>
 
-            <div className="input-field">
-              <label htmlFor="email">Email Address</label>
-              <div className="input-wrapper">
-                <AtSign size={18} className="input-icon" />
-                <input id="email" name="email" type="email" placeholder="you@example.com" value={formData.email} onChange={handleChange} required />
+              <div className="input-field">
+                <label htmlFor="password">Password</label>
+                <div className="input-wrapper">
+                  <KeyRound size={18} className="input-icon" />
+                  <input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder="At least 8 characters" value={formData.password} onChange={handleChange} required minLength="8" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="password-toggle-btn">
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div className="input-field">
-              <label htmlFor="password">Password</label>
-              <div className="input-wrapper">
-              <KeyRound size={18} className="input-icon" />
-                <input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder="At least 8 characters" value={formData.password} onChange={handleChange} required minLength="8" />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="password-toggle-btn">
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              <div className="terms-check">
+                <button type="button" onClick={() => setAgreedToTerms(!agreedToTerms)} className="checkbox-btn">
+                  {agreedToTerms ? <CheckSquare size={20} className="checked" /> : <Square size={20} />}
                 </button>
+                <label>
+                  I agree to <Link to="/privacy" target="_blank" className="text-link">Privacy Policy</Link> and <Link to="/terms" target="_blank" className="text-link">Terms of Service</Link>.
+                </label>
               </div>
-            </div>
 
-            <div className="terms-check">
-              <button type="button" onClick={() => setAgreedToTerms(!agreedToTerms)} className="checkbox-btn">
-                {agreedToTerms ? <CheckSquare size={20} className="checked" /> : <Square size={20} />}
+              <button className="submit-btn" type="submit" disabled={loading}>
+                {loading ? <Loader className="animate-spin" /> : 'Continue'}
               </button>
-              <label>
-                I agree to <Link to="/privacy" target="_blank" className="text-link">Privacy Policy</Link> and <Link to="/terms" target="_blank" className="text-link">Terms of Service</Link>.
-              </label>
-            </div>
+            </form>
 
-            <button className="submit-btn" type="submit" disabled={loading}>
-              {loading ? <Loader className="animate-spin" /> : 'Continue'}
-            </button>
-          </form>
+            <p className="login-link">
+              Already have an account? <Link to="/login" className="text-link">Log In</Link>
+            </p>
+          </div>
 
-          <p className="login-link">
-            Already have an account? <Link to="/login" className="text-link">Log In</Link>
-          </p>
-        </div>
-
-        <div className="image-panel">
+          <div className="image-panel">
             <div className="image-overlay-text">
-                <p>SHARE.</p>
-                <p>DISCOVER.</p>
-                <p>CONNECT.</p>
+              <p>SHARE.</p>
+              <p>DISCOVER.</p>
+              <p>CONNECT.</p>
             </div>
+          </div>
         </div>
-      </div>
       </StyledWrapper>
     </>
   );

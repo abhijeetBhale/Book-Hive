@@ -9,11 +9,11 @@ import { PAGE_SEO } from '../utils/seo';
 
 const GoogleIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M22.56 12.25C22.56 11.45 22.49 10.68 22.36 9.92H12V14.45H18.02C17.72 15.93 16.92 17.21 15.61 18.06V20.69H19.5C21.49 18.88 22.56 15.89 22.56 12.25Z" fill="#4285F4"/>
-    <path d="M12 23C15.08 23 17.73 21.93 19.5 20.14L15.61 17.51C14.58 18.22 13.38 18.63 12 18.63C9.43 18.63 7.23 16.95 6.38 14.6H2.38V17.22C4.24 20.73 7.82 23 12 23Z" fill="#34A853"/>
-    <path d="M6.38 14.05C6.13 13.35 6 12.6 6 11.85C6 11.1 6.13 10.35 6.38 9.65V7.03H2.38C1.52 8.63 1 10.19 1 11.85C1 13.51 1.52 15.07 2.38 16.67L6.38 14.05Z" fill="#FBBC05"/>
-    <path d="M12 5.38C13.51 5.38 14.83 5.91 15.85 6.86L19.58 3.25C17.73 1.56 15.08 0.5 12 0.5C7.82 0.5 4.24 2.77 2.38 6.28L6.38 8.9C7.23 6.55 9.43 4.88 12 4.88V5.38Z" fill="#EA4335"/>
-  </svg>
+    <path d="M22.56 12.25C22.56 11.45 22.49 10.68 22.36 9.92H12V14.45H18.02C17.72 15.93 16.92 17.21 15.61 18.06V20.69H19.5C21.49 18.88 22.56 15.89 22.56 12.25Z" fill="#4285F4" />
+    <path d="M12 23C15.08 23 17.73 21.93 19.5 20.14L15.61 17.51C14.58 18.22 13.38 18.63 12 18.63C9.43 18.63 7.23 16.95 6.38 14.6H2.38V17.22C4.24 20.73 7.82 23 12 23Z" fill="#34A853" />
+    <path d="M6.38 14.05C6.13 13.35 6 12.6 6 11.85C6 11.1 6.13 10.35 6.38 9.65V7.03H2.38C1.52 8.63 1 10.19 1 11.85C1 13.51 1.52 15.07 2.38 16.67L6.38 14.05Z" fill="#FBBC05" />
+    <path d="M12 5.38C13.51 5.38 14.83 5.91 15.85 6.86L19.58 3.25C17.73 1.56 15.08 0.5 12 0.5C7.82 0.5 4.24 2.77 2.38 6.28L6.38 8.9C7.23 6.55 9.43 4.88 12 4.88V5.38Z" fill="#EA4335" />
+  </svg >
 );
 
 const Login = () => {
@@ -26,7 +26,7 @@ const Login = () => {
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -43,17 +43,17 @@ const Login = () => {
   const handleGoogleLogin = () => {
     // Get current origin (e.g., http://localhost:5173 or https://book-hive-frontend.onrender.com)
     const redirectUrl = window.location.origin;
-    
+
     // Construct Google OAuth URL with redirect parameter
     const googleLoginUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/google?redirect=${encodeURIComponent(redirectUrl)}`;
-    
+
     // Redirect to backend Google OAuth endpoint
     window.location.href = googleLoginUrl;
   };
 
   return (
     <>
-      <SEO 
+      <SEO
         title={PAGE_SEO.login.title}
         description={PAGE_SEO.login.description}
         keywords={PAGE_SEO.login.keywords}
@@ -61,62 +61,62 @@ const Login = () => {
       />
       <StyledWrapper>
         <div className="login-container">
-        <div className="form-panel">
-          <div className="form-header">
-            <h1 className="title">Welcome Back!</h1>
-            <p className="subtitle">Sign in to continue to your BookHive account.</p>
-          </div>
-          
-          <button type="button" className="google-btn" onClick={handleGoogleLogin}>
-            <GoogleIcon />
-            Continue with Google
-          </button>
-
-          <div className="separator">
-            <span>Or sign in with your email</span>
-          </div>
-          
-          <form className="form" onSubmit={handleSubmit}>
-            <div className="input-field">
-              <label htmlFor="email">Email Address</label>
-              <div className="input-wrapper">
-                <AtSign size={18} className="input-icon" />
-                <input id="email" name="email" type="email" placeholder="you@example.com" value={formData.email} onChange={handleChange} required />
-              </div>
+          <div className="form-panel">
+            <div className="form-header">
+              <h1 className="title">Welcome Back!</h1>
+              <p className="subtitle">Sign in to continue to your BookHive account.</p>
             </div>
 
-            <div className="input-field">
-                <div className="label-row">
-                    <label htmlFor="password">Password</label>
-                    <Link to="/forgot-password" tabIndex={-1} className="forgot-password-link">Forgot password?</Link>
-                </div>
-              <div className="input-wrapper">
-                   <KeyRound size={18} className="input-icon" />
-                <input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" value={formData.password} onChange={handleChange} required />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="password-toggle-btn">
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            <button className="submit-btn" type="submit" disabled={loading}>
-              {loading ? <Loader className="animate-spin" /> : 'Sign In'}
+            <button type="button" className="google-btn" onClick={handleGoogleLogin}>
+              <GoogleIcon />
+              Continue with Google
             </button>
-          </form>
 
-          <p className="signup-link">
-            Don't have an account? <Link to="/register">Sign Up</Link>
-          </p>
-        </div>
-
-        <div className="image-panel">
-            <div className="image-overlay-text">
-                <p>CREATE.</p>
-                <p>ENGAGE.</p>
-                <p>UNITE.</p>
+            <div className="separator">
+              <span>Or sign in with your email</span>
             </div>
+
+            <form className="form" onSubmit={handleSubmit}>
+              <div className="input-field">
+                <label htmlFor="email">Email Address</label>
+                <div className="input-wrapper">
+                  <AtSign size={18} className="input-icon" />
+                  <input id="email" name="email" type="email" placeholder="you@example.com" value={formData.email} onChange={handleChange} required />
+                </div>
+              </div>
+
+              <div className="input-field">
+                <div className="label-row">
+                  <label htmlFor="password">Password</label>
+                  <Link to="/forgot-password" tabIndex={-1} className="forgot-password-link">Forgot password?</Link>
+                </div>
+                <div className="input-wrapper">
+                  <KeyRound size={18} className="input-icon" />
+                  <input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" value={formData.password} onChange={handleChange} required />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="password-toggle-btn">
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <button className="submit-btn" type="submit" disabled={loading}>
+                {loading ? <Loader className="animate-spin" /> : 'Sign In'}
+              </button>
+            </form>
+
+            <p className="signup-link">
+              Don't have an account? <Link to="/register">Sign Up</Link>
+            </p>
+          </div>
+
+          <div className="image-panel">
+            <div className="image-overlay-text">
+              <p>CREATE.</p>
+              <p>ENGAGE.</p>
+              <p>UNITE.</p>
+            </div>
+          </div>
         </div>
-      </div>
       </StyledWrapper>
     </>
   );
