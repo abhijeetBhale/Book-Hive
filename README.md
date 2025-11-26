@@ -91,6 +91,22 @@ In an era where reading often feels solitary, BookHive bridges the gap between d
 - **Error Handling**: Improved error recovery and user feedback
 - **Migration Scripts**: Database migration tools for schema updates
 
+#### **💎 Premium Subscriptions**
+- **Tiered Plans**: Free, Verified Reader, and Premium options
+- **Razorpay Integration**: Secure payment processing for subscriptions
+- **Exclusive Features**: Unlimited borrowing, nationwide connections, and advanced analytics
+- **Profile Customization**: Premium badges and themes for subscribers
+
+#### **🎮 Gamification System**
+- **Achievements**: Earn badges for reading, lending, and community participation
+- **Reading Streaks**: Track consecutive reading days to build habits
+- **Challenges**: Join community challenges (e.g., New Year Reading Challenge)
+- **Leaderboards**: Compete with friends and the global community
+
+#### **📍 Enhanced Privacy**
+- **Fuzzy Location**: Approximate location display for user privacy
+- **Privacy Migration**: Automated scripts to secure existing user location data
+
 ## 🚀 Key Features
 
 ### 📚 **Book Management & Discovery**
@@ -162,6 +178,17 @@ In an era where reading often feels solitary, BookHive bridges the gap between d
 - **📱 PWA Support**: Progressive Web App manifest
 - **🔗 Dynamic SEO**: Page-specific meta tags for books, events, and profiles
 
+### 💎 **Premium Memberships**
+- **🆓 Free Plan**: Basic access to borrowing and community features
+- **✅ Verified Reader**: Verified badge, increased limits, and priority search
+- **👑 Premium**: Unlimited access, nationwide discovery, advanced analytics, and exclusive events
+
+### 🎮 **Gamification & Rewards**
+- **🏆 Achievements**: Unlock badges like "Bookworm", "Social Butterfly", and "Legend"
+- **🔥 Streaks**: Maintain daily reading streaks to earn points
+- **🎯 Challenges**: Participate in time-limited reading challenges
+- **📊 Stats**: Detailed breakdown of your reading and lending history
+
 ## 🛠️ Built With
 
 ### 🎨 **Frontend Technologies**
@@ -189,6 +216,7 @@ In an era where reading often feels solitary, BookHive bridges the gap between d
 - **🔒 Bcrypt.js**: Secure password hashing
 - **📧 Nodemailer**: Email service
 - **⏰ Node-Cron**: Scheduled tasks
+- **💳 Razorpay**: Secure payment gateway integration
 - **📍 Geocoding APIs**: Location services integration
 - **🎯 Role-Based Access**: Middleware for organizer permissions
 
@@ -355,6 +383,7 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - **🔍 Security Headers**: Helmet.js protection
 - **🧹 NoSQL Injection Prevention**: MongoDB sanitization
 - **🔒 E2E Encryption**: Secure message transmission
+- **📍 Location Privacy**: Fuzzy coordinates to protect exact user locations
 
 ## 📄 License
 

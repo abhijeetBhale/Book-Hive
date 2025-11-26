@@ -560,10 +560,6 @@ const Home = () => {
             <div className="organizer-content">
               <div className="section-header">
                 <h2 className="section-title">Become an Organizer</h2>
-                <p className="section-subtitle">
-                  Take your passion for books to the next level. As an organizer, you can create and host reading events, 
-                  build your own community, and connect with book lovers in meaningful ways.
-                </p>
               </div>
               <ul className="organizer-features-list">
                 <li>
