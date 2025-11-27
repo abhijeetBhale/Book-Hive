@@ -6,6 +6,7 @@ import { getFullImageUrl } from '../utils/imageHelpers';
 import { hasValidLocation } from '../utils/locationHelpers';
 import { Player } from '@lottiefiles/react-lottie-player';
 import animationData from '../assets/honeybee.json';
+import atomicHabitsCover from '../assets/atomic_habits.png';
 import { useInView } from 'react-intersection-observer';
 import CountUp from 'react-countup';
 import LocationPermission from '../components/LocationPermission';
@@ -23,7 +24,8 @@ import {
   Star,
   X,
   MessageCircle,
-  Calendar
+  Calendar,
+  UserPlus
 } from 'lucide-react';
 import { AvatarCircles } from '../components/ui/avatar-circles';
 import { AuroraText } from '../components/ui/aurora-text';
@@ -236,13 +238,6 @@ const Home = () => {
     userName: user.name
   }));
 
-  const howItWorks = [
-    { step: '1', title: 'Join BookHive', description: 'Create your account and set up your profile with your location and reading preferences.' },
-    { step: '2', title: 'Add Your Books', description: "Upload your book collection with details like title, author, condition, and whether it's available for borrowing." },
-    { step: '3', title: 'Discover Readers', description: 'Browse other users in your area, see their book collections, and connect with fellow book lovers.' },
-    { step: '4', title: 'Borrow & Share', description: 'Request to borrow books from others and lend your books to the community. Build lasting friendships through reading.' },
-  ];
-
   const communityStats = [
     { number: '800+', label: 'Books Shared' },
     { number: '200+', label: 'Active Members' },
@@ -282,7 +277,7 @@ const Home = () => {
 
   return (
     <>
-      <SEO 
+      <SEO
         title={PAGE_SEO.home.title}
         description={PAGE_SEO.home.description}
         keywords={PAGE_SEO.home.keywords}
@@ -292,295 +287,445 @@ const Home = () => {
       <StyledWrapper>
         {/* Hero Section */}
         <section className="hero-section">
-        <div className="lottie-background">
-          <Player autoplay loop speed={0.49} src={animationData} style={{ height: '100%', width: '100%' }} />
-        </div>
-        <div className="background-gradient"></div>
-        <div className="content-container">
-          <div className="badge-container">
-            <div className="badge">
-              <div className="animated-badge" key={quoteIndex}>
-                {quotes[quoteIndex].icon}
-                <span className="badge-text">{quotes[quoteIndex].text}</span>
+          <div className="lottie-background">
+            <Player autoplay loop speed={0.49} src={animationData} style={{ height: '100%', width: '100%' }} />
+          </div>
+          <div className="background-gradient"></div>
+          <div className="content-container">
+            <div className="badge-container">
+              <div className="badge">
+                <div className="animated-badge" key={quoteIndex}>
+                  {quotes[quoteIndex].icon}
+                  <span className="badge-text">{quotes[quoteIndex].text}</span>
+                </div>
+              </div>
+            </div>
+            <h1 className="main-heading">
+              {user ? (
+                <>
+                  Welcome back, <AuroraText>{user.name ? user.name.split(' ')[0] : 'Reader'}</AuroraText>
+                </>
+              ) : (
+                <>
+                  Welcome to <AuroraText>BookHive</AuroraText>
+                </>
+              )}
+            </h1>
+            <p className="sub-heading">
+              {user ? (
+                "Let's discover your next favorite book or connect with readers near you."
+              ) : (
+                "The community-driven platform that connects book lovers, enables book sharing, and builds reading communities in your neighborhood."
+              )}
+            </p>
+            <div className="button-group">
+              {user ? (
+                <>
+                  <Link to="/users" className="btn primary-btn group">
+                    <Users className="btn-icon" />
+                    Browse Community
+                    <ArrowRight className="arrow-icon" />
+                  </Link>
+                  <Link to="/books" className="btn secondary-btn group">
+                    <Eye className="btn-icon" />
+                    View Books
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/register" className="btn primary-btn group">
+                    <BookOpen className="btn-icon" />
+                    Join BookHive
+                    <ArrowRight className="arrow-icon" />
+                  </Link>
+                  <Link to="/login" className="btn tertiary-btn group">
+                    Sign In
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Recently Added Books Section */}
+        <section className="recently-added-section">
+          <div className="content-container">
+            <div className="section-header">
+              <h2 className="section-title">Fresh On The Shelves</h2>
+              <p className="section-subtitle">See what books were recently added by members of the community.</p>
+            </div>
+            <div className="books-carousel">
+              <div className="books-scroller">
+                {[...recentlyAddedBooks, ...recentlyAddedBooks].map((book, index) => (
+                  <Link to="/register" key={index} className="book-card">
+                    <img src={getFullImageUrl(book.coverUrl)} alt={`Cover of ${book.title}`} className="book-cover" />
+                    <div className="book-info">
+                      <h4 className="book-title">{book.title}</h4>
+                      <p className="book-author">{book.author}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div className="explore-more-container">
+              <Link to={user ? '/books' : '/register'} className="btn explore-more-btn group">
+                {user ? 'Discover More Books' : 'Explore More'}
+                <ArrowRight className="arrow-icon" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Book of the Month Section */}
+        <section className="book-of-the-month-section">
+          <div className="content-container">
+            <div className="book-grid">
+              <div className="book-cover-wrapper">
+                <img src={getFullImageUrl(bookOfTheMonth.coverUrl)} alt={`Cover of ${bookOfTheMonth.title}`} className="book-cover-image" />
+              </div>
+              <div className="book-details">
+                <div className="eyebrow-section">
+                  <p className="eyebrow-text">
+                    <Star className="eyebrow-icon" />
+                    Community Pick for {getCurrentMonth()}
+                  </p>
+                  <div className="community-readers">
+                    {avatars.length > 0 ? (
+                      <AvatarCircles
+                        numPeople={communityUsers.length + 93}
+                        avatarUrls={avatars}
+                        onAvatarClick={handleAvatarClick}
+                      />
+                    ) : (
+                      <div className="loading-avatars">
+                        <div className="avatar-skeleton"></div>
+                        <div className="avatar-skeleton"></div>
+                        <div className="avatar-skeleton"></div>
+                        <span className="loading-text">Loading community...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <h2 className="book-title-featured">{bookOfTheMonth.title}</h2>
+                <h3 className="book-author-featured">by {bookOfTheMonth.author}</h3>
+                <p className="book-reason">{bookOfTheMonth.reason}</p>
+
+                <Link to="/books" className="btn primary-btn group">
+                  Find This Book
+                  <ArrowRight className="arrow-icon" />
+                </Link>
               </div>
             </div>
           </div>
-          <h1 className="main-heading">
-            {user ? (
-              <>
-                Welcome back, <AuroraText>{user.name ? user.name.split(' ')[0] : 'Reader'}</AuroraText>
-              </>
-            ) : (
-              <>
-                Welcome to <AuroraText>BookHive</AuroraText>
-              </>
-            )}
-          </h1>
-          <p className="sub-heading">
-            {user ? (
-              "Let's discover your next favorite book or connect with readers near you."
-            ) : (
-              "The community-driven platform that connects book lovers, enables book sharing, and builds reading communities in your neighborhood."
-            )}
-          </p>
-          <div className="button-group">
-            {user ? (
-              <>
-                <Link to="/users" className="btn primary-btn group">
-                  <Users className="btn-icon" />
-                  Browse Community
-                  <ArrowRight className="arrow-icon" />
-                </Link>
-                <Link to="/books" className="btn secondary-btn group">
-                  <Eye className="btn-icon" />
-                  View Books
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link to="/register" className="btn primary-btn group">
-                  <BookOpen className="btn-icon" />
-                  Join BookHive
-                  <ArrowRight className="arrow-icon" />
-                </Link>
-                <Link to="/login" className="btn tertiary-btn group">
-                  Sign In
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Recently Added Books Section */}
-      <section className="recently-added-section">
-        <div className="content-container">
-          <div className="section-header">
-            <h2 className="section-title">Fresh On The Shelves</h2>
-            <p className="section-subtitle">See what books were recently added by members of the community.</p>
-          </div>
-          <div className="books-carousel">
-            <div className="books-scroller">
-              {[...recentlyAddedBooks, ...recentlyAddedBooks].map((book, index) => (
-                <Link to="/register" key={index} className="book-card">
-                  <img src={getFullImageUrl(book.coverUrl)} alt={`Cover of ${book.title}`} className="book-cover" />
-                  <div className="book-info">
-                    <h4 className="book-title">{book.title}</h4>
-                    <p className="book-author">{book.author}</p>
+        {/* How It Works Section */}
+        <section ref={howItWorksRef} className={`how-it-works-section ${isHowItWorksVisible ? 'is-visible' : ''}`}>
+          <div className="content-container">
+            <div className="section-header">
+              <h2 className="section-title">How BookHive Works</h2>
+              <p className="section-subtitle">From concept to connection, BookHive streamlines every step of book sharing, allowing you to discover and share books in minutes.</p>
+            </div>
+            <div className="how-it-works-grid">
+              {/* Card 1 - Create an Account */}
+            <div className="how-card card-left">
+              <div className="how-card-icon">
+                <UserPlus size={24} />
+              </div>
+              <h3 className="how-card-title">Create an Account</h3>
+              <div className="how-card-visual">
+                
+                {/* SMOOTH GOOGLE LOGIN MOCKUP */}
+                <div className="login-mockup-card">
+                  <div className="login-header">
+                    <span className="login-title">Sign in to BookHive</span>
+                    <span className="login-subtitle">Welcome back! Please enter your details.</span>
                   </div>
+                  
+                  <div className="mock-google-btn">
+                    <svg className="google-icon" viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                      <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
+                        <path fill="#4285F4" d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z" />
+                        <path fill="#34A853" d="M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.824 60.329 L -10.684 57.329 C -11.764 58.049 -13.134 58.489 -14.754 58.489 C -17.884 58.489 -20.534 56.379 -21.484 53.529 L -25.464 53.529 L -25.464 56.619 C -23.494 60.539 -19.444 63.239 -14.754 63.239 Z" />
+                        <path fill="#FBBC05" d="M -21.484 53.529 C -21.734 52.809 -21.864 52.039 -21.864 51.239 C -21.864 50.439 -21.724 49.669 -21.484 48.949 L -21.484 45.859 L -25.464 45.859 C -26.284 47.479 -26.754 49.299 -26.754 51.239 C -26.754 53.179 -26.284 54.999 -25.464 56.619 L -21.484 53.529 Z" />
+                        <path fill="#EA4335" d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.099 -17.884 43.989 -14.754 43.989 Z" />
+                      </g>
+                    </svg>
+                    <span>Sign in with Google</span>
+                  </div>
+
+                  <div className="mock-divider">
+                    <span>or</span>
+                  </div>
+
+                  <div className="mock-input-field">
+                    <span className="placeholder">user@gmail.com</span>
+                  </div>
+                  
+                  <div className="mock-input-btn">
+                    <span>Continue</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+              {/* Card 2 - Connect with readers (Featured/Purple) */}
+              <div className="how-card card-center">
+                <div className="how-card-icon">
+                  <Users size={24} />
+                </div>
+                <h3 className="how-card-title">Connect with readers</h3>
+                <p className="how-card-description">
+                  Browse our diverse network of readers and choose the ones who best match your needs. Filter readers by demographics, interests, and lifestyle to narrow down who applies. Have someone in mind? You can also invite your favorite readers directly.
+                </p>
+                <Link to="/users" className="explore-btn">
+                  Explore readers
                 </Link>
+                <div className="how-card-visual-center">
+                  <div className="browser-mockup">
+                    <div className="browser-header">
+                      <div className="browser-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                    </div>
+                    <div className="browser-content">
+                      <img
+                        src="./community-screenshot.png"
+                        alt="BookHive Community Screenshot"
+                        className="community-screenshot"
+                        onError={(e) => {
+                          // Fallback to showing the profile grid if image fails to load
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'grid';
+                        }}
+                      />
+                      <div className="profile-grid" style={{ display: 'none' }}>
+                        <div className="profile-card">
+                          <div className="profile-avatar" style={{ backgroundImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}></div>
+                          <div className="profile-bar"></div>
+                        </div>
+                        <div className="profile-card">
+                          <div className="profile-avatar" style={{ backgroundImage: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}></div>
+                          <div className="profile-bar"></div>
+                        </div>
+                        <div className="profile-card">
+                          <div className="profile-avatar" style={{ backgroundImage: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}></div>
+                          <div className="profile-bar"></div>
+                        </div>
+                        <div className="profile-card">
+                          <div className="profile-avatar" style={{ backgroundImage: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}></div>
+                          <div className="profile-bar"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3 - Borrowing & Lending */}
+            <div className="how-card card-right">
+              <div className="how-card-icon">
+                <BookOpen size={24} />
+              </div>
+              <h3 className="how-card-title">Borrow & Exchange</h3>
+              <p className="how-card-description">
+                Found a book you love? Send a request with one tap. Coordinate the exchange via our secure chat and track your lending history effortlessly.
+              </p>
+              
+              <div className="how-card-visual">
+                <div className="phone-mockup">
+                  <div className="phone-screen">
+                    <div className="phone-content">
+                      
+                      {/* Mini App UI: Book Request Screen */}
+                      <div className="app-ui-container">
+                        <div className="app-nav">
+                          <div className="nav-dot"></div>
+                          <div className="nav-line"></div>
+                        </div>
+                        
+                        <div className="app-book-preview">
+                          <div className="mini-book-cover">
+                            <img
+                              src={atomicHabitsCover}
+                              alt="Atomic Habits cover art"
+                              className="mini-book-cover-image"
+                            />
+                            <span className="mini-book-spine"></span>
+                          </div>
+                        </div>
+
+                        <div className="app-book-info">
+                          <span className="mini-title">Atomic Habits</span>
+                          <span className="mini-author">James Clear</span>
+                          <div className="mini-status">
+                            <span className="status-dot"></span>
+                            Available • 2km away
+                          </div>
+                        </div>
+
+                        <button className="app-request-btn">
+                          Request Book
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
+
+            <div className="how-it-works-cta">
+              <Link to={user ? '/users' : '/register'} className="btn primary-btn group">
+                Get started
+                <ArrowRight className="arrow-icon" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Community Stats Section */}
+        <section className="stats-section" ref={statsRef}>
+          <div className="content-container">
+            <div className="section-header">
+              <h2 className="section-title">Our Community By The Numbers</h2>
+              <p className="section-subtitle">
+                BookHive is more than an app; it's a growing movement of readers connecting and sharing in neighborhoods just like yours.
+              </p>
+            </div>
+            <div className="stats-grid">
+              {communityStats.map((stat, index) => (
+                <div key={index} className="stat-item">
+                  <span className="stat-number">
+                    {isStatsVisible && (
+                      <CountUp
+                        start={0}
+                        end={parseInt(stat.number.replace(/,/g, ''))}
+                        duration={2.5}
+                        separator=","
+                        suffix={stat.number.includes('+') ? '+' : ''}
+                      />
+                    )}
+                  </span>
+                  <span className="stat-label">{stat.label}</span>
+                </div>
               ))}
             </div>
           </div>
-          <div className="explore-more-container">
-            <Link to={user ? '/books' : '/register'} className="btn explore-more-btn group">
-              {user ? 'Discover More Books' : 'Explore More'}
-              <ArrowRight className="arrow-icon" />
-            </Link>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Book of the Month Section */}
-      <section className="book-of-the-month-section">
-        <div className="content-container">
-          <div className="book-grid">
-            <div className="book-cover-wrapper">
-              <img src={getFullImageUrl(bookOfTheMonth.coverUrl)} alt={`Cover of ${bookOfTheMonth.title}`} className="book-cover-image" />
-            </div>
-            <div className="book-details">
-              <div className="eyebrow-section">
-                <p className="eyebrow-text">
-                  <Star className="eyebrow-icon" />
-                  Community Pick for {getCurrentMonth()}
-                </p>
-                <div className="community-readers">
-                  {avatars.length > 0 ? (
-                    <AvatarCircles
-                      numPeople={communityUsers.length + 93}
-                      avatarUrls={avatars}
-                      onAvatarClick={handleAvatarClick}
-                    />
-                  ) : (
-                    <div className="loading-avatars">
-                      <div className="avatar-skeleton"></div>
-                      <div className="avatar-skeleton"></div>
-                      <div className="avatar-skeleton"></div>
-                      <span className="loading-text">Loading community...</span>
+        {/* Map Feature Section */}
+        <section className="map-feature-section">
+          <div className="content-container">
+            <div className="map-grid">
+              <div className="map-text-container">
+                <div className="section-header">
+                  <h2 className="section-title">Discover Your Local Reading Community</h2>
+                </div>
+                <ul className="map-features-list">
+                  <li>
+                    <MapPin className="list-icon" />
+                    <div>
+                      <h4>Find Nearby Readers</h4>
+                      <p>See the general location of other members to find reading buddies in your area.</p>
                     </div>
-                  )}
-                </div>
+                  </li>
+                  <li>
+                    <BookOpen className="list-icon" />
+                    <div>
+                      <h4>Locate Available Books</h4>
+                      <p>Easily spot books available for borrowing near you and expand your reading list.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <Shield className="list-icon" />
+                    <div>
+                      <h4>Privacy is Paramount</h4>
+                      <p>Your exact location is never shared. We only show a generalized area to protect your privacy.</p>
+                    </div>
+                  </li>
+                </ul>
+                <Link to={user ? '/map' : '/login'} className="btn primary-btn group">
+                  Explore The Community Map
+                  <ArrowRight className="arrow-icon" />
+                </Link>
               </div>
-              <h2 className="book-title-featured">{bookOfTheMonth.title}</h2>
-              <h3 className="book-author-featured">by {bookOfTheMonth.author}</h3>
-              <p className="book-reason">{bookOfTheMonth.reason}</p>
-
-              <Link to="/books" className="btn primary-btn group">
-                Find This Book
-                <ArrowRight className="arrow-icon" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section ref={howItWorksRef} className={`how-it-works-section ${isHowItWorksVisible ? 'is-visible' : ''}`}>
-        <div className="content-container">
-          <div className="section-header">
-            <h2 className="section-title">How BookHive Works</h2>
-            <p className="section-subtitle">Get started with BookHive in just a few simple steps and join a thriving community of book lovers.</p>
-          </div>
-          <div className="steps-grid">
-            {howItWorks.map((item) => (
-              <div key={item.step} className="step-card group">
-                <div className="step-number">{item.step}</div>
-                <h3 className="step-title">{item.title}</h3>
-                <p className="step-description">{item.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Community Stats Section */}
-      <section className="stats-section" ref={statsRef}>
-        <div className="content-container">
-          <div className="section-header">
-            <h2 className="section-title">Our Community By The Numbers</h2>
-            <p className="section-subtitle">
-              BookHive is more than an app; it's a growing movement of readers connecting and sharing in neighborhoods just like yours.
-            </p>
-          </div>
-          <div className="stats-grid">
-            {communityStats.map((stat, index) => (
-              <div key={index} className="stat-item">
-                <span className="stat-number">
-                  {isStatsVisible && (
-                    <CountUp
-                      start={0}
-                      end={parseInt(stat.number.replace(/,/g, ''))}
-                      duration={2.5}
-                      separator=","
-                      suffix={stat.number.includes('+') ? '+' : ''}
-                    />
-                  )}
-                </span>
-                <span className="stat-label">{stat.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Map Feature Section */}
-      <section className="map-feature-section">
-        <div className="content-container">
-          <div className="map-grid">
-            <div className="map-text-container">
-              <div className="section-header">
-                <h2 className="section-title">Discover Your Local Reading Community</h2>
-              </div>
-              <ul className="map-features-list">
-                <li>
-                  <MapPin className="list-icon" />
-                  <div>
-                    <h4>Find Nearby Readers</h4>
-                    <p>See the general location of other members to find reading buddies in your area.</p>
-                  </div>
-                </li>
-                <li>
-                  <BookOpen className="list-icon" />
-                  <div>
-                    <h4>Locate Available Books</h4>
-                    <p>Easily spot books available for borrowing near you and expand your reading list.</p>
-                  </div>
-                </li>
-                <li>
-                  <Shield className="list-icon" />
-                  <div>
-                    <h4>Privacy is Paramount</h4>
-                    <p>Your exact location is never shared. We only show a generalized area to protect your privacy.</p>
-                  </div>
-                </li>
-              </ul>
-              <Link to={user ? '/map' : '/login'} className="btn primary-btn group">
-                Explore The Community Map
-                <ArrowRight className="arrow-icon" />
-              </Link>
-            </div>
-            <div className="map-visual-container">
-              <div className="map-background">
-                <div className="building" style={{ top: '18%', left: '22%' }}></div>
-                <div className="building" style={{ top: '22%', left: '28%' }}></div>
-                <div className="building" style={{ top: '48%', left: '28%' }}></div>
-                <div className="building" style={{ top: '52%', left: '32%' }}></div>
-                <div className="building" style={{ top: '33%', left: '52%' }}></div>
-                <div className="building" style={{ top: '37%', left: '58%' }}></div>
-                <div className="building" style={{ top: '63%', left: '68%' }}></div>
-                <div className="building" style={{ top: '67%', left: '72%' }}></div>
-                <div className="building" style={{ top: '42%', left: '42%' }}></div>
-                <div className="building" style={{ top: '48%', left: '48%' }}></div>
-                <div className="user-pin" style={{ top: '20%', left: '59%' }}></div>
-                <div className="user-pin" style={{ top: '50%', left: '28%' }}></div>
-                <div className="user-pin" style={{ top: '37%', left: '50%' }}></div>
-                <div className="user-pin" style={{ top: '54%', left: '70%' }}></div>
-                <div className="user-pin" style={{ top: '65%', left: '70%' }}></div>
-                <div className="user-pin" style={{ top: '86%', left: '20%' }}></div>
-                <div className="user-pin main-user-pin" style={{ top: '70%', left: '49%' }}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Become an Organizer Section */}
-      <section className="become-organizer-section">
-        <div className="content-container">
-          <div className="organizer-grid">
-            <div className="organizer-visual">
-              <div className="organizer-image-wrapper">
-                <div className="organizer-icon-large">
-                  <Calendar className="icon-large" />
-                </div>
-                <div className="floating-badge badge-1">
-                  <BookOpen size={20} />
-                  <span>Create Events</span>
-                </div>
-                <div className="floating-badge badge-2">
-                  <Users size={20} />
-                  <span>Build Community</span>
-                </div>
-                <div className="floating-badge badge-3">
-                  <Star size={20} />
-                  <span>Get Verified</span>
+              <div className="map-visual-container">
+                <div className="map-background">
+                  <div className="building" style={{ top: '18%', left: '22%' }}></div>
+                  <div className="building" style={{ top: '22%', left: '28%' }}></div>
+                  <div className="building" style={{ top: '48%', left: '28%' }}></div>
+                  <div className="building" style={{ top: '52%', left: '32%' }}></div>
+                  <div className="building" style={{ top: '33%', left: '52%' }}></div>
+                  <div className="building" style={{ top: '37%', left: '58%' }}></div>
+                  <div className="building" style={{ top: '63%', left: '68%' }}></div>
+                  <div className="building" style={{ top: '67%', left: '72%' }}></div>
+                  <div className="building" style={{ top: '42%', left: '42%' }}></div>
+                  <div className="building" style={{ top: '48%', left: '48%' }}></div>
+                  <div className="user-pin" style={{ top: '20%', left: '59%' }}></div>
+                  <div className="user-pin" style={{ top: '50%', left: '28%' }}></div>
+                  <div className="user-pin" style={{ top: '37%', left: '50%' }}></div>
+                  <div className="user-pin" style={{ top: '54%', left: '70%' }}></div>
+                  <div className="user-pin" style={{ top: '65%', left: '70%' }}></div>
+                  <div className="user-pin" style={{ top: '86%', left: '20%' }}></div>
+                  <div className="user-pin main-user-pin" style={{ top: '70%', left: '49%' }}></div>
                 </div>
               </div>
             </div>
-            <div className="organizer-content">
-              <div className="section-header">
-                <h2 className="section-title">Become an Organizer</h2>
+          </div>
+        </section>
+
+        {/* Become an Organizer Section */}
+        <section className="become-organizer-section">
+          <div className="content-container">
+            <div className="organizer-grid">
+              <div className="organizer-visual">
+                <div className="organizer-image-wrapper">
+                  <div className="organizer-icon-large">
+                    <Calendar className="icon-large" />
+                  </div>
+                  <div className="floating-badge badge-1">
+                    <BookOpen size={20} />
+                    <span>Create Events</span>
+                  </div>
+                  <div className="floating-badge badge-2">
+                    <Users size={20} />
+                    <span>Build Community</span>
+                  </div>
+                  <div className="floating-badge badge-3">
+                    <Star size={20} />
+                    <span>Get Verified</span>
+                  </div>
+                </div>
               </div>
-              <ul className="organizer-features-list">
-                <li>
-                  <div className="feature-icon-wrapper">
-                    <BookOpen className="feature-icon" />
-                  </div>
-                  <div>
-                    <h4>Create & Host Events</h4>
-                    <p>Organize book clubs, reading sessions, author meetups, and literary discussions in your area.</p>
-                  </div>
-                </li>
-                <li>
-                  <div className="feature-icon-wrapper">
-                    <Users className="feature-icon" />
-                  </div>
-                  <div>
-                    <h4>Grow Your Community</h4>
-                    <p>Build a dedicated following of readers who share your interests and passion for literature.</p>
-                  </div>
-                </li>
-                {/* <li>
+              <div className="organizer-content">
+                <div className="section-header">
+                  <h2 className="section-title">Become an Organizer</h2>
+                </div>
+                <ul className="organizer-features-list">
+                  <li>
+                    <div className="feature-icon-wrapper">
+                      <BookOpen className="feature-icon" />
+                    </div>
+                    <div>
+                      <h4>Create & Host Events</h4>
+                      <p>Organize book clubs, reading sessions, author meetups, and literary discussions in your area.</p>
+                    </div>
+                  </li>
+                  <li>
+                    <div className="feature-icon-wrapper">
+                      <Users className="feature-icon" />
+                    </div>
+                    <div>
+                      <h4>Grow Your Community</h4>
+                      <p>Build a dedicated following of readers who share your interests and passion for literature.</p>
+                    </div>
+                  </li>
+                  {/* <li>
                   <div className="feature-icon-wrapper">
                     <Star className="feature-icon" />
                   </div>
@@ -589,170 +734,170 @@ const Home = () => {
                     <p>Stand out with an official organizer badge that showcases your commitment to the community.</p>
                   </div>
                 </li> */}
-                <li>
-                  <div className="feature-icon-wrapper">
-                    <Shield className="feature-icon" />
-                  </div>
-                  <div>
-                    <h4>Access Exclusive Tools</h4>
-                    <p>Use advanced features to manage events, track attendance, and engage with your community members.</p>
-                  </div>
-                </li>
-              </ul>
-              <Link to={user ? '/become-organizer' : '/register'} className="btn primary-btn group">
-                <Users className="btn-icon" />
-                {user ? 'Become an Organizer' : 'Join to Become an Organizer'}
-                <ArrowRight className="arrow-icon" />
-              </Link>
+                  <li>
+                    <div className="feature-icon-wrapper">
+                      <Shield className="feature-icon" />
+                    </div>
+                    <div>
+                      <h4>Access Exclusive Tools</h4>
+                      <p>Use advanced features to manage events, track attendance, and engage with your community members.</p>
+                    </div>
+                  </li>
+                </ul>
+                <Link to={user ? '/become-organizer' : '/register'} className="btn primary-btn group">
+                  <Users className="btn-icon" />
+                  {user ? 'Become an Organizer' : 'Join to Become an Organizer'}
+                  <ArrowRight className="arrow-icon" />
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="why-choose-us-section">
-        <div className="content-container">
-          <div className="section-header">
-            <h2 className="section-title">
-              Why <span className="highlight-text">BookHive</span> is The Right Choice for You
-            </h2>
+        <section className="why-choose-us-section">
+          <div className="content-container">
+            <div className="section-header">
+              <h2 className="section-title">
+                Why <span className="highlight-text">BookHive</span> is The Right Choice for You
+              </h2>
+            </div>
+            <div className="why-choose-us-grid">
+              <div className="why-card card-1">
+                <div className="why-icon-wrapper">
+                  <Users className="why-icon" />
+                </div>
+                <h3 className="why-title">Expert Community</h3>
+                <p className="why-description">Learn from avid readers and community veterans who bring real-world experience and insights to the platform.</p>
+              </div>
+              <div className="why-card card-2">
+                <div className="why-icon-wrapper">
+                  <Heart className="why-icon" />
+                </div>
+                <h3 className="why-title">Community-Vetted Reads</h3>
+                <p className="why-description">Discover books that are highly regarded by the community, helping you enhance your collection and find new favorites.</p>
+              </div>
+              <div className="why-card card-3">
+                <div className="why-icon-wrapper">
+                  <BookOpen className="why-icon" />
+                </div>
+                <h3 className="why-title">1000+ Shared Books</h3>
+                <p className="why-description">BookHive offers over 1000 books across diverse genres. Find practical, hands-on opportunities to discover and share.</p>
+              </div>
+              <div className="why-card card-featured">
+                <div className="why-icon-wrapper dark">
+                  <Globe className="why-icon" />
+                </div>
+                <h3 className="why-title">Flexible Connections</h3>
+                <p className="why-description">We understand balancing reading with a busy lifestyle. That's why our community is available on-demand, allowing you to connect at your own pace, anytime, and anywhere.</p>
+                <Link to="/register" className="btn why-btn group">
+                  Start For Free
+                  <ArrowRight className="arrow-icon" />
+                </Link>
+              </div>
+            </div>
           </div>
-          <div className="why-choose-us-grid">
-            <div className="why-card card-1">
-              <div className="why-icon-wrapper">
-                <Users className="why-icon" />
-              </div>
-              <h3 className="why-title">Expert Community</h3>
-              <p className="why-description">Learn from avid readers and community veterans who bring real-world experience and insights to the platform.</p>
-            </div>
-            <div className="why-card card-2">
-              <div className="why-icon-wrapper">
-                <Heart className="why-icon" />
-              </div>
-              <h3 className="why-title">Community-Vetted Reads</h3>
-              <p className="why-description">Discover books that are highly regarded by the community, helping you enhance your collection and find new favorites.</p>
-            </div>
-            <div className="why-card card-3">
-              <div className="why-icon-wrapper">
-                <BookOpen className="why-icon" />
-              </div>
-              <h3 className="why-title">1000+ Shared Books</h3>
-              <p className="why-description">BookHive offers over 1000 books across diverse genres. Find practical, hands-on opportunities to discover and share.</p>
-            </div>
-            <div className="why-card card-featured">
-              <div className="why-icon-wrapper dark">
-                <Globe className="why-icon" />
-              </div>
-              <h3 className="why-title">Flexible Connections</h3>
-              <p className="why-description">We understand balancing reading with a busy lifestyle. That's why our community is available on-demand, allowing you to connect at your own pace, anytime, and anywhere.</p>
-              <Link to="/register" className="btn why-btn group">
-                Start For Free
-                <ArrowRight className="arrow-icon" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ========================================================== */}
-      {/* ============ ANIMATED TESTIMONIALS SECTION ============ */}
-      {/* ========================================================== */}
-      <section className="reviews-section">
-        <div className="content-container">
-          <div className="section-header">
-            <h2 className="section-title">What Our <span className="highlight-text">Community</span> Says</h2>
-            <p className="section-subtitle">Real experiences from book lovers who've found their reading community through BookHive.</p>
-          </div>
-
-          {/* Grid Testimonials Component */}
-          <TestimonialsGrid 
-            testimonials={
-              testimonials.length > 0 
-                ? testimonials
-                : communityReviews
-            }
-          />
-
-          {/* Add Testimonial Button - Only show if user is logged in */}
-          {user ? (
-            <div className="testimonial-cta">
-              <button
-                className="add-testimonial-btn"
-                onClick={() => setShowTestimonialModal(true)}
-              >
-                Add Your Testimonial
-              </button>
-              <p className="testimonial-cta-text">
-                Share your BookHive experience and help others discover our community!
-              </p>
+        {/* ========================================================== */}
+        {/* ============ ANIMATED TESTIMONIALS SECTION ============ */}
+        {/* ========================================================== */}
+        <section className="reviews-section">
+          <div className="content-container">
+            <div className="section-header">
+              <h2 className="section-title">What Our <span className="highlight-text">Community</span> Says</h2>
+              <p className="section-subtitle">Real experiences from book lovers who've found their reading community through BookHive.</p>
             </div>
-          ) : (
-            <div className="testimonial-cta">
-              <Link to="/login" className="add-testimonial-btn">
-                Login to Add Your Testimonial
-              </Link>
-              <p className="testimonial-cta-text">
-                Join BookHive to share your experience with our community!
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="cta-section">
-        <div className="cta-overlay"></div>
-        <div className="content-container cta-content">
-          <h2 className="cta-title">Ready to Join the BookHive Community?</h2>
-          <p className="cta-subtitle">Start sharing your love for books, discover new reads, and connect with fellow readers in your area.</p>
-          <div className="button-group">
+            {/* Grid Testimonials Component */}
+            <TestimonialsGrid
+              testimonials={
+                testimonials.length > 0
+                  ? testimonials
+                  : communityReviews
+              }
+            />
+
+            {/* Add Testimonial Button - Only show if user is logged in */}
             {user ? (
-              <>
-                <Link to="/users" className="btn cta-btn group">
-                  <Globe className="btn-icon" />
-                  Explore Community
-                  <ArrowRight className="arrow-icon" />
-                </Link>
-                <Link to="/contact" className="btn cta-btn-secondary group">
-                  <MessageCircle className="btn-icon" />
-                  Get in Touch
-                </Link>
-              </>
+              <div className="testimonial-cta">
+                <button
+                  className="add-testimonial-btn"
+                  onClick={() => setShowTestimonialModal(true)}
+                >
+                  Add Your Testimonial
+                </button>
+                <p className="testimonial-cta-text">
+                  Share your BookHive experience and help others discover our community!
+                </p>
+              </div>
             ) : (
-              <>
-                <Link to="/register" className="btn cta-btn group">
-                  <BookOpen className="btn-icon" />
-                  Get Started Today
-                  <ArrowRight className="arrow-icon" />
+              <div className="testimonial-cta">
+                <Link to="/login" className="add-testimonial-btn">
+                  Login to Add Your Testimonial
                 </Link>
-                <Link to="/contact" className="btn cta-btn-secondary group">
-                  <MessageCircle className="btn-icon" />
-                  Get in Touch
-                </Link>
-              </>
+                <p className="testimonial-cta-text">
+                  Join BookHive to share your experience with our community!
+                </p>
+              </div>
             )}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Location Permission Modal */}
-      {showLocationModal && (
-        <LocationPermission onClose={() => setShowLocationModal(false)} />
-      )}
+        {/* CTA Section */}
+        <section className="cta-section">
+          <div className="cta-overlay"></div>
+          <div className="content-container cta-content">
+            <h2 className="cta-title">Ready to Join the BookHive Community?</h2>
+            <p className="cta-subtitle">Start sharing your love for books, discover new reads, and connect with fellow readers in your area.</p>
+            <div className="button-group">
+              {user ? (
+                <>
+                  <Link to="/users" className="btn cta-btn group">
+                    <Globe className="btn-icon" />
+                    Explore Community
+                    <ArrowRight className="arrow-icon" />
+                  </Link>
+                  <Link to="/contact" className="btn cta-btn-secondary group">
+                    <MessageCircle className="btn-icon" />
+                    Get in Touch
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/register" className="btn cta-btn group">
+                    <BookOpen className="btn-icon" />
+                    Get Started Today
+                    <ArrowRight className="arrow-icon" />
+                  </Link>
+                  <Link to="/contact" className="btn cta-btn-secondary group">
+                    <MessageCircle className="btn-icon" />
+                    Get in Touch
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
 
-      {/* Testimonial Modal - Only show if user is logged in */}
-      {showTestimonialModal && user && (
-        <TestimonialModal
-          onClose={() => setShowTestimonialModal(false)}
-          onSubmit={handleTestimonialSubmit}
+        {/* Location Permission Modal */}
+        {showLocationModal && (
+          <LocationPermission onClose={() => setShowLocationModal(false)} />
+        )}
+
+        {/* Testimonial Modal - Only show if user is logged in */}
+        {showTestimonialModal && user && (
+          <TestimonialModal
+            onClose={() => setShowTestimonialModal(false)}
+            onSubmit={handleTestimonialSubmit}
+          />
+        )}
+
+        {/* Authentication Modal */}
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
         />
-      )}
-
-      {/* Authentication Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-      />
-    </StyledWrapper>
+      </StyledWrapper>
     </>
   );
 };
@@ -979,7 +1124,7 @@ const StyledWrapper = styled.div`
 
   .book-card {
     flex: 0 0 250px; 
-    width: 250px;     
+    width: 250px;      
     border-radius: 0.75rem;
     overflow: hidden;
     background-color: #f9fafb;
@@ -1191,56 +1336,639 @@ const StyledWrapper = styled.div`
   /* How It Works Section */
   .how-it-works-section {
     padding: 6rem 0;
-    background-color: #f8f8f8;
+    background-color: #f9fafb;
     width: 100%;
-    .section-header { text-align: center; margin-bottom: 4rem; }
-    .section-title { font-size: 2.75rem; font-weight: 800; color: #333; margin-bottom: 1rem; }
-    .section-subtitle { font-size: 1.1rem; color: #666; max-width: 45rem; margin: 0 auto; font-weight: 400; line-height: 1.5; }
-    .steps-grid {
-      display: grid;
-      grid-template-columns: repeat(1, 1fr);
-      gap: 1.5rem;
-      perspective: 1000px;
-      @media (min-width: 768px) { grid-template-columns: repeat(2, 1fr); }
-      @media (min-width: 1024px) { grid-template-columns: repeat(4, 1fr); }
+    
+    .section-header { 
+      text-align: center; 
+      margin-bottom: 4rem; 
     }
-    .step-card {
-      text-align: center;
-      padding: 2rem;
-      border-radius: 0.75rem;
-      background-color: white;
-      border: 1px solid #eee;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-      backface-visibility: hidden;
-      opacity: 0;
-      transform: rotateY(90deg);
-      transition: opacity 0.4s ease-out, transform 0.4s ease-out, box-shadow 0.3s ease, border-color 0.3s ease;
-      &:hover {
-        border-color: #ddd;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-        transform: translateY(-0.25rem) rotateY(0);
+    
+    .section-title { 
+      font-size: 3rem; 
+      font-weight: 900; 
+      color: #111827; 
+      margin-bottom: 1rem; 
+    }
+    
+    .section-subtitle { 
+      font-size: 1.125rem; 
+      color: #6b7280; 
+      max-width: 48rem; 
+      margin: 0 auto; 
+      font-weight: 400; 
+      line-height: 1.6; 
+    }
+    
+    .how-it-works-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+      
+      @media (min-width: 1024px) {
+        flex-direction: row;
+        height: 600px; /* Fixed height for consistent expansion */
       }
     }
-    &.is-visible .step-card {
-      animation: ${flipInY} 0.7s ease-in-out forwards;
-      &:nth-child(1) { animation-delay: 0.2s; }
-      &:nth-child(2) { animation-delay: 0.4s; }
-      &:nth-child(3) { animation-delay: 0.6s; }
-      &:nth-child(4) { animation-delay: 0.8s; }
+    
+    .how-card {
+      background-color: #f3f4f6;
+      border-radius: 1.5rem;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      
+      /* Animation & Transition */
+      transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      opacity: 0;
+      transform: translateY(30px);
+      overflow: hidden;
+      
+      /* Mobile Defaults */
+      min-height: 400px;
+      
+      @media (min-width: 1024px) {
+        flex: 1; /* Default state: all equal width */
+        min-width: 0;
+        height: 100%;
+        
+        &:hover {
+          flex: 3; /* Hovered state: expands horizontally */
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          z-index: 10;
+        }
+      }
     }
-    .step-number {
-      width: 4rem; height: 4rem;
-      background-color: #e0e0e0; color: #555;
+    
+    &.is-visible .how-card {
+      animation: fadeInUp 0.6s ease-out forwards;
+      
+      &:nth-child(1) { animation-delay: 0.1s; }
+      &:nth-child(2) { animation-delay: 0.3s; }
+      &:nth-child(3) { animation-delay: 0.5s; }
+    }
+    
+    @keyframes fadeInUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .card-center {
+      background: linear-gradient(135deg, #e9d5ff 0%, #ddd6fe 100%);
+      
+      @media (min-width: 1024px) {
+        padding: 2.5rem;
+      }
+    }
+    
+    .card-left,
+    .card-right {
+      background-color: #f3f4f6;
+    }
+    
+    .how-card-icon {
+      width: 2.5rem;
+      height: 2.5rem;
+      background-color: rgba(0, 0, 0, 0.05);
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      color: #374151;
+      flex-shrink: 0;
+    }
+    
+    .how-card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 1rem;
+      white-space: nowrap; /* Prevent title wrapping during transition */
+    }
+    
+    .how-card-description {
+      text-align: justify;
+      font-size: 0.95rem;
+      color: #4b5563;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+    
+    .explore-btn {
+      background-color: #5b21b6;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin-bottom: 1.5rem;
+      width: fit-content;
+      
+      &:hover {
+        background-color: #6d28d9;
+      }
+    }
+    
+    /* Visual Container for Phone/Browser Mockups */
+    .how-card-visual {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      flex: 1;
+      overflow: visible;
+    }
+    
+    /* Login Mockup Styles - Stretched & Smoother */
+    .login-mockup-card {
+      background-color: white;
+      border-radius: 1rem; /* Smoother corners */
+      padding: 2.5rem 2rem; /* Stretched padding */
+      margin-top: 1rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+      border: 1px solid #f3f4f6;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem; /* Stretched gap between elements */
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      width: 100%;
+      max-width: 400px; /* Ensures it looks good on wide screens */
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Hover effect for the card itself */
+    .how-card:hover .login-mockup-card {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      border-color: #e5e7eb;
+    }
+
+    .login-header {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .login-title {
+      font-size: 1.25rem; /* Larger title */
+      font-weight: 800;
+      color: #111827;
+      letter-spacing: -0.025em;
+    }
+    
+    .login-subtitle {
+      font-size: 0.875rem;
+      color: #6b7280;
+    }
+
+    .mock-google-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      background-color: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.75rem;
+      padding: 0.875rem; /* Taller button */
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #374151;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mock-google-btn:hover {
+      background-color: #f9fafb;
+      border-color: #d1d5db;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .mock-divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      color: #9ca3af;
+      font-size: 0.875rem;
+      width: 100%;
+    }
+
+    .mock-divider::before,
+    .mock-divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .mock-divider span {
+      padding: 0 1rem;
+    }
+
+    .mock-input-field {
+      background-color: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.75rem;
+      padding: 0.875rem 1rem; /* Taller input */
+      display: flex;
+      align-items: center;
+      transition: all 0.2s ease;
+    }
+    
+    /* Simulate focus state on hover */
+    .how-card:hover .mock-input-field {
+      border-color: #d1d5db;
+      background-color: white;
+    }
+
+    .mock-input-field .placeholder {
+      font-size: 0.95rem;
+      color: #9ca3af;
+    }
+
+    .mock-input-btn {
+      background-image: linear-gradient(to right, #4F46E5, #7c3aed);
+      color: white;
+      border-radius: 0.75rem;
+      padding: 0.875rem; /* Taller button */
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+    }
+    
+    .mock-input-btn:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+    }
+
+    /* Phone App UI Styling */
+    .app-ui-container {
+      width: 100%;
+      height: 100%;
+      padding: 2rem 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: linear-gradient(to bottom, #f9fafb 0%, white 100%);
+      position: relative;
+    }
+
+    .app-nav {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .nav-dot { 
+      width: 18px; 
+      height: 18px; 
+      background: #e5e9ebff; 
+      border-radius: 50%; 
+    }
+    
+    .nav-line { 
+      width: 35px; 
+      height: 6px; 
+      background: #15d853cb; 
+      border-radius: 3px; 
+    }
+
+    .app-book-preview {
+      margin-bottom: 1.25rem;
+      filter: drop-shadow(0 15px 25px rgba(0,0,0,0.15));
+      transition: transform 0.3s ease;
+    }
+
+    .mini-book-cover {
+      width: 110px;
+      height: 165px;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 
+        0 15px 35px rgba(15, 23, 42, 0.2),
+        0 5px 15px rgba(0, 0, 0, 0.12);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .mini-book-cover-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .mini-book-spine {
+      position: absolute;
+      left: 8px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: rgba(0, 0, 0, 0.15);
+      box-shadow: 1px 0 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .app-book-info {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin-bottom: 1.5rem;
+      padding: 0 0.5rem;
+    }
+
+    .mini-title {
+      font-weight: 800;
+      color: #111827;
+      font-size: 0.95rem;
+      line-height: 1.2;
+    }
+
+    .mini-author {
+      font-size: 0.8rem;
+      color: #6b7280;
+      font-weight: 500;
+      margin-bottom: -10px;
+    }
+
+    .mini-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 150px;
+      margin-top: -40px;
+      margin-bottom: -20px;
+      gap: 0.35rem;
+      font-size: 0.7rem;
+      color: #059669;
+      background-color: #ecfdf5;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      margin-top: 0.35rem;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 5px;
+      height: 5px;
+      background-color: #059669;
       border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.5rem; font-weight: 700;
-      margin: 0 auto 1.5rem;
-      transition: transform 0.3s ease, background-color 0.3s ease;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      .group:hover & { transform: scale(1.05); background-color: #d0d0d0; }
+      animation: pulse 2s infinite;
     }
-    .step-title { font-size: 1.35rem; font-weight: 700; color: #333; margin-bottom: 0.75rem; }
-    .step-description { color: #666; line-height: 1.5; font-size: 0.95rem; }
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    .app-request-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+      color: white;
+      border: none;
+      padding: 0.25rem;
+      border-radius: 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      // cursor: pointer;
+      margin-top: auto;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      letter-spacing: 0.025em;
+    }
+
+    /* Animation on Hover */
+    .card-right:hover .app-request-btn {
+      margin-top:5px;
+      transform: translateY(-2px);
+      background: linear-gradient(135deg, #4F46E5 0%, #6366f1 100%);
+      box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+    }
+    
+    .card-right:hover .app-book-preview {
+      transform: translateY(-8px) scale(1.05);
+    }
+    
+    .card-right:hover .mini-book-cover {
+      box-shadow: 
+        0 20px 45px rgba(15, 23, 42, 0.3),
+        0 8px 20px rgba(0, 0, 0, 0.18);
+    }
+
+    /* Form Mockup */
+    .form-mockup {
+      background-color: white;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      margin-top: 1rem;
+    }
+    
+    .form-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #e5e7eb;
+      
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+    
+    .form-label {
+      font-size: 0.875rem;
+      color: #6b7280;
+    }
+    
+    .form-value {
+      font-size: 0.875rem;
+      color: #111827;
+      font-weight: 600;
+      background-color: #f3f4f6;
+      padding: 0.25rem 0.75rem;
+      border-radius: 0.375rem;
+    }
+    
+    /* Browser Mockup */
+    .browser-mockup {
+      background-color: white;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .browser-header {
+      background-color: #f3f4f6;
+      padding: 0.75rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .browser-dots {
+      display: flex;
+      gap: 0.5rem;
+      
+      span {
+        width: 0.75rem;
+        height: 0.75rem;
+        border-radius: 50%;
+        background-color: #8c8080ff;
+        
+        &:nth-child(1) {
+          background-color: #ff5f56; /* Red */
+        }
+        
+        &:nth-child(2) {
+          background-color: #ffbd2e; /* Yellow */
+        }
+        
+        &:nth-child(3) {
+          background-color: #27c93f; /* Green */
+        }
+      }
+    }
+    
+    .browser-content {
+      padding: 0;
+      overflow: hidden;
+      background-color: #f9fafb;
+    }
+    
+    .community-screenshot {
+      width: 100%;
+      height: auto;
+      max-height: 400px;
+      display: block;
+      object-fit: contain;
+      object-position: top;
+      border-radius: 0 0 0.75rem 0.75rem;
+    }
+    
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      padding: 1.5rem;
+    }
+    
+    .profile-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .profile-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-color: #e5e7eb;
+    }
+    
+    .profile-bar {
+      width: 100%;
+      height: 0.5rem;
+      background-color: #e5e7eb;
+      border-radius: 0.25rem;
+    }
+    
+    /* iPhone-Style Phone Mockup */
+    .phone-mockup {
+      margin-top: -30px;
+      display: flex;
+      justify-content: center;
+      perspective: 1000px;
+    }
+    
+    .phone-screen {
+      width: 200px;
+      height: 400px;
+      background: linear-gradient(145deg, #2d3748, #1a202c);
+      border-radius: 2.5rem;
+      padding: 0.75rem;
+      box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.4),
+        inset 0 0 0 2px rgba(255, 255, 255, 0.1);
+      position: relative;
+      transition: transform 0.3s ease;
+      
+      /* iPhone notch */
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0.75rem;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 20px;
+        background: #1a202c;
+        border-radius: 0 0 1rem 1rem;
+        z-index: 10;
+      }
+      
+      /* iPhone home indicator */
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+        z-index: 10;
+      }
+    }
+    
+    .card-right:hover .phone-screen {
+      transform: rotateY(-5deg) rotateX(5deg) scale(1.02);
+    }
+    
+    .phone-content {
+      width: 100%;
+      height: 100%;
+      border-radius: 2rem;
+      overflow: hidden;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    
+    .book-preview {
+      width: 100%;
+      height: 100%;
+      background-color: transparent;
+      border-radius: 0;
+      backdrop-filter: none;
+    }
+    
+    .how-it-works-cta {
+      text-align: center;
+      margin-top: 3rem;
+    }
   }
 
   /* Stats Section */
@@ -1636,7 +2364,7 @@ const StyledWrapper = styled.div`
       text-align: center;
       margin-bottom: 4rem;
     }
-  
+    
     .section-eyebrow {
       font-size: 1rem;
       font-weight: 700;
