@@ -29,9 +29,10 @@ import {
 } from 'lucide-react';
 import { AvatarCircles } from '../components/ui/avatar-circles';
 import { AuroraText } from '../components/ui/aurora-text';
-import TestimonialsGrid from '../components/ui/testimonials-grid';
+import TiltedCard from '../components/ui/TiltedCard';
 import SEO from '../components/SEO';
 import { PAGE_SEO, generateStructuredData } from '../utils/seo';
+import { InfiniteMovingCards } from '../components/ui/infinite-moving-cards';
 
 // Authentication Modal Component
 const AuthModal = ({ isOpen, onClose }) => {
@@ -381,7 +382,20 @@ const Home = () => {
           <div className="content-container">
             <div className="book-grid">
               <div className="book-cover-wrapper">
-                <img src={getFullImageUrl(bookOfTheMonth.coverUrl)} alt={`Cover of ${bookOfTheMonth.title}`} className="book-cover-image" />
+                <TiltedCard
+                  imageSrc={getFullImageUrl(bookOfTheMonth.coverUrl)}
+                  altText={`Cover of ${bookOfTheMonth.title}`}
+                  captionText={`${bookOfTheMonth.title} by ${bookOfTheMonth.author}`}
+                  containerHeight="500px"
+                  containerWidth="100%"
+                  imageHeight="500px"
+                  imageWidth="350px"
+                  rotateAmplitude={12}
+                  scaleOnHover={1.1}
+                  showMobileWarning={false}
+                  showTooltip={true}
+                  displayOverlayContent={false}
+                />
               </div>
               <div className="book-details">
                 <div className="eyebrow-section">
@@ -808,13 +822,19 @@ const Home = () => {
               <p className="section-subtitle">Real experiences from book lovers who've found their reading community through BookHive.</p>
             </div>
 
-            {/* Grid Testimonials Component */}
-            <TestimonialsGrid
-              testimonials={
-                testimonials.length > 0
-                  ? testimonials
-                  : communityReviews
-              }
+            {/* Infinite Moving Cards Component */}
+            <InfiniteMovingCards
+              items={(testimonials.length > 0 ? testimonials : communityReviews).map(testimonial => ({
+                photo: testimonial.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(testimonial.user || testimonial.name)}&background=4F46E5&color=ffffff&bold=true`,
+                name: testimonial.user || testimonial.name,
+                title: testimonial.title || '',
+                rating: testimonial.rating || 5,
+                content: testimonial.review || testimonial.content
+              }))}
+              direction="left"
+              speed="slow"
+              pauseOnHover={true}
+              className="my-8"
             />
 
             {/* Add Testimonial Button - Only show if user is logged in */}
@@ -1210,22 +1230,9 @@ const StyledWrapper = styled.div`
   }
 
   .book-cover-wrapper {
-    perspective: 1000px;
     display: flex;
     justify-content: center;
-  }
-
-  .book-cover-image {
-    width: 100%;
-    max-width: 350px;
-    border-radius: 0.75rem;
-    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-    transition: transform 0.4s ease;
-    transform: rotateY(-15deg) rotateX(5deg);
-
-    &:hover {
-      transform: rotateY(0) rotateX(0) scale(1.05);
-    }
+    align-items: center;
   }
 
   .book-details {
