@@ -1,17 +1,18 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, lazy, Suspense } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import { hasValidLocation } from '../utils/locationHelpers';
-import { Player } from '@lottiefiles/react-lottie-player';
-import animationData from '../assets/honeybee.json';
 import atomicHabitsCover from '../assets/atomic_habits.png';
 import { useInView } from 'react-intersection-observer';
 import CountUp from 'react-countup';
-import LocationPermission from '../components/LocationPermission';
-import TestimonialModal from '../components/TestimonialModal';
 import { testimonialAPI, usersAPI } from '../utils/api';
+
+// Lazy load heavy components
+const Player = lazy(() => import('@lottiefiles/react-lottie-player').then(module => ({ default: module.Player })));
+const LocationPermission = lazy(() => import('../components/LocationPermission'));
+const TestimonialModal = lazy(() => import('../components/TestimonialModal'));
 import {
   BookOpen,
   Users,
@@ -33,6 +34,16 @@ import TiltedCard from '../components/ui/TiltedCard';
 import SEO from '../components/SEO';
 import { PAGE_SEO, generateStructuredData } from '../utils/seo';
 import { InfiniteMovingCards } from '../components/ui/infinite-moving-cards';
+
+// Lazy load animation data
+let animationData = null;
+const loadAnimationData = async () => {
+  if (!animationData) {
+    const module = await import('../assets/honeybee.json');
+    animationData = module.default;
+  }
+  return animationData;
+};
 
 // Authentication Modal Component
 const AuthModal = ({ isOpen, onClose }) => {
@@ -70,6 +81,7 @@ const AuthModal = ({ isOpen, onClose }) => {
 const Home = () => {
   const { user } = useContext(AuthContext);
   const [quoteIndex, setQuoteIndex] = useState(0);
+  const [lottieData, setLottieData] = useState(null);
 
   // Get current month name
   const getCurrentMonth = () => {
@@ -99,6 +111,10 @@ const Home = () => {
     const interval = setInterval(() => {
       setQuoteIndex((prevIndex) => (prevIndex + 1) % quotes.length);
     }, 4000);
+    
+    // Load animation data lazily
+    loadAnimationData().then(data => setLottieData(data));
+    
     return () => clearInterval(interval);
   }, [quotes.length]);
 
@@ -289,7 +305,11 @@ const Home = () => {
         {/* Hero Section */}
         <section className="hero-section">
           <div className="lottie-background">
-            <Player autoplay loop speed={0.49} src={animationData} style={{ height: '100%', width: '100%' }} />
+            {lottieData && (
+              <Suspense fallback={<div style={{ height: '100%', width: '100%', background: 'transparent' }} />}>
+                <Player autoplay loop speed={0.49} src={lottieData} style={{ height: '100%', width: '100%' }} />
+              </Suspense>
+            )}
           </div>
           <div className="background-gradient"></div>
           <div className="content-container">
@@ -901,15 +921,19 @@ const Home = () => {
 
         {/* Location Permission Modal */}
         {showLocationModal && (
-          <LocationPermission onClose={() => setShowLocationModal(false)} />
+          <Suspense fallback={null}>
+            <LocationPermission onClose={() => setShowLocationModal(false)} />
+          </Suspense>
         )}
 
         {/* Testimonial Modal - Only show if user is logged in */}
         {showTestimonialModal && user && (
-          <TestimonialModal
-            onClose={() => setShowTestimonialModal(false)}
-            onSubmit={handleTestimonialSubmit}
-          />
+          <Suspense fallback={null}>
+            <TestimonialModal
+              onClose={() => setShowTestimonialModal(false)}
+              onSubmit={handleTestimonialSubmit}
+            />
+          </Suspense>
         )}
 
         {/* Authentication Modal */}

@@ -17,11 +17,28 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = sessionManager.getToken();
     if (token && sessionManager.isTokenValid()) {
-      fetchProfile();
+      // Try to load cached user data first for instant display
+      const cachedUser = localStorage.getItem('cachedUser');
+      if (cachedUser) {
+        try {
+          const parsedUser = JSON.parse(cachedUser);
+          setUser(parsedUser);
+          setLoading(false); // Show UI immediately with cached data
+          
+          // Fetch fresh data in background
+          fetchProfile(true); // Pass true to indicate background refresh
+        } catch (error) {
+          // If cache is corrupted, fetch normally
+          fetchProfile();
+        }
+      } else {
+        fetchProfile();
+      }
     } else {
       if (token) {
         // Token exists but is invalid/expired
         sessionManager.removeToken();
+        localStorage.removeItem('cachedUser');
       }
       setLoading(false);
     }
@@ -29,6 +46,7 @@ export const AuthProvider = ({ children }) => {
     // Listen for session expiration events
     const handleSessionExpired = () => {
       setUser(null);
+      localStorage.removeItem('cachedUser');
       toast.error('Your session has expired. Please login again.');
       navigate('/login');
     };
@@ -37,11 +55,13 @@ export const AuthProvider = ({ children }) => {
     return () => window.removeEventListener('sessionExpired', handleSessionExpired);
   }, [navigate]);
   
-  const fetchProfile = async () => {
+  const fetchProfile = async (isBackgroundRefresh = false) => {
     try {
       const token = sessionManager.getToken();
       if (!token) {
-        setLoading(false);
+        if (!isBackgroundRefresh) {
+          setLoading(false);
+        }
         return;
       }
 
@@ -55,7 +75,7 @@ export const AuthProvider = ({ children }) => {
       }
       
       // server returns flat user fields; normalize to `user` shape
-      setUser({
+      const userData = {
         _id: data._id,
         name: data.name,
         email: data.email,
@@ -65,15 +85,47 @@ export const AuthProvider = ({ children }) => {
         isOrganizer: data.isOrganizer || false, // Include organizer flag
         verified: data.verified || false, // Include verified status for organizer checks
         organizerProfile: data.organizerProfile || null, // Include organizer profile
-      });
+      };
+      
+      setUser(userData);
+      
+      // Cache user data for faster subsequent loads
+      try {
+        localStorage.setItem('cachedUser', JSON.stringify(userData));
+      } catch (cacheError) {
+        // Ignore cache errors (e.g., quota exceeded)
+        console.warn('Failed to cache user data:', cacheError);
+      }
     } catch (error) {
       console.error('Failed to fetch profile', error);
+      
+      // If it's a background refresh and fails, keep the cached data
+      if (isBackgroundRefresh) {
+        console.log('Background refresh failed, keeping cached data');
+        return;
+      }
+      
       if (error?.response?.status === 401) {
         sessionManager.removeToken();
+        localStorage.removeItem('cachedUser');
         setUser(null);
+      } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        // Timeout error - show cached data if available
+        const cachedUser = localStorage.getItem('cachedUser');
+        if (cachedUser) {
+          try {
+            setUser(JSON.parse(cachedUser));
+            toast.error('Slow connection detected. Showing cached data.');
+          } catch (e) {
+            // Cache corrupted
+            localStorage.removeItem('cachedUser');
+          }
+        }
       }
     } finally {
-      setLoading(false);
+      if (!isBackgroundRefresh) {
+        setLoading(false);
+      }
     }
   };
 
@@ -127,6 +179,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
       sessionManager.removeToken();
+      localStorage.removeItem('cachedUser');
       setUser(null);
       toast.success('Logged out successfully.');
       navigate('/login');
