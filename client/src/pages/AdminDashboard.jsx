@@ -47,6 +47,7 @@ import toast from 'react-hot-toast';
 import ActionSuccessModal from '../components/admin/ActionSuccessModal';
 import ReportDetailsModal from '../components/admin/ReportDetailsModal';
 import beeIcon from '../assets/icons8-bee-100.png';
+import { io } from 'socket.io-client';
 
 // Import new admin components
 import BookSharingActivity from '../components/admin/BookSharingActivity';
@@ -95,6 +96,11 @@ const AdminDashboard = () => {
   // Analytics-specific state
   const [analyticsFilter, setAnalyticsFilter] = useState('7d');
 
+  // Reviews-specific state
+  const [selectedReview, setSelectedReview] = useState(null);
+  const [filterRating, setFilterRating] = useState('all');
+  const [reviewSortBy, setReviewSortBy] = useState('createdAt');
+
   // Settings-specific state
   const [settings, setSettings] = useState({
     emailNotifications: true,
@@ -122,6 +128,40 @@ const AdminDashboard = () => {
     report: null
   });
 
+  // Notification counts for all tabs
+  const [notificationCounts, setNotificationCounts] = useState({
+    users: 0,
+    books: 0,
+    booksForSale: 0,
+    borrows: 0,
+    clubs: 0,
+    organizerApplications: 0,
+    events: 0,
+    reviews: 0,
+    reports: 0
+  });
+
+  // Track which tabs have been visited to clear badges
+  const [visitedTabs, setVisitedTabs] = useState(new Set());
+
+  // Helper function to get notification badge
+  const getNotificationBadge = (count, tabName) => {
+    // Don't show badge if tab has been visited
+    if (visitedTabs.has(tabName)) return null;
+    if (!count || count === 0) return null;
+    return (
+      <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+        {count > 99 ? '99+' : count}
+      </span>
+    );
+  };
+
+  // Handle tab change and mark as visited
+  const handleTabChange = (tabName) => {
+    setActiveTab(tabName);
+    setVisitedTabs(prev => new Set([...prev, tabName]));
+  };
+
   // Check if user has admin access - let server validate
   // Always allow access for the super admin email, let server handle final validation
   const hasAdminAccess = user && (
@@ -138,6 +178,103 @@ const AdminDashboard = () => {
       fetchDashboardData();
     }
   }, [user]);
+
+  // Setup socket for real-time admin notifications
+  useEffect(() => {
+    if (!user || !hasAdminAccess) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+    const socket = io(base, { auth: { token }, transports: ['websocket', 'polling'] });
+
+    // Listen for various admin events
+    socket.on('borrow_request:new', () => {
+      setNotificationCounts(prev => ({ ...prev, borrows: prev.borrows + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('borrows');
+        return newSet;
+      });
+    });
+
+    socket.on('user:new', () => {
+      setNotificationCounts(prev => ({ ...prev, users: prev.users + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('users');
+        return newSet;
+      });
+    });
+
+    socket.on('book:new', () => {
+      setNotificationCounts(prev => ({ ...prev, books: prev.books + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('books');
+        return newSet;
+      });
+    });
+
+    socket.on('book_for_sale:new', () => {
+      setNotificationCounts(prev => ({ ...prev, booksForSale: prev.booksForSale + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('books-for-sale');
+        return newSet;
+      });
+    });
+
+    socket.on('book_club:new', () => {
+      setNotificationCounts(prev => ({ ...prev, clubs: prev.clubs + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('clubs');
+        return newSet;
+      });
+    });
+
+    socket.on('organizer_application:new', () => {
+      setNotificationCounts(prev => ({ ...prev, organizerApplications: prev.organizerApplications + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('organizer-applications');
+        return newSet;
+      });
+    });
+
+    socket.on('event:new', () => {
+      setNotificationCounts(prev => ({ ...prev, events: prev.events + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('events');
+        return newSet;
+      });
+    });
+
+    socket.on('review:new', () => {
+      setNotificationCounts(prev => ({ ...prev, reviews: prev.reviews + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('reviews');
+        return newSet;
+      });
+    });
+
+    socket.on('report:new', () => {
+      setNotificationCounts(prev => ({ ...prev, reports: prev.reports + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('reports');
+        return newSet;
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user, hasAdminAccess]);
 
   useEffect(() => {
     // Let server handle auth validation for each request
@@ -161,6 +298,9 @@ const AdminDashboard = () => {
         case 'reports':
           fetchReports();
           break;
+        case 'reviews':
+          fetchReviews();
+          break;
         case 'analytics':
           fetchAnalytics();
           break;
@@ -168,7 +308,7 @@ const AdminDashboard = () => {
           break;
       }
     }
-  }, [user, activeTab, filters, pagination.page]);
+  }, [user, activeTab, filters, pagination.page, filterRating, reviewSortBy]);
 
   // Reset to first page when books filters change
   useEffect(() => {
@@ -179,7 +319,22 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       const response = await adminAPIService.getDashboard();
-      setDashboardData(response.data.data);
+      const data = response.data.data;
+      setDashboardData(data);
+      
+      // Update notification counts based on dashboard data
+      setNotificationCounts({
+        users: data.overview?.newUsersToday || 0,
+        books: data.overview?.pendingBooks || 0,
+        booksForSale: data.overview?.newBooksForSaleToday || 0,
+        borrows: data.overview?.pendingBorrowRequests || 0,
+        clubs: data.overview?.newBookClubsToday || 0,
+        organizerApplications: data.overview?.pendingOrganizerApplications || 0,
+        events: data.overview?.upcomingEvents || 0,
+        reviews: data.overview?.pendingReviews || 0,
+        reports: data.overview?.unresolvedReports || 0
+      });
+      
       setError(null);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -330,6 +485,37 @@ const AdminDashboard = () => {
       console.error('Error fetching reports:', error);
       setReports([]);
       setTabErrors(prev => ({ ...prev, reports: 'Failed to load reports' }));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        page: pagination.page,
+        limit: pagination.limit,
+        sortBy: reviewSortBy,
+        order: 'desc'
+      };
+      if (filterRating !== 'all') params.rating = filterRating;
+
+      const [reviewsRes, statsRes] = await Promise.all([
+        reviewsAPI.getAllReviews(params),
+        reviewsAPI.getReviewStats()
+      ]);
+
+      setReviews(reviewsRes.data.reviews);
+      setReviewStats(statsRes.data);
+      setPagination(prev => ({
+        ...prev,
+        total: reviewsRes.data.total,
+        pages: reviewsRes.data.totalPages
+      }));
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      setTabErrors(prev => ({ ...prev, reviews: 'Failed to load reviews' }));
     } finally {
       setLoading(false);
     }
@@ -2086,43 +2272,6 @@ const AdminDashboard = () => {
   };
 
   const renderReviews = () => {
-    const [selectedReview, setSelectedReview] = useState(null);
-    const [filterRating, setFilterRating] = useState('all');
-    const [sortBy, setSortBy] = useState('createdAt');
-
-    useEffect(() => {
-      const fetchReviews = async () => {
-        try {
-          const params = {
-            page: pagination.page,
-            limit: pagination.limit,
-            sortBy,
-            order: 'desc'
-          };
-          if (filterRating !== 'all') params.rating = filterRating;
-
-          const [reviewsRes, statsRes] = await Promise.all([
-            reviewsAPI.getAllReviews(params),
-            reviewsAPI.getReviewStats()
-          ]);
-
-          setReviews(reviewsRes.data.reviews);
-          setReviewStats(statsRes.data);
-          setPagination(prev => ({
-            ...prev,
-            total: reviewsRes.data.total,
-            pages: reviewsRes.data.totalPages
-          }));
-        } catch (error) {
-          console.error('Error fetching reviews:', error);
-          setTabErrors(prev => ({ ...prev, reviews: 'Failed to load reviews' }));
-        }
-      };
-
-      if (activeTab === 'reviews') {
-        fetchReviews();
-      }
-    }, [activeTab, pagination.page, filterRating, sortBy]);
 
     const handleDeleteReview = async (reviewId) => {
       if (!window.confirm('Are you sure you want to delete this review? This action cannot be undone.')) return;
@@ -2215,8 +2364,8 @@ const AdminDashboard = () => {
             </select>
 
             <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              value={reviewSortBy}
+              onChange={(e) => setReviewSortBy(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="createdAt">Most Recent</option>
@@ -2229,8 +2378,8 @@ const AdminDashboard = () => {
 
         {/* Reviews List */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div>
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">From User</th>
@@ -3045,7 +3194,7 @@ const AdminDashboard = () => {
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">MAIN</div>
 
             <button
-              onClick={() => setActiveTab('overview')}
+              onClick={() => handleTabChange('overview')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'overview'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -3056,7 +3205,7 @@ const AdminDashboard = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab('books')}
+              onClick={() => handleTabChange('books')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'books'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -3064,10 +3213,11 @@ const AdminDashboard = () => {
             >
               <BookOpen className="w-4 h-4 mr-3" />
               Books
+              {getNotificationBadge(notificationCounts.books, 'books')}
             </button>
 
             <button
-              onClick={() => setActiveTab('books-for-sale')}
+              onClick={() => handleTabChange('books-for-sale')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'books-for-sale'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -3075,10 +3225,11 @@ const AdminDashboard = () => {
             >
               <ShoppingCart className="w-4 h-4 mr-3" />
               Books for Sale
+              {getNotificationBadge(notificationCounts.booksForSale, 'books-for-sale')}
             </button>
 
             <button
-              onClick={() => setActiveTab('users')}
+              onClick={() => handleTabChange('users')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'users'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -3086,10 +3237,11 @@ const AdminDashboard = () => {
             >
               <Users className="w-4 h-4 mr-3" />
               Users
+              {getNotificationBadge(notificationCounts.users, 'users')}
             </button>
 
             <button
-              onClick={() => setActiveTab('borrows')}
+              onClick={() => handleTabChange('borrows')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'borrows'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -3097,10 +3249,11 @@ const AdminDashboard = () => {
             >
               <ArrowLeftRight className="w-4 h-4 mr-3" />
               Borrow Requests
+              {getNotificationBadge(notificationCounts.borrows, 'borrows')}
             </button>
 
             <button
-              onClick={() => setActiveTab('clubs')}
+              onClick={() => handleTabChange('clubs')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'clubs'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -3108,9 +3261,10 @@ const AdminDashboard = () => {
             >
               <Users className="w-4 h-4 mr-3" />
               Book Clubs
+              {getNotificationBadge(notificationCounts.clubs, 'clubs')}
             </button>
             <button
-              onClick={() => setActiveTab('organizer-applications')}
+              onClick={() => handleTabChange('organizer-applications')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'organizer-applications'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -3118,10 +3272,11 @@ const AdminDashboard = () => {
             >
               <UserCheck className="w-4 h-4 mr-3" />
               Organizer Applications
+              {getNotificationBadge(notificationCounts.organizerApplications, 'organizer-applications')}
             </button>
 
             <button
-              onClick={() => setActiveTab('events')}
+              onClick={() => handleTabChange('events')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'events'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -3129,11 +3284,12 @@ const AdminDashboard = () => {
             >
               <Calendar className="w-4 h-4 mr-3" />
               Events
+              {getNotificationBadge(notificationCounts.events, 'events')}
             </button>
 
 
             <button
-              onClick={() => setActiveTab('reviews')}
+              onClick={() => handleTabChange('reviews')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'reviews'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -3141,10 +3297,11 @@ const AdminDashboard = () => {
             >
               <Star className="w-4 h-4 mr-3" />
               Reviews
+              {getNotificationBadge(notificationCounts.reviews, 'reviews')}
             </button>
 
             <button
-              onClick={() => setActiveTab('analytics')}
+              onClick={() => handleTabChange('analytics')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'analytics'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -3155,7 +3312,7 @@ const AdminDashboard = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab('reports')}
+              onClick={() => handleTabChange('reports')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'reports'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -3163,12 +3320,13 @@ const AdminDashboard = () => {
             >
               <FileText className="w-4 h-4 mr-3" />
               Reports
+              {getNotificationBadge(notificationCounts.reports, 'reports')}
             </button>
 
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 mt-6">SETTINGS</div>
 
             <button
-              onClick={() => setActiveTab('settings')}
+              onClick={() => handleTabChange('settings')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'settings'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -3179,7 +3337,7 @@ const AdminDashboard = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab('help')}
+              onClick={() => handleTabChange('help')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'help'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'

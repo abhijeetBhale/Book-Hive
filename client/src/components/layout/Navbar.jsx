@@ -254,13 +254,13 @@ const Navbar = () => {
       { to: '/friends', text: 'Friends', icon: <Heart size={24} />, badgeKey: 'friends' },
     ];
 
-    // Organizers access "My Events" through the Events page tabs
-    // No separate navigation item needed
-
     return userLinks;
   };
 
   const navLinks = getNavLinks();
+
+  // Compute aggregated admin badge count
+  const adminBadgeCount = badges.events + badges.reports + badges.topBooks + badges.topCategories + badges.recentActivity + badges.bookSharing + badges.organizerApplications + badges.adminBorrowRequests;
 
   // Clear badge when navigating to a page
   useEffect(() => {
@@ -281,6 +281,8 @@ const Navbar = () => {
                 <span className="text-2xl font-bold text-gray-800">BookHive</span>
               </Link>
             </div>
+
+            {/* Desktop Navigation */}
             <div className="hidden min-[1201px]:block">
               <div className="flex items-center space-x-20">
                 {user &&
@@ -289,16 +291,14 @@ const Navbar = () => {
                       key={link.to}
                       to={link.to}
                       className={({ isActive }) =>
-                        `transition-colors duration-300 ${isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'
-                        }`
+                        `transition-colors duration-300 ${isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'}`
                       }
-                      title={link.text} // Tooltip for desktop
+                      title={link.text}
                     >
                       {({ isActive }) => (
                         <div className="relative flex flex-col items-center pt-4 pb-4">
                           <div className="relative">
                             {link.icon}
-                            {/* iOS-style notification dot - positioned at top-right corner of icon */}
                             {badges[link.badgeKey] > 0 && (
                               <span
                                 className="absolute bg-red-500 rounded-full shadow-lg"
@@ -313,10 +313,8 @@ const Navbar = () => {
                               />
                             )}
                           </div>
-                          {/* Active indicator */}
                           <span
-                            className={`absolute bottom-1 h-1.5 w-3.5 right-0.9 rounded-full bg-green-500 transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'
-                              }`}
+                            className={`absolute bottom-1 h-1.5 w-3.5 right-0.9 rounded-full bg-green-500 transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}
                           ></span>
                         </div>
                       )}
@@ -324,14 +322,16 @@ const Navbar = () => {
                   ))}
               </div>
             </div>
+
+            {/* Right Side Actions */}
             <div className="hidden min-[1201px]:block">
               {user ? (
                 <div className="flex items-center gap-4">
-                  {/* Admin Dashboard Button - Only for superadmin */}
-                  {/* {user.email === 'abhijeetbhale7@gmail.com' && (user.role === 'admin' || user.role === 'superadmin') && (
+                  {/* Admin Dashboard Button */}
+                  {(user.role === 'admin' || user.role === 'superadmin') && (
                     <Link
                       to="/admin-dashboard-secure"
-                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2"
+                      className="relative px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2"
                       title="Admin Dashboard"
                     >
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -340,10 +340,23 @@ const Navbar = () => {
                         <path d="M2 12l10 5 10-5"></path>
                       </svg>
                       Admin
+                      {adminBadgeCount > 0 && (
+                        <span
+                          className="absolute bg-red-500 rounded-full shadow-lg"
+                          style={{
+                            width: '10px',
+                            height: '10px',
+                            border: '2px solid white',
+                            top: '-2px',
+                            right: '-2px',
+                            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                          }}
+                        />
+                      )}
                     </Link>
-                  )} */}
-                  
-                  {/* Real-time Notification Bell */}
+                  )}
+
+                  {/* Notification Bell */}
                   <div className="relative" style={{ zIndex: 10000 }}>
                     <button
                       onClick={() => {
@@ -365,11 +378,6 @@ const Navbar = () => {
                       <div
                         ref={dropdownRef}
                         className="absolute right-0 top-12 w-96 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-lg shadow-lg z-[9999]"
-                        style={{
-                          position: 'absolute',
-                          zIndex: 9999,
-                          pointerEvents: 'auto'
-                        }}
                       >
                         <div className="p-3 border-b border-gray-100">
                           <div className="flex items-center justify-between">
@@ -377,33 +385,18 @@ const Navbar = () => {
                             <Link
                               to="/profile#notifications"
                               className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                              onClick={() => {
-                                setShowNotificationDropdown(false);
-                              }}
+                              onClick={() => setShowNotificationDropdown(false)}
                             >
                               View All
                             </Link>
                           </div>
                         </div>
-                        <div
-                          className="max-h-96 overflow-y-auto relative"
-                          style={{
-                            scrollbarWidth: 'thin',
-                            scrollbarColor: '#d1d5db #f3f4f6'
-                          }}
-                        >
-                          {realtimeNotifications.length > 5 && (
-                            <div className="absolute top-0 right-2 text-xs text-gray-400 bg-white px-2 py-1 rounded-b shadow-sm z-10">
-                              Scroll for more
-                            </div>
-                          )}
+                        <div className="max-h-96 overflow-y-auto relative custom-scrollbar">
                           {realtimeNotifications.length > 0 ? (
                             realtimeNotifications.map((notification) => (
                               <div
                                 key={notification._id}
-                                className={`p-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors relative ${notification.isRead ? 'opacity-75' : ''
-                                  }`}
-                                style={{ zIndex: 1 }}
+                                className={`p-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors relative ${notification.isRead ? 'opacity-75' : ''}`}
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
@@ -418,24 +411,16 @@ const Navbar = () => {
                                     <div className="flex items-start justify-between">
                                       <div className="flex-1 pr-2">
                                         {notification.title && (
-                                          <p className="text-sm font-semibold text-gray-900 mb-1">
-                                            {notification.title}
-                                          </p>
+                                          <p className="text-sm font-semibold text-gray-900 mb-1">{notification.title}</p>
                                         )}
-                                        <p className="text-sm text-gray-700">
-                                          {notification.message}
-                                        </p>
+                                        <p className="text-sm text-gray-700">{notification.message}</p>
                                       </div>
                                       <div className="flex items-center gap-2">
                                         {!notification.isRead && (
                                           <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
                                         )}
                                         <button
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            handleDeleteNotification(notification._id, e);
-                                          }}
+                                          onClick={(e) => handleDeleteNotification(notification._id, e)}
                                           className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all duration-200 rounded hover:bg-red-50"
                                           title="Delete notification"
                                         >
@@ -444,11 +429,7 @@ const Navbar = () => {
                                       </div>
                                     </div>
                                     <p className="text-xs text-gray-500 mt-1">
-                                      {new Date(notification.createdAt).toLocaleTimeString([], {
-                                        hour: 'numeric',
-                                        minute: '2-digit',
-                                        hour12: true
-                                      })}
+                                      {new Date(notification.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
                                     </p>
                                   </div>
                                 </div>
@@ -479,33 +460,16 @@ const Navbar = () => {
                   <Button onClick={logout} variant="secondary" className="cursor-pointer">
                     Logout
                   </Button>
-                  {/* Admin Dashboard Button - Only for superadmin */}
-                  {user.email === 'abhijeetbhale7@gmail.com' && (user.role === 'admin' || user.role === 'superadmin') && (
-                    <Link
-                      to="/admin-dashboard-secure"
-                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2"
-                      title="Admin Dashboard"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                        <path d="M2 17l10 5 10-5"></path>
-                        <path d="M2 12l10 5 10-5"></path>
-                      </svg>
-                      Admin
-                    </Link>
-                  )}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <Link to="/login">
-                    <LoginButton />
-                  </Link>
-                  <Link to="/register">
-                    <SignButton />
-                  </Link>
+                  <Link to="/login"><LoginButton /></Link>
+                  <Link to="/register"><SignButton /></Link>
                 </div>
               )}
             </div>
+
+            {/* Mobile Menu Button */}
             <div className="-mr-2 flex min-[1201px]:hidden">
               <button
                 onClick={() => setIsOpen(!isOpen)}
@@ -518,6 +482,7 @@ const Navbar = () => {
           </div>
         </div>
 
+        {/* Mobile Menu */}
         {isOpen && (
           <div className="min-[1201px]:hidden absolute w-full bg-white border-b border-gray-200 shadow-lg">
             <div className="px-4 pt-4 pb-4">
@@ -528,15 +493,13 @@ const Navbar = () => {
                       key={link.to}
                       to={link.to}
                       className={({ isActive }) =>
-                        `transition-colors duration-300 text-base ${isActive ? 'text-primary font-semibold' : 'text-gray-700 hover:text-primary'
-                        }`
+                        `transition-colors duration-300 text-base ${isActive ? 'text-primary font-semibold' : 'text-gray-700 hover:text-primary'}`
                       }
                       onClick={() => setIsOpen(false)}
                     >
                       <div className="relative flex items-end gap-3 py-2 px-4 rounded-lg hover:bg-gray-50">
                         <span className="relative inline-block flex-shrink-0">
                           {link.icon}
-                          {/* iOS-style notification dot for mobile - top-right corner */}
                           {badges[link.badgeKey] > 0 && (
                             <span
                               className="absolute bg-red-500 rounded-full shadow-lg"
@@ -555,7 +518,6 @@ const Navbar = () => {
                     </NavLink>
                   ))}
 
-                  {/* Mobile Notification Bell */}
                   <button
                     onClick={() => {
                       setShowNotificationCenter(true);
@@ -593,10 +555,9 @@ const Navbar = () => {
                     <span>Profile</span>
                   </Link>
 
-                  {/* Admin Dashboard Button - Mobile - Only for superadmin */}
-                  {user.email === 'abhijeetbhale7@gmail.com' && (user.role === 'admin' || user.role === 'superadmin') && (
+                  {(user.role === 'admin' || user.role === 'superadmin') && (
                     <Link
-                      to="/admin"
+                      to="/admin-dashboard-secure"
                       className="flex items-center gap-3 py-2 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 shadow-md"
                       onClick={() => setIsOpen(false)}
                     >
@@ -606,10 +567,16 @@ const Navbar = () => {
                         <path d="M2 12l10 5 10-5"></path>
                       </svg>
                       <span className="font-semibold">Admin Dashboard</span>
+                      {adminBadgeCount > 0 && (
+                        <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                          {adminBadgeCount}
+                        </span>
+                      )}
                     </Link>
                   )}
                 </div>
               )}
+
               <div className="mt-4 pt-4 border-t border-gray-200">
                 {user ? (
                   <Button
@@ -624,12 +591,8 @@ const Navbar = () => {
                   </Button>
                 ) : (
                   <div className="flex flex-col items-center gap-3">
-                    <Link to="/login" onClick={() => setIsOpen(false)}>
-                      <LoginButton />
-                    </Link>
-                    <Link to="/register" onClick={() => setIsOpen(false)}>
-                      <SignButton />
-                    </Link>
+                    <Link to="/login" onClick={() => setIsOpen(false)}><LoginButton /></Link>
+                    <Link to="/register" onClick={() => setIsOpen(false)}><SignButton /></Link>
                   </div>
                 )}
               </div>
@@ -638,13 +601,10 @@ const Navbar = () => {
         )}
       </nav>
 
-      {/* Notification Center */}
       <NotificationCenter
         isOpen={showNotificationCenter}
         onClose={() => setShowNotificationCenter(false)}
       />
-
-
     </header>
   );
 };

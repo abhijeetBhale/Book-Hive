@@ -543,22 +543,25 @@ const FriendsPage = () => {
             <FriendsList>
               {getSortedFilteredFriends().length > 0 ? (
                 getSortedFilteredFriends().map(friendship => {
-                  const friend = friendship.requester._id === user._id
+                  const friend = friendship.requester?._id === user._id
                     ? friendship.recipient
                     : friendship.requester;
+
+                  // Skip if friend data is null or undefined
+                  if (!friend) return null;
 
                   return (
                     <FriendItem key={friendship._id}>
                       <UserInfo>
                         <Avatar
                           src={friend.avatar}
-                          style={{ backgroundColor: getAvatarColor(friend.name) }}
+                          style={{ backgroundColor: getAvatarColor(friend.name || 'Unknown') }}
                         >
-                          {!friend.avatar && getInitials(friend.name)}
+                          {!friend.avatar && getInitials(friend.name || 'Unknown')}
                         </Avatar>
                         <UserDetails>
-                          <UserName>{friend.name}</UserName>
-                          <UserEmail>{friend.email}</UserEmail>
+                          <UserName>{friend.name || 'Unknown User'}</UserName>
+                          <UserEmail>{friend.email || 'No email'}</UserEmail>
                         </UserDetails>
                       </UserInfo>
                       <Actions>
@@ -588,20 +591,24 @@ const FriendsPage = () => {
             <SectionHeader>Pending Friend Requests</SectionHeader>
             <FriendsList>
               {data.pending?.length > 0 ? (
-                data.pending.map(request => (
-                  <FriendItem key={request._id}>
-                    <UserInfo>
-                      <Avatar
-                        src={request.requester.avatar}
-                        style={{ backgroundColor: getAvatarColor(request.requester.name) }}
-                      >
-                        {!request.requester.avatar && getInitials(request.requester.name)}
-                      </Avatar>
-                      <UserDetails>
-                        <UserName>{request.requester.name}</UserName>
-                        <UserEmail>{request.requester.email}</UserEmail>
-                      </UserDetails>
-                    </UserInfo>
+                data.pending.map(request => {
+                  // Skip if requester data is null or undefined
+                  if (!request.requester) return null;
+                  
+                  return (
+                    <FriendItem key={request._id}>
+                      <UserInfo>
+                        <Avatar
+                          src={request.requester.avatar}
+                          style={{ backgroundColor: getAvatarColor(request.requester.name || 'Unknown') }}
+                        >
+                          {!request.requester.avatar && getInitials(request.requester.name || 'Unknown')}
+                        </Avatar>
+                        <UserDetails>
+                          <UserName>{request.requester.name || 'Unknown User'}</UserName>
+                          <UserEmail>{request.requester.email || 'No email'}</UserEmail>
+                        </UserDetails>
+                      </UserInfo>
                     <Actions>
                       <ActionButton
                         variant="primary"
@@ -619,7 +626,8 @@ const FriendsPage = () => {
                       </ActionButton>
                     </Actions>
                   </FriendItem>
-                ))
+                  );
+                })
               ) : (
                 <EmptyState>
                   <p>No pending friend requests</p>

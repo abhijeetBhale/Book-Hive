@@ -10,6 +10,7 @@ import ReviewsModal from '../components/ReviewsModal';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
 import AnimatedButton from '../components/ui/AnimatedButton';
 import UpgradeModal from '../components/ui/UpgradeModal';
+import { io } from 'socket.io-client';
 
 
 // --- Keyframes for Animations ---
@@ -686,6 +687,65 @@ const UserProfile = () => {
     window.addEventListener('review-updated', handleReviewUpdate);
     return () => window.removeEventListener('review-updated', handleReviewUpdate);
   }, [id]);
+
+  // Listen for friend request updates via socket
+  useEffect(() => {
+    if (!currentUser || !id || id === currentUser._id) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+    const socket = io(base, { auth: { token }, transports: ['websocket', 'polling'] });
+
+    // Listen for friend request accepted
+    socket.on('friend_request:updated', async (data) => {
+      // Check if this update involves the current profile being viewed
+      if (data.requesterId === id || data.recipientId === id) {
+        // Refresh friendship status
+        try {
+          const friendsResponse = await friendsAPI.getAll();
+          const { pending, sent, friends } = friendsResponse.data;
+
+          // Check if there's a pending request from this user to current user
+          const pendingRequest = pending.find(req => req.requester._id === id);
+          if (pendingRequest) {
+            setFriendshipStatus('pending');
+            setFriendshipId(pendingRequest._id);
+            return;
+          }
+
+          // Check if current user sent a request to this user
+          const sentRequest = sent.find(req => req.recipient._id === id);
+          if (sentRequest) {
+            setFriendshipStatus('sent');
+            setFriendshipId(sentRequest._id);
+            return;
+          }
+
+          // Check if they are already friends
+          const friendship = friends.find(f =>
+            (f.requester._id === id) || (f.recipient._id === id)
+          );
+          if (friendship) {
+            setFriendshipStatus('friends');
+            setFriendshipId(friendship._id);
+            return;
+          }
+
+          // No relationship exists
+          setFriendshipStatus(null);
+          setFriendshipId(null);
+        } catch (error) {
+          console.error('Error refreshing friendship status:', error);
+        }
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [currentUser, id]);
 
   const handleOpenDetailsModal = (book) => setViewingBook(book);
   const handleCloseDetailsModal = () => setViewingBook(null);
