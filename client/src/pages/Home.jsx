@@ -140,8 +140,7 @@ const Home = () => {
         setTestimonialsLoaded(true);
       } catch (error) {
         console.error('Failed to load testimonials:', error);
-        // Use default testimonials if API fails
-        setTestimonials(communityReviews);
+        setTestimonials([]);
         setTestimonialsLoaded(true);
       }
     };
@@ -262,32 +261,7 @@ const Home = () => {
   ];
 
   // Updated data to match the new testimonial card design
-  const communityReviews = [
-    {
-      user: 'Priya Sharma',
-      title: 'Avid Reader, Indore',
-      avatar: 'https://i.pravatar.cc/150?img=48', // Using a specific image seed
-      review: "Absolutely love this platform! It helped me discover so many local readers and hidden gems in my own city. A must-have for every book lover.",
-    },
-    {
-      user: 'Rohan Patel',
-      title: 'President, Mumbai Readers Club',
-      avatar: 'https://i.pravatar.cc/150?img=67', // Using a specific image seed
-      review: "BookHive is a game-changer for our book club. Managing borrows and discovering new books for discussion has never been easier.",
-    },
-    {
-      user: 'Anjali Menon',
-      title: 'Community Organizer, Delhi',
-      avatar: 'https://i.pravatar.cc/150?img=25', // Using a specific image seed
-      review: "A fantastic initiative that truly builds a community around the love for reading. It's safe, easy to use, and full of wonderful people.",
-    },
-    {
-      user: 'Vikram Singh',
-      title: 'Top Contributor, Bengaluru',
-      avatar: 'https://i.pravatar.cc/150?img=53', // Using a specific image seed
-      review: "As someone who loves sharing books, the process is seamless. The map feature is brilliant for finding books nearby. Highly recommended!",
-    },
-  ];
+  
 
   const { ref: howItWorksRef, inView: isHowItWorksVisible } = useInView({ threshold: 0.1 });
   const { ref: statsRef, inView: isStatsVisible } = useInView({ threshold: 0.3 });
@@ -843,19 +817,25 @@ const Home = () => {
             </div>
 
             {/* Infinite Moving Cards Component */}
-            <InfiniteMovingCards
-              items={(testimonials.length > 0 ? testimonials : communityReviews).map(testimonial => ({
-                photo: testimonial.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(testimonial.user || testimonial.name)}&background=4F46E5&color=ffffff&bold=true`,
-                name: testimonial.user || testimonial.name,
-                title: testimonial.title || '',
-                rating: testimonial.rating || 5,
-                content: testimonial.review || testimonial.content
-              }))}
-              direction="left"
-              speed="slow"
-              pauseOnHover={true}
-              className="my-8"
-            />
+            {testimonials.length > 0 ? (
+              <InfiniteMovingCards
+                items={testimonials.map(testimonial => ({
+                  photo: testimonial.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(testimonial.user || testimonial.name)}&background=4F46E5&color=ffffff&bold=true`,
+                  name: testimonial.user || testimonial.name,
+                  title: testimonial.title || '',
+                  rating: testimonial.rating || 5,
+                  content: testimonial.review || testimonial.content
+                }))}
+                direction="left"
+                speed="slow"
+                pauseOnHover={true}
+                className="my-8"
+              />
+            ) : (
+              <div className="text-center py-10">
+                <p className="text-gray-500 text-lg">No testimonials yet. Be the first to share your experience!</p>
+              </div>
+            )}
 
             {/* Add Testimonial Button - Only show if user is logged in */}
             {user ? (

@@ -48,7 +48,7 @@ export const InfiniteMovingCards = ({
 
   useEffect(() => {
     if (!containerRef.current || !scrollerRef.current) return;
-    
+
     // Set animation properties
     if (direction === "left") {
       containerRef.current.style.setProperty("--animation-direction", "forwards");
@@ -69,7 +69,7 @@ export const InfiniteMovingCards = ({
       const timer = setTimeout(() => {
         if (scrollerRef.current && !isDuplicatedRef.current) {
           const scrollerContent = Array.from(scrollerRef.current.children);
-          
+
           // Duplicate items for infinite scroll
           scrollerContent.forEach((item) => {
             const duplicatedItem = item.cloneNode(true);
@@ -77,7 +77,7 @@ export const InfiniteMovingCards = ({
               scrollerRef.current.appendChild(duplicatedItem);
             }
           });
-          
+
           isDuplicatedRef.current = true;
           setStart(true);
         }
@@ -105,7 +105,7 @@ export const InfiniteMovingCards = ({
       <ul
         ref={scrollerRef}
         className={cn(
-          "flex w-max min-w-full shrink-0 flex-nowrap gap-6 py-4",
+          "flex w-max min-w-full shrink-0 flex-nowrap gap-10 py-8",
           start && "animate-scroll",
           pauseOnHover && "hover:[animation-play-state:paused]"
         )}
