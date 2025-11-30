@@ -146,10 +146,10 @@ import axios from "axios";
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-// Create axios instance with timeout
+// Create axios instance with increased timeout for cold starts
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, // 10 second timeout
+  timeout: 60000, // 60 second timeout (for Render cold starts)
   headers: {
     "Content-Type": "application/json",
   },
@@ -173,7 +173,17 @@ api.interceptors.request.use(
 // Response interceptor for handling universal errors, like an expired session
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // Handle timeout errors with retry (for cold starts)
+    if (error.code === 'ECONNABORTED' && !originalRequest._retry) {
+      originalRequest._retry = true;
+      console.log('Request timed out, retrying with extended timeout...');
+      originalRequest.timeout = 90000; // 90 seconds for retry
+      return api(originalRequest);
+    }
+    
     if (error.response?.status === 401) {
       // Only redirect to login if we're not already on login/register pages
       const currentPath = window.location.pathname;

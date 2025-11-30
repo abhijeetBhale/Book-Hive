@@ -118,6 +118,16 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Initialize Passport
 app.use(passport.initialize());
 
+// Health check endpoint (before other routes)
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 // Mount routers
 app.use('/api/auth', authRoutes);
 app.use('/api/books', bookRoutes);
