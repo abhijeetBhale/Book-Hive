@@ -759,7 +759,10 @@ const UserProfile = () => {
     try {
       await borrowAPI.createRequest(bookId);
       const book = user.booksOwned?.find(b => b._id === bookId);
-      toast.success(`📚 Borrow request sent for "${book?.title || 'this book'}"!`, { duration: 5000 });
+      toast.success(`📚 Borrow request sent for "${book?.title || 'this book'}"! You'll be notified when ${user.name} responds.`, { 
+        duration: 5000,
+        icon: '✅'
+      });
       handleCloseDetailsModal();
     } catch (error) {
       const errorData = error.response?.data;

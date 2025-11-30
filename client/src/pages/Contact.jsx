@@ -184,10 +184,8 @@ const Contact = () => {
           <div className="footer-content">
             <div className="footer-left">
               <div className="footer-links">
-                <Link to="/">ABOUT</Link>
-                {/* <Link to="/">SERVICES</Link> */}
-                {/* <Link to="/books">OUR WORK</Link> */}
-                {/* <Link to="/contact">GET IN TOUCH</Link> */}
+                <Link to="/about">ABOUT</Link>
+                <Link to="/team">TEAM</Link>
                 <Link to="/terms">TERMS</Link>
                 <Link to="/privacy">PRIVACY POLICY</Link>
               </div>

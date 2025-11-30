@@ -22,6 +22,8 @@ import Contact from './pages/Contact';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Pricing from './pages/Pricing';
+import About from './pages/About';
+import Team from './pages/Team';
 import VerifyEmail from './pages/VerifyEmail';
 import Events from './pages/Events';
 import EventDetails from './pages/EventDetails';
@@ -133,6 +135,8 @@ function App() {
                     <Route path="/terms" element={<TermsOfService />} />
                     <Route path="/privacy" element={<PrivacyPolicy />} />
                     <Route path="/pricing" element={<Pricing />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/team" element={<Team />} />
 
                     <Route path="/books" element={<ProtectedRoute><Books /></ProtectedRoute>} />
                     <Route path="/books/:id" element={<ProtectedRoute><BookDetails /></ProtectedRoute>} />

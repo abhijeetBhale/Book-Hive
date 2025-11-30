@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import compression from 'compression';
 import cron from 'node-cron';
 import hpp from 'hpp';
 import passport from 'passport';
@@ -58,6 +59,18 @@ initializeApp();
 // Security middleware
 app.use(helmet());
 app.use(hpp());
+
+// Compression middleware - compress all responses
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  level: 6 // Compression level (0-9, 6 is default)
+}));
+
 app.use(
   cors({
     origin: [

@@ -8,7 +8,7 @@ import Friendship from '../models/Friendship.js';
 // @route   GET /api/users/profile
 export const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
     if (user) {
       res.json({
         _id: user._id,
@@ -28,7 +28,7 @@ export const getProfile = async (req, res) => {
 // @route   PUT /api/users/profile
 export const updateProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
     if (user) {
       user.name = req.body.name || user.name;
       user.email = req.body.email || user.email;
@@ -100,7 +100,7 @@ export const searchUsers = async (req, res) => {
 export const updateUserLocation = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
 
     if (user) {
       user.location = {
@@ -134,12 +134,12 @@ export const getUserLocation = async (req, res) => {
   }
 };
 
-// @desc    Get all users with their books
+// @desc    Get all users with their books (OPTIMIZED)
 // @route   GET /api/users/with-books
 export const getUsersWithBooks = async (req, res) => {
   try {
-    const { maxDistance, minRating } = req.query;
-    let query = {};
+    const { maxDistance, minRating, page = 1, limit = 50 } = req.query;
+    let query = { isActive: { $ne: false } }; // Only active users
     
     if (req.user && req.user.location && maxDistance) {
       query.location = {
@@ -157,45 +157,126 @@ export const getUsersWithBooks = async (req, res) => {
       query['rating.overallRating'] = { $gte: parseFloat(minRating) };
     }
     
-    const users = await User.find(query)
-      .select('name email avatar location booksOwned rating createdAt isOrganizer');
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
     
-    const usersWithBooks = await Promise.all(users.map(async (user) => {
-      const books = await Book.find({ owner: user._id })
-        .select('title author category isAvailable forBorrowing coverImage');
+    // OPTIMIZATION: Use aggregation pipeline for better performance
+    let usersWithBooks;
+    try {
+      usersWithBooks = await User.aggregate([
+        { $match: query },
+        { $skip: skip },
+        { $limit: parseInt(limit) },
+        {
+          $lookup: {
+            from: 'books',
+            localField: '_id',
+            foreignField: 'owner',
+            as: 'booksOwned',
+            pipeline: [
+              { $project: { title: 1, author: 1, category: 1, isAvailable: 1, forBorrowing: 1, coverImage: 1 } },
+              { $limit: 10 } // Limit books per user for performance
+            ]
+          }
+        },
+        {
+          $lookup: {
+            from: 'userstats',
+            localField: '_id',
+            foreignField: 'user',
+            as: 'stats'
+          }
+        },
+        {
+          $lookup: {
+            from: 'friendships',
+            let: { userId: '$_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ['$status', 'accepted'] },
+                      {
+                        $or: [
+                          { $eq: ['$requester', '$$userId'] },
+                          { $eq: ['$recipient', '$$userId'] }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              { $count: 'count' }
+            ],
+            as: 'friendsCount'
+          }
+        },
+        {
+          $addFields: {
+            friendsCount: { $ifNull: [{ $arrayElemAt: ['$friendsCount.count', 0] }, 0] },
+            contributions: {
+              $add: [
+                { $ifNull: [{ $arrayElemAt: ['$stats.sharing.booksLent', 0] }, 0] },
+                { $ifNull: [{ $arrayElemAt: ['$stats.sharing.booksBorrowed', 0] }, 0] }
+              ]
+            }
+          }
+        },
+        {
+          $project: {
+            name: 1,
+            email: 1,
+            avatar: 1,
+            location: 1,
+            rating: 1,
+            createdAt: 1,
+            isOrganizer: 1,
+            booksOwned: 1,
+            friendsCount: 1,
+            contributions: 1
+          }
+        }
+      ]);
       
-      // Fetch user stats for additional info
-      const stats = await UserStats.findOne({ user: user._id });
+      console.log(`getUsersWithBooks: Found ${usersWithBooks.length} users`);
+    } catch (aggError) {
+      console.error('Aggregation error:', aggError);
+      // Fallback to simple query if aggregation fails
+      const users = await User.find(query)
+        .select('name email avatar location rating createdAt isOrganizer')
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean();
       
-      // Count friends dynamically
-      const friendsCount = await Friendship.countDocuments({
-        $or: [
-          { requester: user._id, status: 'accepted' },
-          { recipient: user._id, status: 'accepted' }
-        ]
-      });
-      
-      const userObj = user.toObject();
-      userObj.booksOwned = books;
-      userObj.friendsCount = friendsCount;
-      
-      // Add additional stats
-      if (stats) {
-        userObj.contributions = (stats.sharing?.booksLent || 0) + (stats.sharing?.booksBorrowed || 0);
-      } else {
-        userObj.contributions = 0;
-      }
-      
-      // Apply location privacy - return display coordinates for map
-      if (userObj.location && userObj.location.displayCoordinates && userObj.location.displayCoordinates.length === 2) {
-        userObj.location.coordinates = userObj.location.displayCoordinates;
-        delete userObj.location.displayCoordinates; // Don't expose both sets of coordinates
-      }
-      
-      return userObj;
-    }));
+      usersWithBooks = users.map(user => ({
+        ...user,
+        booksOwned: [],
+        friendsCount: 0,
+        contributions: 0
+      }));
+    }
     
-    res.json({ users: usersWithBooks });
+    // Apply location privacy
+    usersWithBooks.forEach(user => {
+      if (user.location && user.location.displayCoordinates && user.location.displayCoordinates.length === 2) {
+        user.location.coordinates = user.location.displayCoordinates;
+        delete user.location.displayCoordinates;
+      }
+    });
+    
+    // Get total count for pagination
+    const total = await User.countDocuments(query);
+    
+    res.json({ 
+      users: usersWithBooks,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
   } catch (error) {
     console.error('Get users with books error:', error);
     res.status(500).json({ message: 'Server error getting users with books' });
@@ -242,7 +323,7 @@ export const getUserProfile = async (req, res) => {
 // @route   PUT /api/users/public-key
 export const updatePublicKey = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     user.publicKeyJwk = req.body.publicKeyJwk || null;
     await user.save();

@@ -281,7 +281,7 @@ export const messagesAPI = {
   sendFile: (recipientId, formData) => api.post(`/messages/send-file/${recipientId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
-  getConversations: () => api.get('/messages/conversations'),
+  getConversations: (params) => api.get('/messages/conversations', { params }),
   getConversationWith: (userId) => api.get(`/messages/with/${userId}`),
   clearConversation: (conversationId) => api.delete(`/messages/conversation/${conversationId}`),
   blockUser: (userId) => api.post(`/messages/block/${userId}`),

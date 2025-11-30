@@ -5,7 +5,7 @@ import Message from '../models/Message.js';
 
 export const sendFriendRequest = async (req, res) => {
   try {
-    const requesterId = req.user.id;
+    const requesterId = req.user._id; // Fixed: use _id instead of id
     const { userId: recipientId } = req.params;
     if (requesterId === recipientId) return res.status(400).json({ message: 'Cannot friend yourself' });
 
@@ -43,7 +43,7 @@ export const sendFriendRequest = async (req, res) => {
 
 export const respondToFriendRequest = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id; // Fixed: use _id instead of id
     const { requestId } = req.params;
     const { action } = req.body; // 'accept' | 'reject'
 
@@ -114,7 +114,17 @@ export const respondToFriendRequest = async (req, res) => {
 
 export const getFriendsAndRequests = async (req, res) => {
   try {
-    const userId = req.user.id;
+    console.log('getFriendsAndRequests called for user:', req.user?._id);
+    
+    if (!req.user || !req.user._id) {
+      console.error('getFriendsAndRequests: req.user or req.user._id is undefined');
+      return res.status(401).json({ 
+        success: false,
+        message: 'User not authenticated' 
+      });
+    }
+
+    const userId = req.user._id; // Fixed: use _id instead of id
     const pending = await Friendship.find({ recipient: userId, status: 'pending' }).populate('requester', 'name avatar email');
     const sent = await Friendship.find({ requester: userId, status: 'pending' }).populate('recipient', 'name avatar email');
     const accepted = await Friendship.find({ $or: [
@@ -125,13 +135,17 @@ export const getFriendsAndRequests = async (req, res) => {
     res.json({ pending, sent, friends: accepted });
   } catch (err) {
     console.error('getFriendsAndRequests error:', err.message);
-    res.status(500).json({ message: 'Server error fetching friends' });
+    console.error('Error stack:', err.stack);
+    res.status(500).json({ 
+      message: 'Server error fetching friends',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
 export const removeFriend = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id; // Fixed: use _id instead of id
     const { friendshipId } = req.params;
 
     const friendship = await Friendship.findById(friendshipId);
@@ -152,7 +166,7 @@ export const removeFriend = async (req, res) => {
 
 export const cancelFriendRequest = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id; // Fixed: use _id instead of id
     const { requestId } = req.params;
 
     const friendship = await Friendship.findById(requestId);

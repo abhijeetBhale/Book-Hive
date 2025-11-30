@@ -8,7 +8,24 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['warning', 'ban', 'account_deleted', 'info', 'success'],
+    enum: [
+      'warning', 
+      'ban', 
+      'account_deleted', 
+      'info', 
+      'success',
+      'borrow_request',
+      'request_approved',
+      'request_denied',
+      'review_prompt',
+      'friend_request',
+      'friend_accepted',
+      'message',
+      'book_returned',
+      'overdue_reminder',
+      'event_invitation',
+      'event_reminder'
+    ],
     required: true
   },
   title: {

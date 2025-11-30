@@ -342,6 +342,9 @@ userSchema.index({ location: '2dsphere' }); // Geospatial queries
 userSchema.index({ 'rating.starLevel': -1 }); // Sorting by rating
 userSchema.index({ lastActive: -1 }); // Admin dashboard queries
 userSchema.index({ createdAt: -1 }); // Sorting by join date
+userSchema.index({ isActive: 1 }); // Filter active users
+userSchema.index({ name: 'text', email: 'text' }); // Text search
+userSchema.index({ 'rating.overallRating': -1 }); // Rating queries
 
 const User = mongoose.model('User', userSchema)
 export default User

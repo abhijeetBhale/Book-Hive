@@ -14,13 +14,14 @@ import {
   getDeletionPreview
 } from "../controllers/accountDeletionController.js";
 import { protect } from "../middleware/auth.js";
+import { cacheMiddleware } from "../middleware/cache.js";
 
 const router = express.Router();
 
 router.get("/search", protect, searchUsers);
-router.get("/with-books", getUsersWithBooks);
-router.get("/:userId/location", getUserLocation);
-router.get("/:userId/profile", getUserProfile);
+router.get("/with-books", cacheMiddleware(30000), getUsersWithBooks); // Cache for 30 seconds
+router.get("/:userId/location", cacheMiddleware(60000), getUserLocation); // Cache for 1 minute
+router.get("/:userId/profile", cacheMiddleware(30000), getUserProfile); // Cache for 30 seconds
 router.get("/notifications/unread-count", protect, getUnreadNotificationCount);
 router.put("/notifications/mark-read", protect, markRelevantNotificationsRead);
 router.put("/public-key", protect, updatePublicKey);

@@ -147,8 +147,27 @@ export const loginUser = async (req, res) => {
 // @route   GET /api/auth/profile
 export const getProfile = async (req, res) => {
   try {
+    console.log('getProfile called for user:', req.user?._id);
+    
+    if (!req.user || !req.user._id) {
+      console.error('getProfile: req.user or req.user._id is undefined');
+      return res.status(401).json({ 
+        success: false,
+        message: 'User not authenticated' 
+      });
+    }
+
     // Fix: Use req.user._id instead of req.user.id
     const user = await User.findById(req.user._id);
+    
+    if (!user) {
+      console.error('getProfile: User not found in database for ID:', req.user._id);
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+
     if (user) {
       const userObj = user.toObject();
       
@@ -362,7 +381,6 @@ export const changePassword = async (req, res) => {
     if (passwordError) {
       return res.status(400).json({ message: passwordError });
     }
-
     // Update password
     user.password = newPassword;
     await user.save();
@@ -386,7 +404,7 @@ export const updateLocation = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
     
-    if (!latitude || !longitude) {
+    if (latitude === undefined || longitude === undefined) {
       return res.status(400).json({ message: 'Latitude and longitude are required' });
     }
 

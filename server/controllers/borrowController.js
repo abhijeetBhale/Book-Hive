@@ -81,25 +81,32 @@ export const requestBook = async (req, res) => {
       depositAmount: book.securityDeposit || 0
     });
     await borrowRequest.save();
+    
+    // Get populated book data for notifications
+    const populatedBook = await Book.findById(book._id).populate('owner', 'name avatar');
+    
     // Create a notification for the book owner
     try {
-      const notification = await Notification.create({
+      const ownerNotification = await Notification.create({
         userId: book.owner,
         type: 'borrow_request',
         title: 'New Borrow Request',
         message: `${req.user.name} wants to borrow "${book.title}" from you`,
+        fromUserId: req.user._id,
+        link: '/borrow-requests',
         metadata: {
-          fromUserId: req.user._id,
-          link: '/borrow-requests'
+          bookId: book._id,
+          bookTitle: book.title,
+          borrowRequestId: borrowRequest._id
         }
       });
 
-      // Emit real-time notification via WebSocket
+      // Emit real-time notification via WebSocket to owner
       try {
         const io = req.app.get('io');
         if (io) {
-          const notificationData = {
-            id: notification._id,
+          const ownerNotificationData = {
+            id: ownerNotification._id,
             type: 'borrow_request',
             message: `You have a new borrow request from ${req.user.name}!`,
             fromUser: {
@@ -113,25 +120,83 @@ export const requestBook = async (req, res) => {
               coverImage: book.coverImage
             },
             link: '/borrow-requests',
-            createdAt: notification.createdAt,
+            createdAt: ownerNotification.createdAt,
             read: false
           };
 
-          console.log(`Emitting notification to user:${book.owner}`, notificationData);
-          io.to(`user:${book.owner}`).emit('new_notification', notificationData);
+          console.log(`Emitting notification to owner user:${book.owner}`, ownerNotificationData);
+          io.to(`user:${book.owner}`).emit('new_notification', ownerNotificationData);
           // Emit badge update event
           io.to(`user:${book.owner}`).emit('borrow_request:new', { borrowRequestId: borrowRequest._id });
         } else {
           console.warn('Socket.IO instance not available');
         }
       } catch (socketError) {
-        console.error('Failed to emit new_notification event:', socketError.message);
+        console.error('Failed to emit new_notification event to owner:', socketError.message);
       }
     } catch (e) {
       // Log and continue; do not fail the main action due to notification issues
-      console.error('Failed to create borrow_request notification:', e.message);
+      console.error('Failed to create borrow_request notification for owner:', e.message);
     }
-    res.status(201).json({ message: 'Borrow request sent' });
+
+    // Create a confirmation notification for the borrower (person requesting the book)
+    try {
+      const borrowerNotification = await Notification.create({
+        userId: req.user._id,
+        type: 'info',
+        title: 'Borrow Request Sent',
+        message: `Your request to borrow "${book.title}" from ${populatedBook.owner.name} has been sent successfully. You'll be notified when they respond.`,
+        fromUserId: book.owner,
+        link: '/borrow-requests',
+        metadata: {
+          bookId: book._id,
+          bookTitle: book.title,
+          borrowRequestId: borrowRequest._id,
+          ownerId: book.owner
+        }
+      });
+
+      // Emit real-time notification via WebSocket to borrower
+      try {
+        const io = req.app.get('io');
+        if (io) {
+          const borrowerNotificationData = {
+            id: borrowerNotification._id,
+            type: 'info',
+            message: `Your request to borrow "${book.title}" has been sent successfully!`,
+            fromUser: {
+              _id: populatedBook.owner._id,
+              name: populatedBook.owner.name,
+              avatar: populatedBook.owner.avatar
+            },
+            book: {
+              _id: book._id,
+              title: book.title,
+              coverImage: book.coverImage
+            },
+            link: '/borrow-requests',
+            createdAt: borrowerNotification.createdAt,
+            read: false
+          };
+
+          console.log(`Emitting confirmation notification to borrower user:${req.user._id}`, borrowerNotificationData);
+          io.to(`user:${req.user._id}`).emit('new_notification', borrowerNotificationData);
+          // Emit badge update event
+          io.to(`user:${req.user._id}`).emit('borrow_request:sent', { borrowRequestId: borrowRequest._id });
+        }
+      } catch (socketError) {
+        console.error('Failed to emit confirmation notification to borrower:', socketError.message);
+      }
+    } catch (e) {
+      // Log and continue; do not fail the main action due to notification issues
+      console.error('Failed to create confirmation notification for borrower:', e.message);
+    }
+
+    res.status(201).json({ 
+      message: 'Borrow request sent',
+      borrowRequestId: borrowRequest._id,
+      success: true
+    });
   } catch (error) {
     console.error('Request book error:', error);
     res.status(500).json({ message: 'Server error requesting book' });
@@ -212,9 +277,10 @@ export const returnBook = async (req, res) => {
         type: 'review_prompt',
         title: 'Review Request',
         message: 'Your book was returned. Please review the borrower.',
+        fromUserId: borrowRequest.borrower,
+        link: '/borrow-requests',
         metadata: {
-          fromUserId: borrowRequest.borrower,
-          link: '/borrow-requests'
+          borrowRequestId: borrowRequest._id
         }
       });
       await Notification.create({
@@ -222,9 +288,10 @@ export const returnBook = async (req, res) => {
         type: 'review_prompt',
         title: 'Review Request',
         message: 'You returned a book. Please review the lender.',
+        fromUserId: borrowRequest.owner,
+        link: '/borrow-requests',
         metadata: {
-          fromUserId: borrowRequest.owner,
-          link: '/borrow-requests'
+          borrowRequestId: borrowRequest._id
         }
       });
     } catch (e) {
@@ -385,9 +452,12 @@ export const updateRequestStatus = async (req, res) => {
           type: 'request_approved',
           title: 'Request Approved',
           message: `Your request to borrow "${populatedRequest.book.title}" was approved! Check your messages to coordinate pickup.`,
+          fromUserId: req.user._id,
+          link: '/messages',
           metadata: {
-            fromUserId: req.user._id,
-            link: '/messages'
+            bookId: populatedRequest.book._id,
+            bookTitle: populatedRequest.book.title,
+            borrowRequestId: request._id
           }
         });
 
@@ -447,9 +517,12 @@ export const updateRequestStatus = async (req, res) => {
           type: 'request_denied',
           title: 'Request Declined',
           message: `Your request to borrow "${populatedRequest.book.title}" was declined`,
+          fromUserId: req.user._id,
+          link: '/borrow-requests',
           metadata: {
-            fromUserId: req.user._id,
-            link: '/borrow-requests'
+            bookId: populatedRequest.book._id,
+            bookTitle: populatedRequest.book.title,
+            borrowRequestId: request._id
           }
         });
 

@@ -10,10 +10,17 @@ export const protect = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = await User.findById(decoded.userId).select('-password');
       
-      // Update lastActive field for admin dashboard tracking
-      if (req.user) {
-        await User.findByIdAndUpdate(decoded.userId, { lastActive: new Date() });
+      // Check if user exists
+      if (!req.user) {
+        console.error('User not found for userId:', decoded.userId);
+        return res.status(401).json({ 
+          message: 'User not found. Please login again.',
+          error: 'USER_NOT_FOUND'
+        });
       }
+      
+      // Update lastActive field for admin dashboard tracking
+      await User.findByIdAndUpdate(decoded.userId, { lastActive: new Date() });
       
       return next();
     } catch (error) {

@@ -13,7 +13,7 @@ export const sendMessage = async (req, res) => {
     // Now correctly receiving both subject and message
     const { subject, ciphertext, iv, salt, alg, message } = req.body;
     const { recipientId } = req.params;
-    const senderId = req.user.id;
+    const senderId = req.user._id;
 
     // Check if either user has blocked the other
     const [sender, recipient] = await Promise.all([
@@ -105,55 +105,116 @@ export const sendMessage = async (req, res) => {
   }
 };
 
-// @desc    Get all conversations for the logged-in user
+// @desc    Get all conversations for the logged-in user (OPTIMIZED)
 // @route   GET /api/messages/conversations
 export const getConversations = async (req, res) => {
     try {
-        const loggedInUserId = req.user.id;
+        const loggedInUserId = req.user._id;
+        const { limit = 20 } = req.query; // Add pagination
         
-        // Get current user's blocked users list
+        // OPTIMIZATION: Use aggregation pipeline for better performance
+        const conversations = await Conversation.aggregate([
+          {
+            $match: { participants: loggedInUserId }
+          },
+          {
+            $limit: parseInt(limit)
+          },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'participants',
+              foreignField: '_id',
+              as: 'participants',
+              pipeline: [
+                { $project: { name: 1, avatar: 1, email: 1, publicKeyJwk: 1, blockedUsers: 1 } }
+              ]
+            }
+          },
+          {
+            $lookup: {
+              from: 'messages',
+              localField: 'messages',
+              foreignField: '_id',
+              as: 'messages',
+              pipeline: [
+                { $sort: { createdAt: -1 } },
+                { $limit: 1 }, // Only get last message for preview
+                {
+                  $lookup: {
+                    from: 'users',
+                    localField: 'senderId',
+                    foreignField: '_id',
+                    as: 'senderId',
+                    pipeline: [{ $project: { name: 1, email: 1, avatar: 1 } }]
+                  }
+                },
+                {
+                  $lookup: {
+                    from: 'users',
+                    localField: 'recipientId',
+                    foreignField: '_id',
+                    as: 'recipientId',
+                    pipeline: [{ $project: { name: 1, email: 1, avatar: 1 } }]
+                  }
+                },
+                {
+                  $addFields: {
+                    senderId: { $arrayElemAt: ['$senderId', 0] },
+                    recipientId: { $arrayElemAt: ['$recipientId', 0] }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            $lookup: {
+              from: 'messages',
+              let: { conversationId: '$_id' },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $in: ['$_id', '$$conversationId.messages'] },
+                        { $eq: ['$recipientId', loggedInUserId] },
+                        { $ne: ['$read', true] }
+                      ]
+                    }
+                  }
+                },
+                { $count: 'count' }
+              ],
+              as: 'unreadCount'
+            }
+          },
+          {
+            $addFields: {
+              unreadCount: { $ifNull: [{ $arrayElemAt: ['$unreadCount.count', 0] }, 0] },
+              lastMessage: { $arrayElemAt: ['$messages', 0] }
+            }
+          },
+          {
+            $sort: { 'lastMessage.createdAt': -1 }
+          }
+        ]);
+        
+        // Filter out blocked users
         const currentUser = await User.findById(loggedInUserId).select('blockedUsers').lean();
-        const blockedUserIds = (currentUser?.blockedUsers || []).map(id => id.toString());
+        const blockedUserIds = new Set((currentUser?.blockedUsers || []).map(id => id.toString()));
         
-        // Also get users who have blocked the current user
-        const usersWhoBlockedMe = await User.find({ blockedUsers: loggedInUserId }).select('_id').lean();
-        const blockedByUserIds = usersWhoBlockedMe.map(u => u._id.toString());
-        
-        const conversations = await Conversation.find({ participants: loggedInUserId })
-          .populate({
-            path: 'participants',
-            select: 'name avatar email publicKeyJwk'
-          })
-          .populate({
-            path: 'messages',
-            options: { sort: { createdAt: -1 }, limit: 50 }, // Limit messages for performance
-            populate: [
-              { path: 'senderId', select: 'name email avatar' },
-              { path: 'recipientId', select: 'name email avatar' }
-            ]
-          })
-          .lean(); // Use lean() for better performance
-
-        // Filter out conversations with blocked users
         const filteredConversations = conversations.filter((c) => {
           const otherParticipant = c.participants.find(p => p._id.toString() !== loggedInUserId.toString());
           if (!otherParticipant) return false;
           
           const otherUserId = otherParticipant._id.toString();
-          // Hide conversation if user is blocked or has blocked current user
-          return !blockedUserIds.includes(otherUserId) && !blockedByUserIds.includes(otherUserId);
+          const isBlocked = blockedUserIds.has(otherUserId);
+          const hasBlockedMe = otherParticipant.blockedUsers?.some(id => id.toString() === loggedInUserId.toString());
+          
+          return !isBlocked && !hasBlockedMe;
         });
 
-        const withCounts = filteredConversations.map((c) => {
-          // Filter out messages soft-deleted by this user
-          c.messages = (c.messages || []).filter((m) => !(m.deletedBy || []).some(id => id?.toString() === loggedInUserId.toString()));
-          c.unreadCount = (c.messages || []).filter((m) => {
-            return m && m.recipientId && m.recipientId._id?.toString() === loggedInUserId.toString() && m.read !== true;
-          }).length;
-          return c;
-        });
-
-        res.status(200).json(withCounts);
+        res.status(200).json(filteredConversations);
     } catch (error) {
         console.error('Error in getConversations controller: ', error.message);
         res.status(500).json({ message: 'Server error getting conversations' });
@@ -164,7 +225,7 @@ export const getConversations = async (req, res) => {
 // @route   GET /api/messages/with/:userId
 export const getConversationWithUser = async (req, res) => {
   try {
-    const loggedInUserId = req.user.id;
+    const loggedInUserId = req.user._id;
     const { userId } = req.params;
     let conversation = await Conversation.findOne({ participants: { $all: [loggedInUserId, userId] } })
       .populate({ path: 'participants', select: 'name avatar email publicKeyJwk' })
@@ -262,7 +323,7 @@ export const getConversationWithUser = async (req, res) => {
 // @route   GET /api/messages/received
 export const getReceivedMessages = async (req, res) => {
     try {
-        const loggedInUserId = req.user.id;
+        const loggedInUserId = req.user._id;
         const messages = await Message.find({ recipientId: loggedInUserId })
           .populate('senderId', 'name avatar email')
           .sort({ createdAt: -1 })
@@ -280,7 +341,7 @@ export const getReceivedMessages = async (req, res) => {
 export const deleteMessage = async (req, res) => {
     try {
         const { messageId } = req.params;
-        const userId = req.user.id;
+        const userId = req.user._id;
 
         // Find the message
         const message = await Message.findById(messageId);
@@ -311,7 +372,7 @@ export const deleteMessage = async (req, res) => {
 export const sendFileMessage = async (req, res) => {
   try {
     const { recipientId } = req.params;
-    const senderId = req.user.id;
+    const senderId = req.user._id;
 
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
@@ -402,7 +463,7 @@ export const sendFileMessage = async (req, res) => {
 export const clearConversation = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     const conversation = await Conversation.findById(conversationId);
 
@@ -439,7 +500,7 @@ export const clearConversation = async (req, res) => {
 export const blockUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const currentUserId = req.user.id;
+    const currentUserId = req.user._id;
 
     if (userId === currentUserId) {
       return res.status(400).json({ message: 'You cannot block yourself' });
@@ -475,7 +536,7 @@ export const blockUser = async (req, res) => {
 export const unblockUser = async (req, res) => {
   try {
     const { userId } = req.params;
-    const currentUserId = req.user.id;
+    const currentUserId = req.user._id;
 
     // Remove from blocked users list
     await User.findByIdAndUpdate(currentUserId, {
@@ -499,7 +560,7 @@ export const unblockUser = async (req, res) => {
 // @route   GET /api/messages/blocked
 export const getBlockedUsers = async (req, res) => {
   try {
-    const currentUserId = req.user.id;
+    const currentUserId = req.user._id;
 
     const user = await User.findById(currentUserId)
       .populate('blockedUsers', 'name email avatar')
@@ -511,3 +572,4 @@ export const getBlockedUsers = async (req, res) => {
     res.status(500).json({ message: 'Server error getting blocked users' });
   }
 };
+

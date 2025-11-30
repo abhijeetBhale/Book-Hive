@@ -26,7 +26,13 @@ import {
   X,
   MessageCircle,
   Calendar,
-  UserPlus
+  UserPlus,
+  Facebook,
+  Instagram,
+  Linkedin,
+  Youtube,
+  Mail,
+  Send
 } from 'lucide-react';
 import { AvatarCircles } from '../components/ui/avatar-circles';
 import { AuroraText } from '../components/ui/aurora-text';
@@ -865,38 +871,92 @@ const Home = () => {
 
         {/* CTA Section */}
         <section className="cta-section">
-          <div className="cta-overlay"></div>
-          <div className="content-container cta-content">
-            <h2 className="cta-title">Ready to Join the BookHive Community?</h2>
-            <p className="cta-subtitle">Start sharing your love for books, discover new reads, and connect with fellow readers in your area.</p>
-            <div className="button-group">
-              {user ? (
-                <>
-                  <Link to="/users" className="btn cta-btn group">
-                    <Globe className="btn-icon" />
-                    Explore Community
-                    <ArrowRight className="arrow-icon" />
-                  </Link>
-                  <Link to="/contact" className="btn cta-btn-secondary group">
-                    <MessageCircle className="btn-icon" />
-                    Get in Touch
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link to="/register" className="btn cta-btn group">
-                    <BookOpen className="btn-icon" />
-                    Get Started Today
-                    <ArrowRight className="arrow-icon" />
-                  </Link>
-                  <Link to="/contact" className="btn cta-btn-secondary group">
-                    <MessageCircle className="btn-icon" />
-                    Get in Touch
-                  </Link>
-                </>
-              )}
+           {/* Footer Section */}
+        <footer className="footer-section">
+          <div className="footer-content">
+            <div className="footer-top">
+              <div className="footer-heading">
+                <h2>Ready to Join the BookHive Community?</h2>
+                <p>Start sharing your love for books, discover new reads, and connect with fellow readers in your area.</p>
+              </div>
+              <div className="footer-links-grid">
+                <div className="footer-column">
+                  <h3>About BookHive</h3>
+                  <ul>
+                    <li><Link to="/about">Our Story</Link></li>
+                    <li><Link to="/team">Team</Link></li>
+                    {/* <li><Link to="/careers">Careers</Link></li> */}
+                  </ul>
+                </div>
+                
+                <div className="footer-column">
+                  <h3>Explore</h3>
+                  <ul>
+                    <li><Link to="/users">Community</Link></li>
+                    <li><Link to="/books">Discover Books</Link></li>
+                    <li><Link to="/events">Events</Link></li>
+                  </ul>
+                </div>
+                
+                <div className="footer-column">
+                  <h3>Support</h3>
+                  <ul>
+                    <li><Link to="/help">Help Center</Link></li>
+                    <li><Link to="/contact">Contact Us</Link></li>
+                    <li><Link to="/faq">FAQs</Link></li>
+                  </ul>
+                </div>
+                
+                <div className="footer-column">
+                  <h3>Stay Connected</h3>
+                  <div className="social-links">
+                    <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                      <Facebook size={20} />
+                    </a>
+                    <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                      <Instagram size={20} />
+                    </a>
+                    <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+                      <Linkedin size={20} />
+                    </a>
+                    <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+                      <Youtube size={20} />
+                    </a>
+                  </div>
+                  <div className="newsletter">
+                    <p className="newsletter-label">Newsletter</p>
+                    <form className="newsletter-form" onSubmit={(e) => e.preventDefault()}>
+                      <input 
+                        type="email" 
+                        placeholder="Sign up - email" 
+                        className="newsletter-input"
+                      />
+                      <button type="submit" className="newsletter-submit" aria-label="Subscribe">
+                        <Send size={18} />
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="footer-actions">
+              <Link to="/users" className="footer-btn explore-btn">
+                <Globe size={20} />
+                Explore Community
+                <ArrowRight size={18} />
+              </Link>
+              <Link to="/contact" className="footer-btn contact-btn">
+                <MessageCircle size={20} />
+                Get in Touch
+              </Link>
+            </div>
+            
+            <div className="footer-bottom">
+              <p>© 2025 BookHive. All rights reserved.</p>
             </div>
           </div>
+        </footer>
         </section>
 
         {/* Location Permission Modal */}
@@ -2501,47 +2561,11 @@ const StyledWrapper = styled.div`
     }
   }
 
-  /* CTA Section */
-  .cta-section {
-    padding: 6rem 0;
-    background-image: linear-gradient(to bottom right, #4F46E5, #a855f7, #3b82f6);
-    position: relative;
-    overflow: hidden;
-    width: 100%;
-    .cta-overlay { position: absolute; inset: 0; background-color: rgba(0, 0, 0, 0.1); }
-    .cta-content { position: relative; text-align: center; }
-    .cta-title { font-size: 3rem; font-weight: 900; color: white; margin-bottom: 2rem; }
-    .cta-subtitle { font-size: 1.25rem; color: rgba(255, 255, 255, 0.9); margin-bottom: 3rem; font-weight: 500; }
-    
-    .button-group {
-      gap: 2rem;
-      
-      @media (max-width: 640px) {
-        gap: 1.5rem;
-      }
-    }
-    
-    .cta-btn {
-      background-color: white;
-      color: #4F46E5;
-      --shadow-color: rgba(255, 255, 255, 0.25);
-      &:hover { background-color: #f9fafb; }
-    }
-    
-    .cta-btn-secondary {
-      background-color: rgba(255, 255, 255, 0.1);
-      color: white;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      --shadow-color: rgba(255, 255, 255, 0.15);
-      &:hover { 
-        background-color: rgba(255, 255, 255, 0.2);
-        border-color: rgba(255, 255, 255, 0.5);
-      }
-    }
-  }
+  
   
   /* Community Reviews Section */
   .reviews-section {
+    margin-bottom: -6rem;
     padding: 6rem 0;
     background-color: white;
 
@@ -2828,6 +2852,229 @@ const StyledWrapper = styled.div`
       font-size: 0.875rem;
       color: #9ca3af;
       font-style: italic;
+    }
+  }
+
+  /* Footer Section Styles */
+  .footer-section {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #7c3aed 100%);
+    color: white;
+    padding: 4rem 0 2rem;
+    margin-top: 4rem;
+  }
+
+  .footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  .footer-top {
+    margin-bottom: 3rem;
+  }
+
+  .footer-heading {
+    text-align: center;
+    margin-bottom: 3rem;
+
+    h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: white;
+    }
+
+    p {
+      font-size: 1.125rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 700px;
+      margin: 0 auto;
+    }
+  }
+
+  .footer-links-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2.5rem;
+    margin-bottom: 2rem;
+
+    @media (max-width: 768px) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+    }
+
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .footer-column {
+    h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: white;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+
+      li {
+        margin-bottom: 0.75rem;
+
+        a {
+          color: rgba(255, 255, 255, 0.85);
+          text-decoration: none;
+          font-size: 0.95rem;
+          transition: all 0.2s;
+          display: inline-block;
+
+          &:hover {
+            color: white;
+            transform: translateX(4px);
+          }
+        }
+      }
+    }
+  }
+
+  .social-links {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+
+    a {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      transition: all 0.3s;
+      backdrop-filter: blur(10px);
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: translateY(-3px);
+      }
+    }
+  }
+
+  .newsletter {
+    margin-top: 1rem;
+
+    .newsletter-label {
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      color: rgba(255, 255, 255, 0.9);
+    }
+  }
+
+  .newsletter-form {
+    display: flex;
+    gap: 0.2rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 50px;
+    padding: 0.25rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    .newsletter-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 0.625rem 1rem;
+      color: white;
+      font-size: 0.875rem;
+      outline: none;
+      // margin-top: -10px;
+      margin-right: -20px;
+
+      &::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+      }
+    }
+
+    .newsletter-submit {
+      background: white;
+      color: #6366f1;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      flex-shrink: 0;
+      
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.9);
+        transform: scale(1.05);
+      }
+    }
+  }
+
+  .footer-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin: 3rem 0 2rem;
+    flex-wrap: wrap;
+  }
+
+  .footer-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.75rem;
+    border-radius: 50px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s;
+    font-size: 0.95rem;
+
+    &.explore-btn {
+      background: white;
+      color: #6366f1;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+      }
+    }
+
+    &.contact-btn {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(10px);
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.25);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-2px);
+      }
+    }
+  }
+
+  .footer-bottom {
+    text-align: center;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    margin-top: 2rem;
+
+    p {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.875rem;
+      margin: 0;
     }
   }
 `;

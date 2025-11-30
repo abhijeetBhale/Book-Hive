@@ -9,6 +9,7 @@ import OptimizedAvatar from '../components/OptimizedAvatar';
 import UpgradeModal from '../components/ui/UpgradeModal';
 import SEO from '../components/SEO';
 import { BASE_URL, generateStructuredData } from '../utils/seo';
+import toast from 'react-hot-toast';
 
 const PageWrapper = styled.div`
   background-color: #f9fafb;
@@ -156,8 +157,11 @@ const BookDetails = () => {
 
   const handleBorrowRequest = async () => {
     try {
-      await borrowAPI.createRequest(id);
-      alert('Borrow request sent successfully!');
+      const response = await borrowAPI.createRequest(id);
+      toast.success(`📚 Borrow request sent for "${book?.title}"! You'll be notified when the owner responds.`, { 
+        duration: 5000,
+        icon: '✅'
+      });
     } catch (err) {
       const errorData = err.response?.data;
       
@@ -169,7 +173,7 @@ const BookDetails = () => {
           isPremium: errorData.isPremium
         });
       } else {
-        alert(errorData?.message || 'Failed to send borrow request.');
+        toast.error(`❌ ${errorData?.message || 'Failed to send borrow request.'}`, { duration: 4000 });
       }
     }
   };

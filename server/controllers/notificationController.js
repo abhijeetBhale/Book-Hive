@@ -218,6 +218,16 @@ export const listBookInquiries = async (req, res) => {
 // @access  Private
 export const getAllNotifications = async (req, res) => {
   try {
+    console.log('getAllNotifications called for user:', req.user?._id);
+    
+    if (!req.user || !req.user._id) {
+      console.error('getAllNotifications: req.user or req.user._id is undefined');
+      return res.status(401).json({ 
+        success: false,
+        message: 'User not authenticated' 
+      });
+    }
+
     const { limit = 50 } = req.query;
     
     const notifications = await Notification.find({
@@ -233,9 +243,11 @@ export const getAllNotifications = async (req, res) => {
     });
   } catch (error) {
     console.error('Get all notifications error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ 
       success: false,
-      message: 'Server error getting notifications' 
+      message: 'Server error getting notifications',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -245,6 +257,16 @@ export const getAllNotifications = async (req, res) => {
 // @access  Private
 export const getUnreadCount = async (req, res) => {
   try {
+    console.log('getUnreadCount called for user:', req.user?._id);
+    
+    if (!req.user || !req.user._id) {
+      console.error('getUnreadCount: req.user or req.user._id is undefined');
+      return res.status(401).json({ 
+        success: false,
+        message: 'User not authenticated' 
+      });
+    }
+
     const count = await Notification.countDocuments({
       userId: req.user._id,
       isRead: false
@@ -256,9 +278,11 @@ export const getUnreadCount = async (req, res) => {
     });
   } catch (error) {
     console.error('Get unread count error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ 
       success: false,
-      message: 'Server error getting unread count' 
+      message: 'Server error getting unread count',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

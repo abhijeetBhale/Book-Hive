@@ -19,5 +19,10 @@ const conversationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Add indexes for performance optimization
+conversationSchema.index({ participants: 1 }); // Find conversations by participant
+conversationSchema.index({ updatedAt: -1 }); // Sort by last activity
+conversationSchema.index({ participants: 1, updatedAt: -1 }); // Compound index for queries
+
 const Conversation = mongoose.model('Conversation', conversationSchema);
 export default Conversation;
