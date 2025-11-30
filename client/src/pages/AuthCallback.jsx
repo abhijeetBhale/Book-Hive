@@ -1,4 +1,4 @@
-import React, { useEffect, useContext } from 'react';
+import React, { useEffect, useContext, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { authAPI } from '../utils/api';
@@ -10,14 +10,15 @@ const AuthCallback = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { fetchProfile } = useContext(AuthContext);
+  const hasProcessed = useRef(false); // Use ref to prevent duplicate execution
 
   useEffect(() => {
-    let isProcessing = false; // Prevent duplicate execution
     const token = searchParams.get('token');
 
     const handleAuth = async () => {
-      if (isProcessing) return; // Prevent duplicate execution
-      isProcessing = true;
+      // Prevent duplicate execution
+      if (hasProcessed.current) return;
+      hasProcessed.current = true;
 
       if (token) {
         try {
@@ -26,22 +27,31 @@ const AuthCallback = () => {
 
           // 1. Save the token received from the backend
           sessionManager.setToken(token);
+          
           // 2. Refresh the user's profile to update the app's state
           await fetchProfile();
+          
           // 3. Automatically request user's location for Google auth users (silently)
           await requestUserLocation();
+          
           // 4. Show single success toast for Google login
-          toast.success("Welcome to BookHive! You're now logged in.");
+          toast.success("Welcome to BookHive! You're now logged in.", {
+            id: 'google-login-success', // Unique ID prevents duplicate toasts
+            duration: 3000,
+          });
+          
           // 5. Redirect to the homepage, now logged in
-          navigate('/');
+          navigate('/', { replace: true });
         } catch (error) {
           console.error('Auth callback error:', error);
-          toast.error("Login failed. Please try again.");
-          navigate('/login');
+          toast.error("Login failed. Please try again.", {
+            id: 'google-login-error',
+          });
+          navigate('/login', { replace: true });
         }
       } else {
         // Handle cases where the redirect happens without a token
-        navigate('/login');
+        navigate('/login', { replace: true });
       }
     };
 
@@ -66,17 +76,12 @@ const AuthCallback = () => {
 
         await authAPI.updateLocation(location);
       } catch (error) {
-        // Location update failed - optional feature
+        // Location update failed - optional feature, fail silently
       }
     };
 
     handleAuth();
-
-    // Cleanup function
-    return () => {
-      isProcessing = false;
-    };
-  }, [searchParams, navigate, fetchProfile]);
+  }, []); // Empty dependency array - only run once on mount
 
   return (
     <StyledWrapper>
