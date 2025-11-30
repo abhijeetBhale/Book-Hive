@@ -87,6 +87,19 @@ export const createEvent = async (req, res) => {
     };
 
     const event = await Event.create(eventData);
+    
+    // Populate organizer for admin notification
+    await event.populate('organizer', 'name');
+
+    // Notify admins of new event
+    try {
+      const adminNotificationService = req.app.get('adminNotificationService');
+      if (adminNotificationService) {
+        adminNotificationService.notifyNewEvent(event);
+      }
+    } catch (adminNotifError) {
+      console.error('Failed to send admin notification for new event:', adminNotifError);
+    }
 
     res.status(201).json({
       success: true,

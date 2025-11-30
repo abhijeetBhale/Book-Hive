@@ -36,6 +36,8 @@ import organizerRoutes from './routes/organizerRoutes.js';
 import { initializeDefaultAchievements } from './services/achievementService.js';
 import { initializeAllUserStats } from './services/userStatsService.js';
 import NotificationService from './services/notificationService.js';
+import AdminNotificationService from './services/adminNotificationService.js';
+import User from './models/User.js';
 
 
 const app = express();
@@ -203,6 +205,10 @@ app.set('io', io);
 const notificationService = new NotificationService(io);
 app.set('notificationService', notificationService);
 
+// Initialize admin notification service
+const adminNotificationService = new AdminNotificationService(io);
+app.set('adminNotificationService', adminNotificationService);
+
 // Track online users: userId -> Set of socketIds
 const onlineUsers = new Map();
 
@@ -230,7 +236,7 @@ io.use((socket, next) => {
   }
 });
 
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
   const userId = socket.data.userId;
   console.log(`WebSocket user connected: ${userId} (socket: ${socket.id})`);
 
@@ -238,6 +244,18 @@ io.on('connection', (socket) => {
   onlineUsers.get(userId).add(socket.id);
 
   socket.join(`user:${userId}`);
+  
+  // Check if user is admin and join admin room
+  try {
+    const user = await User.findById(userId).select('role');
+    if (user && (user.role === 'admin' || user.role === 'superadmin')) {
+      socket.join('admin-room');
+      console.log(`Admin user ${userId} joined admin-room`);
+    }
+  } catch (error) {
+    console.error('Error checking user role for admin room:', error);
+  }
+  
   io.emit('presence:update', Array.from(onlineUsers.keys()));
 
   socket.on('typing', ({ recipientId }) => {

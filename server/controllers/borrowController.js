@@ -85,6 +85,19 @@ export const requestBook = async (req, res) => {
     // Get populated book data for notifications
     const populatedBook = await Book.findById(book._id).populate('owner', 'name avatar');
     
+    // Notify admins of new borrow request
+    try {
+      const adminNotificationService = req.app.get('adminNotificationService');
+      if (adminNotificationService) {
+        const populatedRequest = await BorrowRequest.findById(borrowRequest._id)
+          .populate('book', 'title')
+          .populate('borrower', 'name');
+        adminNotificationService.notifyNewBorrowRequest(populatedRequest);
+      }
+    } catch (adminNotifError) {
+      console.error('Failed to send admin notification for new borrow request:', adminNotifError);
+    }
+    
     // Create a notification for the book owner
     try {
       const ownerNotification = await Notification.create({

@@ -3,6 +3,7 @@ import Book from '../models/Book.js';
 import Notification from '../models/Notification.js'; // Ensure Notification model is imported
 import UserStats from '../models/UserStats.js';
 import Friendship from '../models/Friendship.js';
+import { validateUsername } from '../utils/validation.js';
 
 // @desc    Get user profile
 // @route   GET /api/users/profile
@@ -30,6 +31,14 @@ export const updateProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     if (user) {
+      // Validate username if it's being changed
+      if (req.body.name && req.body.name !== user.name) {
+        const usernameError = validateUsername(req.body.name);
+        if (usernameError) {
+          return res.status(400).json({ message: usernameError });
+        }
+      }
+      
       user.name = req.body.name || user.name;
       user.email = req.body.email || user.email;
       if (req.body.password) {

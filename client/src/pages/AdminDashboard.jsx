@@ -150,9 +150,16 @@ const AdminDashboard = () => {
     if (visitedTabs.has(tabName)) return null;
     if (!count || count === 0) return null;
     return (
-      <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
-        {count > 99 ? '99+' : count}
-      </span>
+      <span 
+        className="ml-auto bg-red-500 rounded-full shadow-lg"
+        style={{
+          width: '8px',
+          height: '8px',
+          border: '2px solid white',
+          animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+        }}
+        title={`${count} new ${count === 1 ? 'item' : 'items'}`}
+      />
     );
   };
 
@@ -181,61 +188,87 @@ const AdminDashboard = () => {
 
   // Setup socket for real-time admin notifications
   useEffect(() => {
-    if (!user || !hasAdminAccess) return;
+    if (!user || !hasAdminAccess) {
+      console.log('❌ Admin socket not initialized - user or access check failed', { user: !!user, hasAdminAccess });
+      return;
+    }
 
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token) {
+      console.log('❌ Admin socket not initialized - no token');
+      return;
+    }
 
+    console.log('🔌 Initializing admin socket connection...');
     const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
     const socket = io(base, { auth: { token }, transports: ['websocket', 'polling'] });
 
+    socket.on('connect', () => {
+      console.log('✅ Admin socket connected!', socket.id);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('❌ Admin socket connection error:', error);
+    });
+
     // Listen for various admin events
-    socket.on('borrow_request:new', () => {
+    socket.on('borrow_request:new', (data) => {
+      console.log('🔔 Received borrow_request:new event', data);
       setNotificationCounts(prev => ({ ...prev, borrows: prev.borrows + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('borrows');
         return newSet;
       });
+      toast.success('New borrow request received!', { icon: '📖' });
     });
 
-    socket.on('user:new', () => {
+    socket.on('user:new', (data) => {
+      console.log('🔔 Received user:new event', data);
       setNotificationCounts(prev => ({ ...prev, users: prev.users + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('users');
         return newSet;
       });
+      toast.success('New user registered!', { icon: '👥' });
     });
 
-    socket.on('book:new', () => {
+    socket.on('book:new', (data) => {
+      console.log('🔔 Received book:new event', data);
       setNotificationCounts(prev => ({ ...prev, books: prev.books + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('books');
         return newSet;
       });
+      toast.success('New book added!', { icon: '📚' });
     });
 
-    socket.on('book_for_sale:new', () => {
+    socket.on('book_for_sale:new', (data) => {
+      console.log('🔔 Received book_for_sale:new event', data);
       setNotificationCounts(prev => ({ ...prev, booksForSale: prev.booksForSale + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('books-for-sale');
         return newSet;
       });
+      toast.success('New book for sale added!', { icon: '🛒' });
     });
 
-    socket.on('book_club:new', () => {
+    socket.on('book_club:new', (data) => {
+      console.log('🔔 Received book_club:new event', data);
       setNotificationCounts(prev => ({ ...prev, clubs: prev.clubs + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('clubs');
         return newSet;
       });
+      toast.success('New book club created!', { icon: '👥' });
     });
 
-    socket.on('organizer_application:new', () => {
+    socket.on('organizer_application:new', (data) => {
+      console.log('🔔 Received organizer_application:new event', data);
       setNotificationCounts(prev => ({ ...prev, organizerApplications: prev.organizerApplications + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
@@ -244,34 +277,68 @@ const AdminDashboard = () => {
       });
     });
 
-    socket.on('event:new', () => {
+    socket.on('event:new', (data) => {
+      console.log('🔔 Received event:new event', data);
       setNotificationCounts(prev => ({ ...prev, events: prev.events + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('events');
         return newSet;
       });
+      toast.success('New event created!', { icon: '📅' });
     });
 
-    socket.on('review:new', () => {
+    socket.on('review:new', (data) => {
+      console.log('🔔 Received review:new event', data);
       setNotificationCounts(prev => ({ ...prev, reviews: prev.reviews + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('reviews');
         return newSet;
       });
+      toast.success('New review posted!', { icon: '⭐' });
     });
 
-    socket.on('report:new', () => {
+    socket.on('report:new', (data) => {
+      console.log('🔔 Received report:new event', data);
       setNotificationCounts(prev => ({ ...prev, reports: prev.reports + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('reports');
         return newSet;
       });
+      toast.success('New report filed!', { icon: '📝' });
+    });
+
+    // Listen for book deletion/update events
+    socket.on('book:deleted', (data) => {
+      console.log('🔔 Received book:deleted event', data);
+      setNotificationCounts(prev => ({ ...prev, books: prev.books + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('books');
+        return newSet;
+      });
+      toast.info('Book deleted!', { icon: '🗑️' });
+    });
+
+    socket.on('book:updated', (data) => {
+      console.log('🔔 Received book:updated event', data);
+      setNotificationCounts(prev => ({ ...prev, books: prev.books + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('books');
+        return newSet;
+      });
+      toast.info('Book updated!', { icon: '✏️' });
+    });
+
+    socket.on('disconnect', () => {
+      console.log('❌ Admin socket disconnected');
     });
 
     return () => {
+      console.log('🔌 Cleaning up admin socket connection');
       socket.disconnect();
     };
   }, [user, hasAdminAccess]);
@@ -3454,5 +3521,22 @@ const AdminDashboard = () => {
     </div>
   );
 };
+
+// Add global styles for badge animation
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+`;
+if (typeof document !== 'undefined' && !document.getElementById('admin-badge-styles')) {
+  style.id = 'admin-badge-styles';
+  document.head.appendChild(style);
+}
 
 export default AdminDashboard;

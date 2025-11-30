@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import { validateEmail, validatePassword } from '../utils/validation.js';
+import { validateEmail, validatePassword, validateUsername } from '../utils/validation.js';
 import { uploadFileToCloudinary } from '../config/cloudinary.js';
 import { getConsistentPrivacyOffset } from '../utils/locationPrivacy.js';
 
@@ -20,6 +20,12 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({
         message: 'Please provide name, email, and password'
       });
+    }
+
+    // Validate username (name field)
+    const usernameError = validateUsername(name);
+    if (usernameError) {
+      return res.status(400).json({ message: usernameError });
     }
 
     const emailError = validateEmail(email);
@@ -55,6 +61,16 @@ export const registerUser = async (req, res) => {
       }
     };
     await user.save();
+    
+    // Notify admins of new user registration
+    try {
+      const adminNotificationService = req.app.get('adminNotificationService');
+      if (adminNotificationService) {
+        adminNotificationService.notifyNewUser(user);
+      }
+    } catch (adminNotifError) {
+      console.error('Failed to send admin notification for new user:', adminNotifError);
+    }
     
     // Send verification email
     try {
@@ -246,6 +262,17 @@ export const updateProfile = async (req, res) => {
         success: false,
         message: 'User not found' 
       });
+    }
+
+    // Validate username if it's being changed
+    if (name !== user.name) {
+      const usernameError = validateUsername(name);
+      if (usernameError) {
+        return res.status(400).json({ 
+          success: false,
+          message: usernameError 
+        });
+      }
     }
 
     // Update basic profile data

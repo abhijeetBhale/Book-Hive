@@ -40,6 +40,19 @@ export const createReport = async (req, res) => {
     });
 
     await newReport.save();
+    
+    // Notify admins of new report
+    try {
+      const adminNotificationService = req.app.get('adminNotificationService');
+      if (adminNotificationService) {
+        const populatedReport = await Report.findById(newReport._id)
+          .populate('reporterId', 'name')
+          .populate('reportedUserId', 'name');
+        adminNotificationService.notifyNewReport(populatedReport);
+      }
+    } catch (adminNotifError) {
+      console.error('Failed to send admin notification for new report:', adminNotifError);
+    }
 
     res.status(201).json({ 
       message: 'Report submitted successfully. Our team will review it shortly.'

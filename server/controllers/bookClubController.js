@@ -184,6 +184,16 @@ export const createBookClub = catchAsync(async (req, res, next) => {
   // Populate creator info
   await club.populate('createdBy', 'name avatar');
 
+  // Notify admins of new book club
+  try {
+    const adminNotificationService = req.app.get('adminNotificationService');
+    if (adminNotificationService) {
+      adminNotificationService.notifyNewBookClub(club);
+    }
+  } catch (adminNotifError) {
+    console.error('Failed to send admin notification for new book club:', adminNotifError);
+  }
+
   res.status(201).json({
     status: 'success',
     data: {

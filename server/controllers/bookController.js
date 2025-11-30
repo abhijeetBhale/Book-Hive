@@ -403,6 +403,21 @@ export const createBook = async (req, res) => {
     // Award points for adding a book
     await awardPoints(req.user._id, 'book_added', 10);
     
+    // Notify admins of new book
+    try {
+      const adminNotificationService = req.app.get('adminNotificationService');
+      if (adminNotificationService) {
+        const populatedBook = await Book.findById(createdBook._id).populate('owner', 'name');
+        if (forSelling) {
+          adminNotificationService.notifyNewBookForSale(populatedBook);
+        } else {
+          adminNotificationService.notifyNewBook(populatedBook);
+        }
+      }
+    } catch (adminNotifError) {
+      console.error('Failed to send admin notification for new book:', adminNotifError);
+    }
+    
     res.status(201).json(createdBook);
   } catch (error) {
     console.error('Create book error:', error);
@@ -498,6 +513,18 @@ export const updateBook = async (req, res) => {
       }
 
       const updatedBook = await book.save();
+      
+      // Notify admins of book update
+      try {
+        const adminNotificationService = req.app.get('adminNotificationService');
+        if (adminNotificationService) {
+          const populatedBook = await Book.findById(updatedBook._id).populate('owner', 'name');
+          adminNotificationService.notifyBookUpdated(populatedBook);
+        }
+      } catch (adminNotifError) {
+        console.error('Failed to send admin notification for book update:', adminNotifError);
+      }
+      
       res.json(updatedBook);
     } else {
       res.status(404).json({ message: 'Book not found' });
@@ -512,11 +539,19 @@ export const updateBook = async (req, res) => {
 // @route   DELETE /api/books/:id
 export const deleteBook = async (req, res) => {
   try {
-    const book = await Book.findById(req.params.id);
+    const book = await Book.findById(req.params.id).populate('owner', 'name');
     if (book) {
-      if (book.owner.toString() !== req.user._id.toString()) {
+      if (book.owner._id.toString() !== req.user._id.toString()) {
         return res.status(401).json({ message: 'Not authorized' });
       }
+      
+      // Store book info before deletion for notification
+      const bookInfo = {
+        _id: book._id,
+        title: book.title,
+        author: book.author,
+        owner: book.owner
+      };
       
       // Remove book from user's booksOwned array
       await User.findByIdAndUpdate(
@@ -526,6 +561,17 @@ export const deleteBook = async (req, res) => {
       );
       
       await book.deleteOne();
+      
+      // Notify admins of book deletion
+      try {
+        const adminNotificationService = req.app.get('adminNotificationService');
+        if (adminNotificationService) {
+          adminNotificationService.notifyBookDeleted(bookInfo);
+        }
+      } catch (adminNotifError) {
+        console.error('Failed to send admin notification for book deletion:', adminNotifError);
+      }
+      
       res.json({ message: 'Book removed' });
     } else {
       res.status(404).json({ message: 'Book not found' });

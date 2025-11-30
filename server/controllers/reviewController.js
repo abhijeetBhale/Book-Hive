@@ -31,6 +31,22 @@ export const createReview = async (req, res) => {
       rating: Math.max(1, Math.min(5, Number(rating))),
       comment: comment?.slice(0, 1000) || '',
     });
+    
+    // Notify admins of new review
+    try {
+      const adminNotificationService = req.app.get('adminNotificationService');
+      if (adminNotificationService) {
+        const populatedReview = await Review.findById(review._id)
+          .populate('fromUser', 'name')
+          .populate({
+            path: 'borrowRequest',
+            populate: { path: 'book', select: 'title' }
+          });
+        adminNotificationService.notifyNewReview(populatedReview);
+      }
+    } catch (adminNotifError) {
+      console.error('Failed to send admin notification for new review:', adminNotifError);
+    }
 
     // Recalculate recipient rating summary
     const agg = await Review.aggregate([
