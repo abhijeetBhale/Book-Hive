@@ -1,56 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { wakeupServer, getServerStatus } from '../utils/serverWakeup';
+import { wakeupServer } from '../utils/serverWakeup';
 
 const ServerWakeupLoader = ({ onReady }) => {
   const [status, setStatus] = useState('checking');
-  const [progress, setProgress] = useState(0);
-  const [message, setMessage] = useState('Connecting to server...');
 
   useEffect(() => {
-    let progressInterval;
-    
     const wakeup = async () => {
-      // Simulate progress
-      progressInterval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 90) return prev;
-          return prev + 2;
-        });
-      }, 1000);
-
-      setMessage('Waking up server (this may take 30-60 seconds)...');
-      
       try {
         const success = await wakeupServer();
-        clearInterval(progressInterval);
         
         if (success) {
-          setProgress(100);
           setStatus('ready');
-          setMessage('Server is ready!');
           setTimeout(() => {
             onReady?.(true);
           }, 500);
         } else {
           setStatus('error');
-          setMessage('Server connection failed. Retrying...');
-          // Retry after 3 seconds
-          setTimeout(wakeup, 3000);
+          setTimeout(wakeup, 5000);
         }
       } catch (error) {
-        clearInterval(progressInterval);
         setStatus('error');
-        setMessage('Connection error. Retrying...');
-        setTimeout(wakeup, 3000);
+        setTimeout(wakeup, 5000);
       }
     };
 
     wakeup();
-
-    return () => {
-      if (progressInterval) clearInterval(progressInterval);
-    };
   }, [onReady]);
 
   if (status === 'ready') {
@@ -60,21 +35,14 @@ const ServerWakeupLoader = ({ onReady }) => {
   return (
     <LoaderOverlay>
       <LoaderContainer>
-        <Logo>📚</Logo>
-        <Title>BookHive</Title>
-        <Message>{message}</Message>
-        <ProgressBar>
-          <ProgressFill progress={progress} status={status} />
-        </ProgressBar>
-        <ProgressText>{progress}%</ProgressText>
-        {status === 'error' && (
-          <ErrorMessage>
-            The server is starting up. This is normal for the first visit.
-          </ErrorMessage>
-        )}
-        <Tip>
-          💡 Tip: The free tier server sleeps after inactivity. First load may take up to 60 seconds.
-        </Tip>
+        <div className="book">
+          <div className="book__pg-shadow" />
+          <div className="book__pg" />
+          <div className="book__pg book__pg--2" />
+          <div className="book__pg book__pg--3" />
+          <div className="book__pg book__pg--4" />
+          <div className="book__pg book__pg--5" />
+        </div>
       </LoaderContainer>
     </LoaderOverlay>
   );
@@ -94,85 +62,330 @@ const LoaderOverlay = styled.div`
 `;
 
 const LoaderContainer = styled.div`
-  background: white;
-  border-radius: 20px;
-  padding: 3rem 2rem;
-  max-width: 500px;
-  width: 90%;
-  text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-`;
-
-const Logo = styled.div`
-  font-size: 4rem;
-  margin-bottom: 1rem;
-  animation: bounce 2s infinite;
-
-  @keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+  .book,
+  .book__pg-shadow,
+  .book__pg {
+    animation: cover 5s ease-in-out infinite;
   }
-`;
 
-const Title = styled.h1`
-  font-size: 2.5rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 1rem;
-`;
+  .book {
+    background-color: hsl(268, 90%, 65%);
+    border-radius: 0.25em;
+    box-shadow: 0 0.25em 0.5em hsla(0, 0%, 0%, 0.3),
+      0 0 0 0.25em hsl(278, 100%, 57%) inset;
+    padding: 0.25em;
+    perspective: 37.5em;
+    position: relative;
+    width: 8em;
+    height: 6em;
+    transform: translate3d(0, 0, 0);
+    transform-style: preserve-3d;
+  }
 
-const Message = styled.p`
-  font-size: 1.1rem;
-  color: #666;
-  margin-bottom: 2rem;
-`;
+  .book__pg-shadow,
+  .book__pg {
+    position: absolute;
+    left: 0.25em;
+    width: calc(50% - 0.25em);
+  }
 
-const ProgressBar = styled.div`
-  width: 100%;
-  height: 8px;
-  background: #e0e0e0;
-  border-radius: 10px;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
-`;
+  .book__pg-shadow {
+    animation-name: shadow;
+    background-image: linear-gradient(
+      -45deg,
+      hsla(0, 0%, 0%, 0) 50%,
+      hsla(0, 0%, 0%, 0.3) 50%
+    );
+    filter: blur(0.25em);
+    top: calc(100% - 0.25em);
+    height: 3.75em;
+    transform: scaleY(0);
+    transform-origin: 100% 0%;
+  }
 
-const ProgressFill = styled.div`
-  height: 100%;
-  width: ${props => props.progress}%;
-  background: ${props => props.status === 'error' 
-    ? 'linear-gradient(90deg, #ff6b6b, #ee5a6f)'
-    : 'linear-gradient(90deg, #667eea, #764ba2)'};
-  transition: width 0.3s ease;
-  border-radius: 10px;
-`;
+  .book__pg {
+    animation-name: pg1;
+    background-color: hsl(223, 10%, 100%);
+    background-image: linear-gradient(
+      90deg,
+      hsla(223, 10%, 90%, 0) 87.5%,
+      hsl(223, 10%, 90%)
+    );
+    height: calc(100% - 0.5em);
+    transform-origin: 100% 50%;
+  }
 
-const ProgressText = styled.div`
-  font-size: 0.9rem;
-  color: #999;
-  margin-bottom: 1rem;
-`;
+  .book__pg--2,
+  .book__pg--3,
+  .book__pg--4 {
+    background-image: repeating-linear-gradient(
+        hsl(223, 10%, 10%) 0 0.125em,
+        hsla(223, 10%, 10%, 0) 0.125em 0.5em
+      ),
+      linear-gradient(90deg, hsla(223, 10%, 90%, 0) 87.5%, hsl(223, 10%, 90%));
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 2.5em 4.125em, 100% 100%;
+  }
 
-const ErrorMessage = styled.div`
-  background: #fff3cd;
-  border: 1px solid #ffc107;
-  color: #856404;
-  padding: 0.75rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-`;
+  .book__pg--2 {
+    animation-name: pg2;
+  }
 
-const Tip = styled.div`
-  font-size: 0.85rem;
-  color: #999;
-  font-style: italic;
-  margin-top: 1rem;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
+  .book__pg--3 {
+    animation-name: pg3;
+  }
+
+  .book__pg--4 {
+    animation-name: pg4;
+  }
+
+  .book__pg--5 {
+    animation-name: pg5;
+  }
+
+  @keyframes cover {
+    from,
+    5%,
+    45%,
+    55%,
+    95%,
+    to {
+      animation-timing-function: ease-out;
+      background-color: hsl(278, 84%, 67%);
+    }
+    10%,
+    40%,
+    60%,
+    90% {
+      animation-timing-function: ease-in;
+      background-color: hsl(271, 90%, 45%);
+    }
+  }
+
+  @keyframes shadow {
+    from,
+    10.01%,
+    20.01%,
+    30.01%,
+    40.01% {
+      animation-timing-function: ease-in;
+      transform: translate3d(0, 0, 1px) scaleY(0) rotateY(0);
+    }
+    5%,
+    15%,
+    25%,
+    35%,
+    45%,
+    55%,
+    65%,
+    75%,
+    85%,
+    95% {
+      animation-timing-function: ease-out;
+      transform: translate3d(0, 0, 1px) scaleY(0.2) rotateY(90deg);
+    }
+    10%,
+    20%,
+    30%,
+    40%,
+    50%,
+    to {
+      animation-timing-function: ease-out;
+      transform: translate3d(0, 0, 1px) scaleY(0) rotateY(180deg);
+    }
+    50.01%,
+    60.01%,
+    70.01%,
+    80.01%,
+    90.01% {
+      animation-timing-function: ease-in;
+      transform: translate3d(0, 0, 1px) scaleY(0) rotateY(180deg);
+    }
+    60%,
+    70%,
+    80%,
+    90%,
+    to {
+      animation-timing-function: ease-out;
+      transform: translate3d(0, 0, 1px) scaleY(0) rotateY(0);
+    }
+  }
+
+  @keyframes pg1 {
+    from,
+    to {
+      animation-timing-function: ease-in-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(0.4deg);
+    }
+    10%,
+    15% {
+      animation-timing-function: ease-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(180deg);
+    }
+    20%,
+    80% {
+      animation-timing-function: ease-in;
+      background-color: hsl(223, 10%, 45%);
+      transform: translate3d(0, 0, 1px) rotateY(180deg);
+    }
+    85%,
+    90% {
+      animation-timing-function: ease-in-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(180deg);
+    }
+  }
+
+  @keyframes pg2 {
+    from,
+    to {
+      animation-timing-function: ease-in;
+      background-color: hsl(223, 10%, 45%);
+      transform: translate3d(0, 0, 1px) rotateY(0.3deg);
+    }
+    5%,
+    10% {
+      animation-timing-function: ease-in-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(0.3deg);
+    }
+    20%,
+    25% {
+      animation-timing-function: ease-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(179.9deg);
+    }
+    30%,
+    70% {
+      animation-timing-function: ease-in;
+      background-color: hsl(223, 10%, 45%);
+      transform: translate3d(0, 0, 1px) rotateY(179.9deg);
+    }
+    75%,
+    80% {
+      animation-timing-function: ease-in-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(179.9deg);
+    }
+    90%,
+    95% {
+      animation-timing-function: ease-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(0.3deg);
+    }
+  }
+
+  @keyframes pg3 {
+    from,
+    10%,
+    90%,
+    to {
+      animation-timing-function: ease-in;
+      background-color: hsl(223, 10%, 45%);
+      transform: translate3d(0, 0, 1px) rotateY(0.2deg);
+    }
+    15%,
+    20% {
+      animation-timing-function: ease-in-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(0.2deg);
+    }
+    30%,
+    35% {
+      animation-timing-function: ease-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(179.8deg);
+    }
+    40%,
+    60% {
+      animation-timing-function: ease-in;
+      background-color: hsl(223, 10%, 45%);
+      transform: translate3d(0, 0, 1px) rotateY(179.8deg);
+    }
+    65%,
+    70% {
+      animation-timing-function: ease-in-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(179.8deg);
+    }
+    80%,
+    85% {
+      animation-timing-function: ease-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(0.2deg);
+    }
+  }
+
+  @keyframes pg4 {
+    from,
+    20%,
+    80%,
+    to {
+      animation-timing-function: ease-in;
+      background-color: hsl(223, 10%, 45%);
+      transform: translate3d(0, 0, 1px) rotateY(0.1deg);
+    }
+    25%,
+    30% {
+      animation-timing-function: ease-in-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(0.1deg);
+    }
+    40%,
+    45% {
+      animation-timing-function: ease-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(179.7deg);
+    }
+    50% {
+      animation-timing-function: ease-in;
+      background-color: hsl(223, 10%, 45%);
+      transform: translate3d(0, 0, 1px) rotateY(179.7deg);
+    }
+    55%,
+    60% {
+      animation-timing-function: ease-in-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(179.7deg);
+    }
+    70%,
+    75% {
+      animation-timing-function: ease-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(0.1deg);
+    }
+  }
+
+  @keyframes pg5 {
+    from,
+    30%,
+    70%,
+    to {
+      animation-timing-function: ease-in;
+      background-color: hsl(223, 10%, 45%);
+      transform: translate3d(0, 0, 1px) rotateY(0);
+    }
+    35%,
+    40% {
+      animation-timing-function: ease-in-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(0deg);
+    }
+    50% {
+      animation-timing-function: ease-in-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(179.6deg);
+    }
+    60%,
+    65% {
+      animation-timing-function: ease-out;
+      background-color: hsl(223, 10%, 100%);
+      transform: translate3d(0, 0, 1px) rotateY(0);
+    }
+  }
 `;
 
 export default ServerWakeupLoader;

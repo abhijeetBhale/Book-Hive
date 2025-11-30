@@ -358,7 +358,7 @@ const Home = () => {
             <div className="books-carousel">
               <div className="books-scroller">
                 {[...recentlyAddedBooks, ...recentlyAddedBooks].map((book, index) => (
-                  <Link to="/register" key={index} className="book-card">
+                  <Link to="/books" key={index} className="book-card">
                     <img src={getFullImageUrl(book.coverUrl)} alt={`Cover of ${book.title}`} className="book-cover" />
                     <div className="book-info">
                       <h4 className="book-title">{book.title}</h4>
