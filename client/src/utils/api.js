@@ -297,6 +297,7 @@ export const messagesAPI = {
   blockUser: (userId) => api.post(`/messages/block/${userId}`),
   unblockUser: (userId) => api.post(`/messages/unblock/${userId}`),
   getBlockedUsers: () => api.get('/messages/blocked'),
+  addReaction: (messageId, emoji) => api.post(`/messages/${messageId}/react`, { emoji }),
 };
 
 export const reportAPI = {

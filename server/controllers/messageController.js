@@ -21,8 +21,8 @@ export const sendMessage = async (req, res) => {
       });
     }
 
-    // Now correctly receiving both subject and message
-    const { subject, ciphertext, iv, salt, alg, message } = req.body;
+    // Now correctly receiving both subject and message, plus replyTo
+    const { subject, ciphertext, iv, salt, alg, message, replyTo } = req.body;
     const { recipientId } = req.params;
     const senderId = req.user._id;
 
@@ -49,6 +49,7 @@ export const sendMessage = async (req, res) => {
       salt,
       alg: alg || 'ECDH-AES-GCM',
       message, // temporary for migration/notifications preview
+      ...(replyTo && { replyTo }),
     });
 
     // Save message first for faster response
@@ -58,6 +59,8 @@ export const sendMessage = async (req, res) => {
     const populatedMessage = await Message.findById(newMessage._id)
       .populate('senderId', 'name email avatar')
       .populate('recipientId', 'name email avatar')
+      .populate('replyTo', 'message senderId recipientId')
+      .populate('reactions.userId', 'name avatar')
       .lean();
 
     // Send response immediately
@@ -143,7 +146,9 @@ export const getConversations = async (req, res) => {
           options: { sort: { createdAt: -1 }, limit: 50 },
           populate: [
             { path: 'senderId', select: 'name email avatar' },
-            { path: 'recipientId', select: 'name email avatar' }
+            { path: 'recipientId', select: 'name email avatar' },
+            { path: 'replyTo', select: 'message senderId recipientId' },
+            { path: 'reactions.userId', select: 'name avatar' }
           ]
         })
         .limit(parseInt(limit))
@@ -230,7 +235,9 @@ export const getConversationWithUser = async (req, res) => {
         options: { sort: { createdAt: 1 } },
         populate: [
           { path: 'senderId', select: 'name email avatar' },
-          { path: 'recipientId', select: 'name email avatar' }
+          { path: 'recipientId', select: 'name email avatar' },
+          { path: 'replyTo', select: 'message senderId recipientId' },
+          { path: 'reactions.userId', select: 'name avatar' }
         ]
       });
 
@@ -297,7 +304,9 @@ export const getConversationWithUser = async (req, res) => {
           options: { sort: { createdAt: 1 } },
           populate: [
             { path: 'senderId', select: 'name email avatar' },
-            { path: 'recipientId', select: 'name email avatar' }
+            { path: 'recipientId', select: 'name email avatar' },
+            { path: 'replyTo', select: 'message senderId recipientId' },
+            { path: 'reactions.userId', select: 'name avatar' }
           ]
         });
     } catch (e) {
@@ -636,6 +645,90 @@ export const getBlockedUsers = async (req, res) => {
   } catch (error) {
     console.error('Error in getBlockedUsers controller: ', error.message);
     res.status(500).json({ message: 'Server error getting blocked users' });
+  }
+};
+
+// @desc    Add reaction to a message
+// @route   POST /api/messages/:messageId/react
+export const addReaction = async (req, res) => {
+  try {
+    console.log('addReaction called for user:', req.user?._id);
+    
+    if (!req.user || !req.user._id) {
+      console.error('addReaction: req.user or req.user._id is undefined');
+      return res.status(401).json({ 
+        success: false,
+        message: 'User not authenticated' 
+      });
+    }
+
+    const { messageId } = req.params;
+    const { emoji } = req.body;
+    const userId = req.user._id;
+
+    if (!emoji) {
+      return res.status(400).json({ message: 'Emoji is required' });
+    }
+
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    // Check if user is part of the conversation
+    if (message.senderId.toString() !== userId && message.recipientId.toString() !== userId) {
+      return res.status(403).json({ message: 'Not authorized to react to this message' });
+    }
+
+    // Check if user already reacted with this emoji
+    const existingReaction = message.reactions.find(
+      r => r.userId.toString() === userId && r.emoji === emoji
+    );
+
+    if (existingReaction) {
+      // Remove reaction if already exists (toggle)
+      message.reactions = message.reactions.filter(
+        r => !(r.userId.toString() === userId && r.emoji === emoji)
+      );
+    } else {
+      // Remove any other reaction from this user and add new one
+      message.reactions = message.reactions.filter(
+        r => r.userId.toString() !== userId
+      );
+      message.reactions.push({ userId, emoji, createdAt: new Date() });
+    }
+
+    await message.save();
+
+    const populatedMessage = await Message.findById(messageId)
+      .populate('reactions.userId', 'name avatar')
+      .lean();
+
+    // Emit socket event for real-time update
+    const io = req.app.get('io');
+    if (io) {
+      const otherUserId = message.senderId.toString() === userId 
+        ? message.recipientId.toString() 
+        : message.senderId.toString();
+      
+      io.to(`user:${userId}`).emit('message:reaction', { 
+        messageId, 
+        reactions: populatedMessage.reactions 
+      });
+      io.to(`user:${otherUserId}`).emit('message:reaction', { 
+        messageId, 
+        reactions: populatedMessage.reactions 
+      });
+    }
+
+    res.status(200).json({ 
+      message: 'Reaction updated successfully', 
+      reactions: populatedMessage.reactions 
+    });
+  } catch (error) {
+    console.error('Error in addReaction controller: ', error.message);
+    res.status(500).json({ message: 'Server error adding reaction' });
   }
 };
 

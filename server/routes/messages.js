@@ -10,6 +10,7 @@ import {
   blockUser,
   unblockUser,
   getBlockedUsers,
+  addReaction,
 } from '../controllers/messageController.js';
 import { protect } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
@@ -33,6 +34,9 @@ router.post('/send/:recipientId', protect, sendMessage);
 
 // This route sends a file message to a specific user
 router.post('/send-file/:recipientId', protect, upload.single('file'), sendFileMessage);
+
+// This route adds/removes a reaction to a message
+router.post('/:messageId/react', protect, addReaction);
 
 // This route deletes a message
 router.delete('/:messageId', protect, deleteMessage);

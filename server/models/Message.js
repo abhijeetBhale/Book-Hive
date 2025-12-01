@@ -31,6 +31,18 @@ const messageSchema = new mongoose.Schema(
     readAt: { type: Date },
     // Soft-delete per user
     deletedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', default: [] }],
+    // Reply to message
+    replyTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Message',
+      default: null
+    },
+    // Message reactions
+    reactions: [{
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      emoji: { type: String, required: true },
+      createdAt: { type: Date, default: Date.now }
+    }]
   },
   { timestamps: true }
 );

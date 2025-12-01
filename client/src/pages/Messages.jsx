@@ -5,7 +5,7 @@ import { importPrivateKeyFromIndexedDB, encryptMessage, decryptMessage } from '.
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { io } from 'socket.io-client';
-import { Search, MoreHorizontal, Send, Paperclip, Smile, Check, CheckCheck, Trash2, Palette, X, Image, File, ArrowLeft, UserX } from 'lucide-react';
+import { Search, MoreHorizontal, Send, Paperclip, Smile, Check, CheckCheck, Trash2, Palette, X, Image, File, ArrowLeft, UserX, Reply, Heart, ThumbsUp, Laugh } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 
 // Modern Messages Page Design
@@ -443,6 +443,12 @@ const MessageBubble = styled.div`
   max-width: 100%;
   min-width: 80px;
   box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  
+  &:active {
+    transform: scale(0.98);
+  }
   
   ${props => props.$isMe ? `
     background: #d9fdd3;
@@ -485,13 +491,63 @@ const MessageBubble = styled.div`
     }
   `}
   
+  .replied-message {
+    background: rgba(0, 0, 0, 0.08);
+    border-left: 3px solid #06cf9c;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    
+    .replied-sender {
+      font-weight: 600;
+      color: #06cf9c;
+      margin-bottom: 2px;
+    }
+    
+    .replied-text {
+      color: #667781;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+  
   .message-text {
     font-size: 14.2px;
     line-height: 19px;
     margin: 0;
-    padding-right: 70px;
+    padding-right: 90px;
     padding-bottom: 0;
     min-height: 19px;
+  }
+  
+  .message-reactions {
+    display: inline-flex;
+    gap: 2px;
+    margin-left: 4px;
+    vertical-align: middle;
+    
+    .reaction-item {
+      background: transparent;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+      padding: 0;
+      
+      &:hover {
+        transform: scale(1.2);
+      }
+      
+      .reaction-emoji {
+        font-size: 16px;
+        line-height: 1;
+        filter: ${props => props.$isMyReaction ? 'none' : 'grayscale(0%)'};
+      }
+    }
   }
   
   .message-time {
@@ -505,6 +561,98 @@ const MessageBubble = styled.div`
     bottom: 4px;
     right: 8px;
     white-space: nowrap;
+  }
+`;
+
+const MessageActions = styled.div`
+  position: absolute;
+  top: -30px;
+  ${props => props.$isMe ? 'right: 0;' : 'left: 0;'}
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  z-index: 10;
+  animation: slideDown 0.2s ease;
+  
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .action-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    border: none;
+    
+    &:hover {
+      background: #f0f2f5;
+      transform: scale(1.1);
+    }
+    
+    &.emoji-btn {
+      font-size: 18px;
+    }
+  }
+`;
+
+const ReplyPreview = styled.div`
+  background: #f0f2f5;
+  border-left: 3px solid #06cf9c;
+  padding: 8px 12px;
+  margin: 0 16px 8px 16px;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  
+  .reply-content {
+    flex: 1;
+    
+    .reply-to {
+      font-size: 12px;
+      color: #06cf9c;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    
+    .reply-message {
+      font-size: 13px;
+      color: #667781;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+  
+  .close-reply {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #667781;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    &:hover {
+      color: #111b21;
+    }
   }
 `;
 
@@ -1185,9 +1333,16 @@ const MessagesPage = () => {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
+  // Reply and reaction state
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [showActionsForMessage, setShowActionsForMessage] = useState(null);
+  const [messageReactions, setMessageReactions] = useState({});
+
   const dropdownRef = useRef(null);
   const emojiRef = useRef(null);
   const fileInputRef = useRef(null);
+  const messageClickTimer = useRef(null);
+  const messageInputRef = useRef(null);
 
 
 
@@ -1221,11 +1376,15 @@ const MessagesPage = () => {
       if (emojiRef.current && !emojiRef.current.contains(event.target)) {
         setShowEmojiPicker(false);
       }
+      // Close message actions when clicking outside
+      if (showActionsForMessage) {
+        setShowActionsForMessage(null);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [showActionsForMessage]);
 
   // Save theme to localStorage
   useEffect(() => {
@@ -1481,6 +1640,23 @@ const MessagesPage = () => {
       }
     });
 
+    // Handle message reaction event
+    socket.on('message:reaction', ({ messageId, reactions }) => {
+      setMessageReactions(prev => ({
+        ...prev,
+        [messageId]: reactions
+      }));
+      
+      // Update the message in active conversation
+      setActive(prev => {
+        if (!prev) return prev;
+        const updatedMessages = prev.messages.map(m => 
+          m._id === messageId ? { ...m, reactions } : m
+        );
+        return { ...prev, messages: updatedMessages };
+      });
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -1515,6 +1691,15 @@ const MessagesPage = () => {
           }
         }
         setDecryptedTexts(results);
+
+        // Initialize message reactions from loaded messages
+        const reactionsMap = {};
+        (active.messages || []).forEach(m => {
+          if (m.reactions && m.reactions.length > 0) {
+            reactionsMap[m._id] = m.reactions;
+          }
+        });
+        setMessageReactions(reactionsMap);
 
         // Initialize message statuses - preserve existing statuses, especially 'read'
         setMessageStatuses(prevStatuses => {
@@ -1554,7 +1739,9 @@ const MessagesPage = () => {
     if (!text.trim() || !other?._id) return;
 
     const plain = text.trim();
+    const replyToId = replyingTo?._id;
     setText('');
+    setReplyingTo(null);
 
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     if (socketRef.current) socketRef.current.emit('typing:stop', { recipientId: other._id });
@@ -1567,6 +1754,7 @@ const MessagesPage = () => {
       message: plain,
       status: 'sent',
       createdAt: new Date().toISOString(),
+      replyTo: replyToId ? replyingTo : null, // Store the full message object for optimistic UI
     };
 
     // Add optimistic message immediately
@@ -1588,7 +1776,14 @@ const MessagesPage = () => {
         }
       } catch { }
 
-      const res = await messagesAPI.sendMessage(other._id, { subject: 'Chat', message: plain, ...(enc || {}) });
+      const messageData = { 
+        subject: 'Chat', 
+        message: plain, 
+        ...(enc || {}),
+        ...(replyToId && { replyTo: replyToId })
+      };
+
+      const res = await messagesAPI.sendMessage(other._id, messageData);
       const savedMessage = res.data;
 
       // Replace optimistic message with real message
@@ -1814,6 +2009,83 @@ const MessagesPage = () => {
     setText(prev => prev + emojiData.emoji);
     setShowEmojiPicker(false);
   };
+
+  // Handle double-click on message to reply
+  const handleMessageDoubleClick = (message) => {
+    if (messageClickTimer.current) {
+      clearTimeout(messageClickTimer.current);
+      messageClickTimer.current = null;
+    }
+    setReplyingTo(message);
+    setShowActionsForMessage(null);
+    
+    // Focus the input field
+    setTimeout(() => {
+      if (messageInputRef.current) {
+        messageInputRef.current.focus();
+      }
+    }, 100);
+  };
+
+  // Handle single click to show actions
+  const handleMessageClick = (messageId, event) => {
+    // Prevent showing actions if clicking on links or buttons
+    if (event.target.tagName === 'A' || event.target.tagName === 'BUTTON') {
+      return;
+    }
+
+    if (messageClickTimer.current) {
+      clearTimeout(messageClickTimer.current);
+      messageClickTimer.current = null;
+      return;
+    }
+
+    messageClickTimer.current = setTimeout(() => {
+      setShowActionsForMessage(prev => prev === messageId ? null : messageId);
+      messageClickTimer.current = null;
+    }, 250);
+  };
+
+  // Handle reaction
+  const handleReaction = async (messageId, emoji) => {
+    console.log('handleReaction called:', { messageId, emoji });
+    try {
+      const response = await messagesAPI.addReaction(messageId, emoji);
+      console.log('Reaction API response:', response.data);
+      setShowActionsForMessage(null);
+      
+      // Immediately update local state with the new reactions
+      if (response.data && response.data.reactions) {
+        console.log('Updating reactions:', response.data.reactions);
+        setMessageReactions(prev => {
+          const updated = {
+            ...prev,
+            [messageId]: response.data.reactions
+          };
+          console.log('Updated messageReactions state:', updated);
+          return updated;
+        });
+        
+        // Update the message in active conversation
+        setActive(prev => {
+          if (!prev) return prev;
+          const updatedMessages = prev.messages.map(m => 
+            m._id === messageId ? { ...m, reactions: response.data.reactions } : m
+          );
+          console.log('Updated active conversation messages');
+          return { ...prev, messages: updatedMessages };
+        });
+      } else {
+        console.error('No reactions in response:', response.data);
+      }
+    } catch (error) {
+      console.error('Failed to add reaction:', error);
+      alert('Failed to add reaction. Please try again.');
+    }
+  };
+
+  // Quick reactions
+  const quickReactions = ['❤️', '👍', '😂', '😮', '😢', '🙏'];
 
 
   // Group messages by sender and time
@@ -2077,38 +2349,126 @@ const MessagesPage = () => {
                       {group.messages.map((message) => {
                         const messageStatus = messageStatuses[message._id] || { status: message.status || 'sent' };
                         const messageText = decryptedTexts[message._id] ?? (message.message || '');
+                        const reactions = messageReactions[message._id] || message.reactions || [];
+                        
+                        // Debug logging
+                        if (reactions.length > 0) {
+                          console.log('Rendering message with reactions:', {
+                            messageId: message._id,
+                            reactions,
+                            fromState: messageReactions[message._id],
+                            fromMessage: message.reactions
+                          });
+                        }
+                        
+                        // Find replied message if exists
+                        // message.replyTo can be either an ID (string) or a populated object
+                        let repliedMessage = null;
+                        if (message.replyTo) {
+                          if (typeof message.replyTo === 'object' && message.replyTo._id) {
+                            // Already populated from server
+                            repliedMessage = message.replyTo;
+                          } else if (typeof message.replyTo === 'string') {
+                            // Just an ID, find in messages array
+                            repliedMessage = active?.messages?.find(m => m._id === message.replyTo);
+                          } else if (typeof message.replyTo === 'object') {
+                            // Optimistic message with full object
+                            repliedMessage = message.replyTo;
+                          }
+                        }
+                        const repliedText = repliedMessage 
+                          ? (decryptedTexts[repliedMessage._id] ?? repliedMessage.message)
+                          : null;
 
                         return (
-                          <MessageBubble key={message._id} $isMe={group.isMe}>
-                            {message.messageType === 'file' ? (
-                              <FileMessageBubble
-                                $isMe={group.isMe}
-                                onClick={() => window.open(message.fileUrl, '_blank')}
-                              >
-                                <div className="file-icon">
-                                  {message.fileType?.startsWith('image/') ? (
-                                    <Image size={24} />
-                                  ) : (
-                                    <File size={24} />
-                                  )}
-                                </div>
-                                <div className="file-info">
-                                  <div className="file-name">{message.fileName}</div>
-                                  <div className="file-size">{formatFileSize(message.fileSize)}</div>
-                                </div>
-                              </FileMessageBubble>
-                            ) : (
-                              <div className="message-text">{messageText}</div>
+                          <div key={message._id} style={{ position: 'relative' }}>
+                            {showActionsForMessage === message._id && (
+                              <MessageActions $isMe={group.isMe}>
+                                <button
+                                  className="action-icon"
+                                  onClick={() => handleMessageDoubleClick(message)}
+                                  title="Reply"
+                                >
+                                  <Reply size={16} />
+                                </button>
+                                {quickReactions.map((emoji) => (
+                                  <button
+                                    key={emoji}
+                                    className="action-icon emoji-btn"
+                                    onClick={() => handleReaction(message._id, emoji)}
+                                    title={`React with ${emoji}`}
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </MessageActions>
                             )}
-                            <div className="message-time">
-                              {formatMessageTime(message.createdAt)}
-                              {group.isMe && (
-                                <span style={{ marginLeft: '4px' }}>
-                                  {getStatusIcon(messageStatus.status)}
-                                </span>
+                            <MessageBubble 
+                              $isMe={group.isMe}
+                              onClick={(e) => handleMessageClick(message._id, e)}
+                              onDoubleClick={() => handleMessageDoubleClick(message)}
+                            >
+                              {repliedMessage && (
+                                <div className="replied-message">
+                                  <div className="replied-sender">
+                                    {repliedMessage.senderId?._id === currentUser?._id ? 'You' : other?.name}
+                                  </div>
+                                  <div className="replied-text">{repliedText}</div>
+                                </div>
                               )}
-                            </div>
-                          </MessageBubble>
+                              {message.messageType === 'file' ? (
+                                <FileMessageBubble
+                                  $isMe={group.isMe}
+                                  onClick={() => window.open(message.fileUrl, '_blank')}
+                                >
+                                  <div className="file-icon">
+                                    {message.fileType?.startsWith('image/') ? (
+                                      <Image size={24} />
+                                    ) : (
+                                      <File size={24} />
+                                    )}
+                                  </div>
+                                  <div className="file-info">
+                                    <div className="file-name">{message.fileName}</div>
+                                    <div className="file-size">{formatFileSize(message.fileSize)}</div>
+                                  </div>
+                                </FileMessageBubble>
+                              ) : (
+                                <div className="message-text">{messageText}</div>
+                              )}
+                              <div className="message-time">
+                                {formatMessageTime(message.createdAt)}
+                                {reactions.length > 0 && (
+                                  <span className="message-reactions">
+                                    {reactions.map((reaction, idx) => {
+                                      // Check if this reaction is from current user
+                                      const userId = typeof reaction.userId === 'object' ? reaction.userId._id : reaction.userId;
+                                      const isMyReaction = userId === currentUser?._id;
+                                      
+                                      return (
+                                        <span 
+                                          key={`${reaction.emoji}-${userId}-${idx}`}
+                                          className="reaction-item"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleReaction(message._id, reaction.emoji);
+                                          }}
+                                          title={isMyReaction ? 'You reacted (click to remove)' : 'Click to react'}
+                                        >
+                                          <span className="reaction-emoji">{reaction.emoji}</span>
+                                        </span>
+                                      );
+                                    })}
+                                  </span>
+                                )}
+                                {group.isMe && (
+                                  <span style={{ marginLeft: '4px' }}>
+                                    {getStatusIcon(messageStatus.status)}
+                                  </span>
+                                )}
+                              </div>
+                            </MessageBubble>
+                          </div>
                         );
                       })}
                     </div>
@@ -2129,6 +2489,25 @@ const MessagesPage = () => {
             </MessagesArea>
 
             <MessageInput>
+              {replyingTo && (
+                <ReplyPreview>
+                  <div className="reply-content">
+                    <div className="reply-to">
+                      Replying to {replyingTo.senderId?._id === currentUser?._id ? 'yourself' : other?.name}
+                    </div>
+                    <div className="reply-message">
+                      {decryptedTexts[replyingTo._id] ?? replyingTo.message}
+                    </div>
+                  </div>
+                  <button 
+                    className="close-reply" 
+                    onClick={() => setReplyingTo(null)}
+                    type="button"
+                  >
+                    <X size={16} />
+                  </button>
+                </ReplyPreview>
+              )}
               <form onSubmit={handleSend}>
                 <div className="input-container">
                   <div className="input-actions">
@@ -2143,6 +2522,7 @@ const MessagesPage = () => {
                   </div>
 
                   <input
+                    ref={messageInputRef}
                     className="message-input"
                     value={text}
                     onChange={handleInputChange}
