@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import EventRegistrationModal from '../components/events/EventRegistrationModal';
 
 // Fix for default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -24,7 +25,6 @@ const EventDetails = () => {
   const { user } = useContext(AuthContext);
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [registering, setRegistering] = useState(false);
 
   useEffect(() => {
     fetchEventDetails();
@@ -44,24 +44,21 @@ const EventDetails = () => {
     }
   };
 
-  const handleRegister = async () => {
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+
+  const handleRegister = () => {
     if (!user) {
       toast.error('Please login to register for events');
       navigate('/login');
       return;
     }
 
-    setRegistering(true);
-    try {
-      await eventsAPI.registerForEvent(id);
-      toast.success('Successfully registered for event!');
-      fetchEventDetails(); // Refresh to update registration count
-    } catch (error) {
-      console.error('Failed to register:', error);
-      toast.error(error.response?.data?.message || 'Failed to register for event');
-    } finally {
-      setRegistering(false);
-    }
+    setShowRegistrationModal(true);
+  };
+
+  const handleRegistrationSuccess = () => {
+    setShowRegistrationModal(false);
+    fetchEventDetails(); // Refresh to update registration count
   };
 
   const getEventTypeColor = (type) => {
@@ -224,18 +221,9 @@ const EventDetails = () => {
                 {event.registrationRequired ? (
                   <RegisterButton
                     onClick={handleRegister}
-                    disabled={registering || isFull}
+                    disabled={isFull}
                   >
-                    {registering ? (
-                      <>
-                        <Loader size={18} className="spinner" />
-                        Registering...
-                      </>
-                    ) : isFull ? (
-                      'Event Full'
-                    ) : (
-                      'Register for Event'
-                    )}
+                    {isFull ? 'Event Full' : 'Register for Event'}
                   </RegisterButton>
                 ) : (
                   <InfoBox>
@@ -314,6 +302,14 @@ const EventDetails = () => {
           </StatsCard>
         </SideSection>
       </ContentGrid>
+
+      {/* Event Registration Modal */}
+      <EventRegistrationModal
+        isOpen={showRegistrationModal}
+        onClose={() => setShowRegistrationModal(false)}
+        event={event}
+        onSuccess={handleRegistrationSuccess}
+      />
     </PageWrapper>
   );
 };

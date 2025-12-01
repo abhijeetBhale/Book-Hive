@@ -28,11 +28,10 @@ const VerificationApplicationsTab = () => {
         const socket = io(base, { auth: { token }, transports: ['websocket', 'polling'] });
 
         socket.on('connect', () => {
-            console.log('✅ VerificationApplicationsTab socket connected');
+            // VerificationApplicationsTab socket connected
         });
 
         socket.on('verification_application:new', (data) => {
-            console.log('🔔 New verification application received in tab', data);
             // Refresh the applications list
             fetchApplications();
         });
@@ -63,7 +62,6 @@ const VerificationApplicationsTab = () => {
             });
             
             const data = await response.json();
-            console.log('Verification applications response:', data);
             setApplications(data.data || []);
         } catch (error) {
             console.error('Error fetching applications:', error);

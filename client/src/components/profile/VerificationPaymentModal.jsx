@@ -27,7 +27,6 @@ const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
     try {
       // Get API URL
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      console.log('API URL:', apiUrl);
       
       // Create order
       const response = await fetch(`${apiUrl}/payment/create-verification-order`, {
@@ -38,9 +37,7 @@ const VerificationPaymentModal = ({ isOpen, onClose, onSuccess }) => {
         }
       });
 
-      console.log('Response status:', response.status);
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (!response.ok) {
         // Check if it's a configuration error

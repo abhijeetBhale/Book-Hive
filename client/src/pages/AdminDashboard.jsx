@@ -192,22 +192,19 @@ const AdminDashboard = () => {
   // Setup socket for real-time admin notifications
   useEffect(() => {
     if (!user || !hasAdminAccess) {
-      console.log('❌ Admin socket not initialized - user or access check failed', { user: !!user, hasAdminAccess });
       return;
     }
 
     const token = localStorage.getItem('token');
     if (!token) {
-      console.log('❌ Admin socket not initialized - no token');
       return;
     }
 
-    console.log('🔌 Initializing admin socket connection...');
     const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
     const socket = io(base, { auth: { token }, transports: ['websocket', 'polling'] });
 
     socket.on('connect', () => {
-      console.log('✅ Admin socket connected!', socket.id);
+      // Admin socket connected
     });
 
     socket.on('connect_error', (error) => {
@@ -216,7 +213,6 @@ const AdminDashboard = () => {
 
     // Listen for various admin events
     socket.on('borrow_request:new', (data) => {
-      console.log('🔔 Received borrow_request:new event', data);
       setNotificationCounts(prev => ({ ...prev, borrows: prev.borrows + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
@@ -227,7 +223,6 @@ const AdminDashboard = () => {
     });
 
     socket.on('user:new', (data) => {
-      console.log('🔔 Received user:new event', data);
       setNotificationCounts(prev => ({ ...prev, users: prev.users + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
@@ -238,7 +233,6 @@ const AdminDashboard = () => {
     });
 
     socket.on('book:new', (data) => {
-      console.log('🔔 Received book:new event', data);
       setNotificationCounts(prev => ({ ...prev, books: prev.books + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
@@ -249,7 +243,6 @@ const AdminDashboard = () => {
     });
 
     socket.on('book_for_sale:new', (data) => {
-      console.log('🔔 Received book_for_sale:new event', data);
       setNotificationCounts(prev => ({ ...prev, booksForSale: prev.booksForSale + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
@@ -260,7 +253,6 @@ const AdminDashboard = () => {
     });
 
     socket.on('book_club:new', (data) => {
-      console.log('🔔 Received book_club:new event', data);
       setNotificationCounts(prev => ({ ...prev, clubs: prev.clubs + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
@@ -271,7 +263,6 @@ const AdminDashboard = () => {
     });
 
     socket.on('organizer_application:new', (data) => {
-      console.log('🔔 Received organizer_application:new event', data);
       setNotificationCounts(prev => ({ ...prev, organizerApplications: prev.organizerApplications + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
@@ -281,7 +272,6 @@ const AdminDashboard = () => {
     });
 
     socket.on('event:new', (data) => {
-      console.log('🔔 Received event:new event', data);
       setNotificationCounts(prev => ({ ...prev, events: prev.events + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
@@ -292,7 +282,6 @@ const AdminDashboard = () => {
     });
 
     socket.on('verification_application:new', (data) => {
-      console.log('🔔 Received verification_application:new event', data);
       setNotificationCounts(prev => ({ ...prev, verification: prev.verification + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
@@ -303,7 +292,6 @@ const AdminDashboard = () => {
     });
 
     socket.on('review:new', (data) => {
-      console.log('🔔 Received review:new event', data);
       setNotificationCounts(prev => ({ ...prev, reviews: prev.reviews + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
@@ -314,7 +302,6 @@ const AdminDashboard = () => {
     });
 
     socket.on('report:new', (data) => {
-      console.log('🔔 Received report:new event', data);
       setNotificationCounts(prev => ({ ...prev, reports: prev.reports + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
@@ -326,7 +313,6 @@ const AdminDashboard = () => {
 
     // Listen for book deletion/update events
     socket.on('book:deleted', (data) => {
-      console.log('🔔 Received book:deleted event', data);
       setNotificationCounts(prev => ({ ...prev, books: prev.books + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
@@ -337,7 +323,6 @@ const AdminDashboard = () => {
     });
 
     socket.on('book:updated', (data) => {
-      console.log('🔔 Received book:updated event', data);
       setNotificationCounts(prev => ({ ...prev, books: prev.books + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
@@ -348,11 +333,10 @@ const AdminDashboard = () => {
     });
 
     socket.on('disconnect', () => {
-      console.log('❌ Admin socket disconnected');
+      // Admin socket disconnected
     });
 
     return () => {
-      console.log('🔌 Cleaning up admin socket connection');
       socket.disconnect();
     };
   }, [user, hasAdminAccess]);

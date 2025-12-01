@@ -10,6 +10,7 @@ import { eventsAPI } from '../../utils/api';
 import toast from 'react-hot-toast';
 import 'leaflet/dist/leaflet.css';
 import VerifiedBadge from '../ui/VerifiedBadge';
+import EventRegistrationModal from '../events/EventRegistrationModal';
 
 // Error Boundary Component
 class MapErrorBoundary extends React.Component {
@@ -325,7 +326,6 @@ const MapView = ({ userGroups, userToShowPopup }) => {
     const [selectedPin, setSelectedPin] = useState(null);
     const [mapKey, setMapKey] = useState(() => `map-${Date.now()}-${Math.random()}`);
     const [hasProcessedUserToShow, setHasProcessedUserToShow] = useState(false);
-    const [registering, setRegistering] = useState(false);
 
     // Flatten userGroups to individual users for clustering
     const allUsers = userGroups.flat();
@@ -593,24 +593,24 @@ const MapView = ({ userGroups, userToShowPopup }) => {
         setSelectedPin(null);
     }
 
-    const handleRegisterForEvent = async (eventId) => {
+    const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+    const [eventToRegister, setEventToRegister] = useState(null);
+
+    const handleRegisterForEvent = (event) => {
         if (!currentUser) {
             toast.error('Please login to register for events');
             navigate('/login');
             return;
         }
 
-        setRegistering(true);
-        try {
-            await eventsAPI.registerForEvent(eventId);
-            toast.success('Successfully registered for event!');
-            setSelectedPin(null); // Close popup after registration
-        } catch (error) {
-            console.error('Failed to register:', error);
-            toast.error(error.response?.data?.message || 'Failed to register for event');
-        } finally {
-            setRegistering(false);
-        }
+        setEventToRegister(event);
+        setShowRegistrationModal(true);
+    }
+
+    const handleRegistrationSuccess = () => {
+        setShowRegistrationModal(false);
+        setEventToRegister(null);
+        setSelectedPin(null);
     }
 
     return (
@@ -804,17 +804,14 @@ const MapView = ({ userGroups, userToShowPopup }) => {
                                                     return (
                                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                             <button 
-                                                                onClick={() => handleRegisterForEvent(selectedPin._id)} 
-                                                                disabled={registering}
+                                                                onClick={() => handleRegisterForEvent(selectedPin)} 
                                                                 className="profile-btn" 
                                                                 style={{ 
                                                                     background: 'linear-gradient(135deg, #10b981, #059669)', 
-                                                                    flex: 1,
-                                                                    opacity: registering ? 0.7 : 1,
-                                                                    cursor: registering ? 'not-allowed' : 'pointer'
+                                                                    flex: 1
                                                                 }}
                                                             >
-                                                                {registering ? 'Registering...' : 'Register Now'}
+                                                                Register Now
                                                             </button>
                                                             <Link 
                                                                 to={`/events/${selectedPin._id}`} 
@@ -899,6 +896,17 @@ const MapView = ({ userGroups, userToShowPopup }) => {
                     )}
                 </SafeMapContainer>
             </StyledMapWrapper>
+
+            {/* Event Registration Modal */}
+            <EventRegistrationModal
+                isOpen={showRegistrationModal}
+                onClose={() => {
+                    setShowRegistrationModal(false);
+                    setEventToRegister(null);
+                }}
+                event={eventToRegister}
+                onSuccess={handleRegistrationSuccess}
+            />
         </MapErrorBoundary>
     );
 };

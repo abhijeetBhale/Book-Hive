@@ -2060,21 +2060,17 @@ const MessagesPage = () => {
 
   // Handle reaction
   const handleReaction = async (messageId, emoji) => {
-    console.log('handleReaction called:', { messageId, emoji });
     try {
       const response = await messagesAPI.addReaction(messageId, emoji);
-      console.log('Reaction API response:', response.data);
       setShowActionsForMessage(null);
       
       // Immediately update local state with the new reactions
       if (response.data && response.data.reactions) {
-        console.log('Updating reactions:', response.data.reactions);
         setMessageReactions(prev => {
           const updated = {
             ...prev,
             [messageId]: response.data.reactions
           };
-          console.log('Updated messageReactions state:', updated);
           return updated;
         });
         
@@ -2084,14 +2080,10 @@ const MessagesPage = () => {
           const updatedMessages = prev.messages.map(m => 
             m._id === messageId ? { ...m, reactions: response.data.reactions } : m
           );
-          console.log('Updated active conversation messages');
           return { ...prev, messages: updatedMessages };
         });
-      } else {
-        console.error('No reactions in response:', response.data);
       }
     } catch (error) {
-      console.error('Failed to add reaction:', error);
       alert('Failed to add reaction. Please try again.');
     }
   };
@@ -2368,16 +2360,6 @@ const MessagesPage = () => {
                         const messageStatus = messageStatuses[message._id] || { status: message.status || 'sent' };
                         const messageText = decryptedTexts[message._id] ?? (message.message || '');
                         const reactions = messageReactions[message._id] || message.reactions || [];
-                        
-                        // Debug logging
-                        if (reactions.length > 0) {
-                          console.log('Rendering message with reactions:', {
-                            messageId: message._id,
-                            reactions,
-                            fromState: messageReactions[message._id],
-                            fromMessage: message.reactions
-                          });
-                        }
                         
                         // Find replied message if exists
                         // message.replyTo can be either an ID (string) or a populated object

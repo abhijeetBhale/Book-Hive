@@ -159,7 +159,8 @@ const Navbar = () => {
       clearInterval(interval);
       window.removeEventListener('notifications-read', onRead);
     };
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?._id]); // Only re-run when user ID changes, not the entire user object
 
   // Close dropdown when clicking outside
   useEffect(() => {

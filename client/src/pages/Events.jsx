@@ -9,6 +9,8 @@ import { format } from 'date-fns';
 import SEO from '../components/SEO';
 import { BASE_URL } from '../utils/seo';
 import CreateEventModal from '../components/events/CreateEventModal';
+import EditEventModal from '../components/events/EditEventModal';
+import EventRegistrantsModal from '../components/events/EventRegistrantsModal';
 
 const Events = () => {
   const { user, fetchProfile } = useContext(AuthContext);
@@ -19,6 +21,9 @@ const Events = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showRegistrantsModal, setShowRegistrantsModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [filters, setFilters] = useState({
     eventType: '',
     startDate: '',
@@ -41,7 +46,8 @@ const Events = () => {
     }, 30000); // 30 seconds
 
     return () => clearInterval(pollInterval);
-  }, [fetchProfile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   useEffect(() => {
     if (activeTab === 'all') {
@@ -66,9 +72,8 @@ const Events = () => {
       }
 
       const response = await eventsAPI.getPublicEvents(params);
-      setEvents(response.data || []);
+      setEvents(response.data || response || []);
     } catch (error) {
-      console.error('Failed to fetch events:', error);
       toast.error('Failed to load events');
     } finally {
       setLoading(false);
@@ -82,10 +87,9 @@ const Events = () => {
         organizerAPI.getOrganizerEvents({ status: filters.status || '' }),
         organizerAPI.getOrganizerStats()
       ]);
-      setMyEvents(eventsRes.data || []);
-      setStats(statsRes.data);
+      setMyEvents(eventsRes.data || eventsRes || []);
+      setStats(statsRes.data || statsRes);
     } catch (error) {
-      console.error('Failed to fetch my events:', error);
       toast.error('Failed to load your events');
     } finally {
       setLoading(false);
@@ -99,9 +103,18 @@ const Events = () => {
       toast.success('Event deleted successfully');
       fetchMyEvents();
     } catch (error) {
-      console.error('Failed to delete event:', error);
       toast.error(error.response?.data?.message || 'Failed to delete event');
     }
+  };
+
+  const handleEditEvent = (event) => {
+    setSelectedEvent(event);
+    setShowEditModal(true);
+  };
+
+  const handleViewRegistrants = (event) => {
+    setSelectedEvent(event);
+    setShowRegistrantsModal(true);
   };
 
   const handleSearch = (e) => {
@@ -415,10 +428,13 @@ const Events = () => {
                     </p>
                   </div>
                   <div className="event-actions">
-                    <button className="action-btn" title="View">
+                    <Link to={`/events/${event._id}`} className="action-btn" title="View Event">
                       <Eye size={18} />
+                    </Link>
+                    <button className="action-btn" title="View Registrants" onClick={() => handleViewRegistrants(event)}>
+                      <Users size={18} />
                     </button>
-                    <button className="action-btn" title="Edit" onClick={() => toast('Edit form coming soon!', { icon: 'ℹ️' })}>
+                    <button className="action-btn" title="Edit" onClick={() => handleEditEvent(event)}>
                       <Edit size={18} />
                     </button>
                     <button className="action-btn delete" title="Delete" onClick={() => handleDeleteEvent(event._id)}>
@@ -441,6 +457,31 @@ const Events = () => {
             fetchMyEvents();
           }
         }}
+      />
+
+      {/* Edit Event Modal */}
+      <EditEventModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedEvent(null);
+        }}
+        event={selectedEvent}
+        onSuccess={() => {
+          fetchMyEvents();
+          setShowEditModal(false);
+          setSelectedEvent(null);
+        }}
+      />
+
+      {/* Event Registrants Modal */}
+      <EventRegistrantsModal
+        isOpen={showRegistrantsModal}
+        onClose={() => {
+          setShowRegistrantsModal(false);
+          setSelectedEvent(null);
+        }}
+        event={selectedEvent}
       />
       </StyledWrapper>
     </>
@@ -1003,6 +1044,10 @@ const StyledWrapper = styled.div`
             color: #64748b;
             cursor: pointer;
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
 
             &:hover {
               background: #e2e8f0;

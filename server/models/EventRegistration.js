@@ -26,6 +26,12 @@ const eventRegistrationSchema = new mongoose.Schema({
       default: ''
     }
   },
+  // Custom registration data based on event's registration fields
+  customFields: {
+    type: Map,
+    of: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
   consentGiven: {
     type: Boolean,
     required: true,
@@ -74,28 +80,32 @@ eventRegistrationSchema.post('save', async function() {
   }
 });
 
-// Update event registration count when registration is cancelled
+// Update event registration count when registration status changes
 eventRegistrationSchema.pre('save', async function(next) {
-  if (this.isModified('status')) {
-    const Event = mongoose.model('Event');
-    
-    if (this.status === 'cancelled' && this._original?.status === 'registered') {
-      await Event.findByIdAndUpdate(this.event, {
-        $inc: { currentRegistrations: -1 }
-      });
-    } else if (this.status === 'registered' && this._original?.status === 'cancelled') {
-      await Event.findByIdAndUpdate(this.event, {
-        $inc: { currentRegistrations: 1 }
-      });
+  if (!this.isNew && this.isModified('status')) {
+    try {
+      const Event = mongoose.model('Event');
+      
+      // Get the original document to compare status
+      const original = await this.constructor.findById(this._id).lean();
+      
+      if (original) {
+        // If changing from registered to cancelled, decrement count
+        if (original.status === 'registered' && this.status === 'cancelled') {
+          await Event.findByIdAndUpdate(this.event, {
+            $inc: { currentRegistrations: -1 }
+          });
+        } 
+        // If changing from cancelled to registered, increment count
+        else if (original.status === 'cancelled' && this.status === 'registered') {
+          await Event.findByIdAndUpdate(this.event, {
+            $inc: { currentRegistrations: 1 }
+          });
+        }
+      }
+    } catch (error) {
+      return next(error);
     }
-  }
-  next();
-});
-
-// Store original status for comparison
-eventRegistrationSchema.pre('save', function(next) {
-  if (!this.isNew) {
-    this._original = this.constructor.findOne({ _id: this._id }).lean();
   }
   next();
 });

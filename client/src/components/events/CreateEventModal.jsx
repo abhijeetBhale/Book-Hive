@@ -3,9 +3,11 @@ import styled from 'styled-components';
 import { X, Calendar, MapPin, Users, Image, Tag, Link as LinkIcon, Mail, Phone, Loader } from 'lucide-react';
 import { organizerAPI } from '../../utils/api';
 import toast from 'react-hot-toast';
+import RegistrationFieldsManager from './RegistrationFieldsManager';
 
 const CreateEventModal = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
+  const [registrationFields, setRegistrationFields] = useState([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -88,6 +90,7 @@ const CreateEventModal = ({ isOpen, onClose, onSuccess }) => {
         status: formData.status,
         isPublic: formData.isPublic,
         registrationRequired: formData.registrationRequired,
+        registrationFields: registrationFields,
         tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
         externalLink: formData.externalLink.trim(),
         contactEmail: formData.contactEmail.trim(),
@@ -99,7 +102,6 @@ const CreateEventModal = ({ isOpen, onClose, onSuccess }) => {
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Failed to create event:', error);
       toast.error(error.response?.data?.message || 'Failed to create event');
     } finally {
       setLoading(false);
@@ -367,6 +369,15 @@ const CreateEventModal = ({ isOpen, onClose, onSuccess }) => {
               <Label>Require registration to attend</Label>
             </CheckboxGroup>
           </Section>
+
+          {formData.registrationRequired && (
+            <Section>
+              <RegistrationFieldsManager
+                fields={registrationFields}
+                onChange={setRegistrationFields}
+              />
+            </Section>
+          )}
 
           <ModalFooter>
             <CancelButton type="button" onClick={onClose}>

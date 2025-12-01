@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI, usersAPI } from '../utils/api';
 import { ensureLocalKeypairAndUpload } from '../utils/crypto';
@@ -13,49 +13,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const token = sessionManager.getToken();
-    if (token && sessionManager.isTokenValid()) {
-      // Try to load cached user data first for instant display
-      const cachedUser = localStorage.getItem('cachedUser');
-      if (cachedUser) {
-        try {
-          const parsedUser = JSON.parse(cachedUser);
-          setUser(parsedUser);
-          setLoading(false); // Show UI immediately with cached data
-          
-          // Fetch fresh data in background
-          fetchProfile(true); // Pass true to indicate background refresh
-        } catch (error) {
-          // If cache is corrupted, fetch normally
-          fetchProfile();
-        }
-      } else {
-        fetchProfile();
-      }
-    } else {
-      if (token) {
-        // Token exists but is invalid/expired
-        sessionManager.removeToken();
-        localStorage.removeItem('cachedUser');
-      }
-      setLoading(false);
-    }
-
-    // Listen for session expiration events
-    const handleSessionExpired = () => {
-      setUser(null);
-      localStorage.removeItem('cachedUser');
-      toast.error('Your session has expired. Please login again.');
-      navigate('/login');
-    };
-
-    window.addEventListener('sessionExpired', handleSessionExpired);
-    return () => window.removeEventListener('sessionExpired', handleSessionExpired);
-  }, [navigate]);
   
-  const fetchProfile = async (isBackgroundRefresh = false) => {
+  const fetchProfile = useCallback(async (isBackgroundRefresh = false) => {
     try {
       const token = sessionManager.getToken();
       if (!token) {
@@ -101,7 +60,6 @@ export const AuthProvider = ({ children }) => {
       
       // If it's a background refresh and fails, keep the cached data
       if (isBackgroundRefresh) {
-        console.log('Background refresh failed, keeping cached data');
         return;
       }
       
@@ -127,7 +85,49 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
       }
     }
-  };
+  }, []); // Empty deps - function doesn't depend on any props or state
+
+  useEffect(() => {
+    const token = sessionManager.getToken();
+    if (token && sessionManager.isTokenValid()) {
+      // Try to load cached user data first for instant display
+      const cachedUser = localStorage.getItem('cachedUser');
+      if (cachedUser) {
+        try {
+          const parsedUser = JSON.parse(cachedUser);
+          setUser(parsedUser);
+          setLoading(false); // Show UI immediately with cached data
+          
+          // Fetch fresh data in background
+          fetchProfile(true); // Pass true to indicate background refresh
+        } catch (error) {
+          // If cache is corrupted, fetch normally
+          fetchProfile();
+        }
+      } else {
+        fetchProfile();
+      }
+    } else {
+      if (token) {
+        // Token exists but is invalid/expired
+        sessionManager.removeToken();
+        localStorage.removeItem('cachedUser');
+      }
+      setLoading(false);
+    }
+
+    // Listen for session expiration events
+    const handleSessionExpired = () => {
+      setUser(null);
+      localStorage.removeItem('cachedUser');
+      toast.error('Your session has expired. Please login again.');
+      navigate('/login');
+    };
+
+    window.addEventListener('sessionExpired', handleSessionExpired);
+    return () => window.removeEventListener('sessionExpired', handleSessionExpired);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   const login = async (credentials) => {
     try {

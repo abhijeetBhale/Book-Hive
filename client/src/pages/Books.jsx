@@ -302,8 +302,8 @@ const Books = () => {
             if (imageUrls.length > 0) {
               // Preload images without blocking the UI
               setTimeout(() => {
-                preloadImages(imageUrls).catch(err => {
-                  console.log('Image preload completed with some errors (non-critical)');
+                preloadImages(imageUrls).catch(() => {
+                  // Image preload completed with some errors (non-critical)
                 });
               }, 100);
             }

@@ -261,7 +261,7 @@ export const getEventById = async (req, res) => {
  */
 export const registerForEvent = async (req, res) => {
   try {
-    const { phone, consentGiven } = req.body;
+    const { phone, consentGiven, customFields } = req.body;
     const eventId = req.params.id;
     const userId = req.user._id;
 
@@ -298,6 +298,18 @@ export const registerForEvent = async (req, res) => {
       });
     }
 
+    // Validate required custom fields
+    if (event.registrationFields && event.registrationFields.length > 0) {
+      for (const field of event.registrationFields) {
+        if (field.required && (!customFields || !customFields[field.fieldName])) {
+          return res.status(400).json({
+            success: false,
+            message: `${field.label} is required`
+          });
+        }
+      }
+    }
+
     // Check if user already registered
     const existingRegistration = await EventRegistration.findOne({
       event: eventId,
@@ -310,6 +322,8 @@ export const registerForEvent = async (req, res) => {
         existingRegistration.status = 'registered';
         existingRegistration.registeredAt = new Date();
         existingRegistration.cancelledAt = null;
+        existingRegistration.customFields = customFields || {};
+        existingRegistration.userSnapshot.phone = phone || existingRegistration.userSnapshot.phone;
         await existingRegistration.save();
 
         return res.json({
@@ -334,6 +348,7 @@ export const registerForEvent = async (req, res) => {
         email: req.user.email,
         phone: phone || ''
       },
+      customFields: customFields || {},
       consentGiven: true,
       status: 'registered'
     });

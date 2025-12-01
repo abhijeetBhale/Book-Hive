@@ -63,10 +63,8 @@ const Map = () => {
         // Fetch ALL public events for everyone to see
         try {
           const response = await eventsAPI.getPublicEvents();
-          console.log('Events API Response:', response); // Debug log
           // Backend returns 'data' field, not 'events'
           const eventsData = response.data || response.events || [];
-          console.log('Events Data:', eventsData); // Debug log
           // Transform events to match user structure for map display
           const eventMarkers = eventsData.filter(event => 
             event.location?.coordinates && 
@@ -79,7 +77,6 @@ const Map = () => {
             eventData: event,
             distanceFromCurrentUser: 0 // Events don't have distance
           }));
-          console.log('Event Markers:', eventMarkers); // Debug log
           allMarkers = [...eventMarkers];
         } catch (error) {
           console.error('Failed to load events:', error);
@@ -143,8 +140,6 @@ const Map = () => {
           }
         }
 
-        console.log('Final allMarkers (events + users):', allMarkers); // Debug log
-        console.log('Events in allMarkers:', allMarkers.filter(m => m.isEvent)); // Debug log
         setUsers(allMarkers);
         setSelectedUserIds(allMarkers.map(u => u._id));
       } catch (error) {

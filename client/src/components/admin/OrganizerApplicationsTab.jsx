@@ -32,7 +32,6 @@ const OrganizerApplicationsTab = () => {
             }
             
             const response = await organizerAPI.getApplications(params);
-            console.log('Applications response:', response);
             setApplications(response.data || []);
         } catch (error) {
             console.error('Error fetching applications:', error);

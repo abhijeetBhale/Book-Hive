@@ -386,7 +386,6 @@ const FriendsPage = () => {
 
   const handleAcceptRequest = async (requestId) => {
     try {
-      console.log('Accepting request with ID:', requestId);
       await friendsAPI.respond(requestId, 'accept');
       toast.success('Friend request accepted!');
       refresh();
@@ -399,7 +398,6 @@ const FriendsPage = () => {
 
   const handleRejectRequest = async (requestId) => {
     try {
-      console.log('Rejecting request with ID:', requestId);
       await friendsAPI.respond(requestId, 'reject');
       toast.success('Friend request rejected');
       refresh();
@@ -608,14 +606,6 @@ const FriendsPage = () => {
             <FriendsList>
               {data.pending?.length > 0 ? (
                 data.pending.map(request => {
-                  // Debug logging
-                  console.log('Pending request:', {
-                    id: request._id,
-                    requester: request.requester?._id,
-                    recipient: request.recipient,
-                    status: request.status
-                  });
-                  
                   // Skip if requester data is null or undefined
                   if (!request.requester) return null;
                   
