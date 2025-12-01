@@ -7,6 +7,7 @@ import { AuthContext } from '../context/AuthContext';
 import { io } from 'socket.io-client';
 import { Search, MoreHorizontal, Send, Paperclip, Smile, Check, CheckCheck, Trash2, Palette, X, Image, File, ArrowLeft, UserX, Reply, Heart, ThumbsUp, Laugh } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
+import VerifiedBadge from '../components/ui/VerifiedBadge';
 
 // Modern Messages Page Design
 const Wrapper = styled.div`
@@ -226,9 +227,17 @@ const ConversationItem = styled.button`
     font-size: 15px;
     font-weight: 600;
     color: #2d3748;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    max-width: 100%;
+    
+    > span:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
   
   .time {
@@ -326,6 +335,9 @@ const ChatHeader = styled.div`
       font-weight: 600;
       color: #2d3748;
       margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
     }
     
     .status {
@@ -2234,7 +2246,10 @@ const MessagesPage = () => {
 
                   <div className="conversation-info">
                     <div className="conversation-header">
-                      <div className="name">{peer?.name || 'User'}</div>
+                      <div className="name">
+                        <span>{peer?.name || 'User'}</span>
+                        {peer?.isVerified && <VerifiedBadge size={14} />}
+                      </div>
                       <div className="time">
                         {last ? new Date(last.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                       </div>
@@ -2272,7 +2287,10 @@ const MessagesPage = () => {
                   alt={other?.name}
                 />
                 <div className="chat-user-details">
-                  <div className="name">{other?.name || 'User'}</div>
+                  <div className="name">
+                    {other?.name || 'User'}
+                    {other?.isVerified && <VerifiedBadge size={16} />}
+                  </div>
                   <div className="status">
                     {isOtherTyping ? 'typing...' : onlineUsers.has(other?._id) ? 'online' : 'offline'}
                     {!socketConnected && ' • connection lost'}

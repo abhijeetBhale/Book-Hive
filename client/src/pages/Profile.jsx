@@ -9,12 +9,13 @@ import { getFullImageUrl } from '../utils/imageHelpers';
 import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy, Shield, Activity, RefreshCw, Search, CheckCircle, ChevronRight, Star, BadgeCheck } from 'lucide-react';
 import GamificationSection from '../components/profile/GamificationSection';
 import ReviewsModal from '../components/ReviewsModal';
-import VerificationPaymentModal from '../components/profile/VerificationPaymentModal';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
 import AccountDeletion from '../components/profile/AccountDeletion';
+import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
   const { user, setUser, fetchProfile } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     name: user.name,
@@ -23,7 +24,6 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [activeSubTab, setActiveSubTab] = useState('overview');
   const [showReviewsModal, setShowReviewsModal] = useState(false);
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
 
   // --- STATE FOR REPORT USER ---
   const [reportData, setReportData] = useState({
@@ -959,7 +959,7 @@ const Profile = () => {
                 <div className="verification-status not-verified">
                   <div className="status-content">
                     <h5>Get Verified</h5>
-                    <p>Stand out with a verified badge next to your name. One-time payment of ₹99.</p>
+                    <p>Stand out with a verified badge next to your name by applying for verification.</p>
                     <ul className="verification-benefits">
                       <li>✓ Blue verified badge on your profile</li>
                       <li>✓ Increased trust from other users</li>
@@ -968,10 +968,10 @@ const Profile = () => {
                     </ul>
                     <button
                       className="verification-btn"
-                      onClick={() => setShowVerificationModal(true)}
+                      onClick={() => navigate('/get-verified')}
                     >
                       <BadgeCheck size={16} />
-                      Get Verified for ₹99
+                      Apply for Verification
                     </button>
                   </div>
                 </div>
@@ -1320,14 +1320,6 @@ const Profile = () => {
         onClose={() => setShowReviewsModal(false)}
         userId={user._id}
         userName={user.name}
-      />
-      
-      <VerificationPaymentModal
-        isOpen={showVerificationModal}
-        onClose={() => setShowVerificationModal(false)}
-        onSuccess={() => {
-          fetchProfile();
-        }}
       />
     </StyledWrapper>
   );

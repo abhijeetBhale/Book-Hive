@@ -6,6 +6,7 @@ import { MessageSquare, Search, Check, X } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import AnimatedAddButton from '../components/ui/AnimatedAddButton';
+import VerifiedBadge from '../components/ui/VerifiedBadge';
 
 // Styled Components
 const Container = styled.div`
@@ -203,6 +204,9 @@ const UserName = styled.div`
   font-weight: 600;
   color: #333;
   font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
 `;
 
 const UserEmail = styled.div`
@@ -518,7 +522,10 @@ const FriendsPage = () => {
                           {!user.avatar && getInitials(user.name)}
                         </Avatar>
                         <UserDetails>
-                          <UserName>{user.name}</UserName>
+                          <UserName>
+                            {user.name}
+                            {user.isVerified && <VerifiedBadge size={16} />}
+                          </UserName>
                           <UserEmail>{user.email}</UserEmail>
                         </UserDetails>
                       </UserInfo>
@@ -566,7 +573,10 @@ const FriendsPage = () => {
                           {!friend.avatar && getInitials(friend.name || 'Unknown')}
                         </Avatar>
                         <UserDetails>
-                          <UserName>{friend.name || 'Unknown User'}</UserName>
+                          <UserName>
+                            {friend.name || 'Unknown User'}
+                            {friend.isVerified && <VerifiedBadge size={16} />}
+                          </UserName>
                           <UserEmail>{friend.email || 'No email'}</UserEmail>
                         </UserDetails>
                       </UserInfo>
@@ -619,7 +629,10 @@ const FriendsPage = () => {
                           {!request.requester.avatar && getInitials(request.requester.name || 'Unknown')}
                         </Avatar>
                         <UserDetails>
-                          <UserName>{request.requester.name || 'Unknown User'}</UserName>
+                          <UserName>
+                            {request.requester.name || 'Unknown User'}
+                            {request.requester.isVerified && <VerifiedBadge size={16} />}
+                          </UserName>
                           <UserEmail>{request.requester.email || 'No email'}</UserEmail>
                         </UserDetails>
                       </UserInfo>

@@ -36,7 +36,8 @@ import {
   BarChart,
   LineChart,
   ChevronRight,
-  Home
+  Home,
+  BadgeCheck
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { adminAPIService } from '../utils/adminAPI';
@@ -56,6 +57,7 @@ import RecentActivity from '../components/admin/RecentActivity';
 import TopBooks from '../components/admin/TopBooks';
 import OrganizerApplicationsTab from '../components/admin/OrganizerApplicationsTab';
 import EventsTab from '../components/admin/EventsTab';
+import VerificationApplicationsTab from '../components/admin/VerificationApplicationsTab';
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -137,6 +139,7 @@ const AdminDashboard = () => {
     clubs: 0,
     organizerApplications: 0,
     events: 0,
+    verification: 0,
     reviews: 0,
     reports: 0
   });
@@ -286,6 +289,17 @@ const AdminDashboard = () => {
         return newSet;
       });
       toast.success('New event created!', { icon: '📅' });
+    });
+
+    socket.on('verification_application:new', (data) => {
+      console.log('🔔 Received verification_application:new event', data);
+      setNotificationCounts(prev => ({ ...prev, verification: prev.verification + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('verification');
+        return newSet;
+      });
+      toast.success('New verification application received!', { icon: '✅' });
     });
 
     socket.on('review:new', (data) => {
@@ -3354,6 +3368,17 @@ const AdminDashboard = () => {
               {getNotificationBadge(notificationCounts.events, 'events')}
             </button>
 
+            <button
+              onClick={() => handleTabChange('verification')}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'verification'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+            >
+              <BadgeCheck className="w-4 h-4 mr-3" />
+              Verification
+              {getNotificationBadge(notificationCounts.verification, 'verification')}
+            </button>
 
             <button
               onClick={() => handleTabChange('reviews')}
@@ -3491,6 +3516,7 @@ const AdminDashboard = () => {
           {activeTab === 'help' && renderHelp()}
           {activeTab === 'organizer-applications' && <OrganizerApplicationsTab />}
           {activeTab === 'events' && <EventsTab />}
+          {activeTab === 'verification' && <VerificationApplicationsTab />}
         </div>
       </div>
 

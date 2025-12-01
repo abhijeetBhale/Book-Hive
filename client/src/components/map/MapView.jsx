@@ -9,6 +9,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { eventsAPI } from '../../utils/api';
 import toast from 'react-hot-toast';
 import 'leaflet/dist/leaflet.css';
+import VerifiedBadge from '../ui/VerifiedBadge';
 
 // Error Boundary Component
 class MapErrorBoundary extends React.Component {
@@ -189,7 +190,16 @@ const PopupCard = styled.div`
   
   .card-body {
     text-align: center;
-    h2 { font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0; }
+    h2 { 
+      font-size: 1.5rem; 
+      font-weight: 700; 
+      color: #111827; 
+      margin: 0;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 0.5rem !important;
+    }
     
     .member-status {
       display: flex;
@@ -831,7 +841,10 @@ const MapView = ({ userGroups, userToShowPopup }) => {
                                             </div>
                                         </div>
                                         <div className="card-body">
-                                            <h2>{selectedPin.name}</h2>
+                                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                {selectedPin.name}
+                                                {selectedPin.isVerified && <VerifiedBadge size={18} />}
+                                            </h2>
                                             <div className="member-status">
                                                 <span>Community Member</span>
                                                 <div className={`status-indicator ${selectedPin.isOnline ? 'online' : 'offline'}`}>

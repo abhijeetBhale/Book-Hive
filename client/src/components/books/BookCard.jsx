@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { User, Calendar, Tag, Star } from 'lucide-react';
 import { getFullImageUrl } from '../../utils/imageHelpers';
 import OptimizedImage from '../ui/OptimizedImage';
+import VerifiedBadge from '../ui/VerifiedBadge';
 
 const BookCard = memo(({ book, onDelete }) => {
   const coverImageUrl = getFullImageUrl(book.coverImage);
@@ -60,8 +61,9 @@ const BookCard = memo(({ book, onDelete }) => {
                   {book.owner.name?.charAt(0).toUpperCase()}
                 </div>
               )}
-              <span className="text-xs font-semibold text-gray-600 max-w-[80px] truncate">
+              <span className="text-xs font-semibold text-gray-600 max-w-[80px] truncate flex items-center gap-1">
                 {book.owner.name}
+                {book.owner.isVerified && <VerifiedBadge size={12} />}
               </span>
             </div>
           )}

@@ -364,6 +364,7 @@ import { Loader, MapPin, User, Search, BookOpen, LayoutGrid, Star, Award, Librar
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
+import VerifiedBadge from '../components/ui/VerifiedBadge';
 
 // --- UserCard Component ---
 const UserCard = ({ user, distance, priority, isOnline }) => {
@@ -408,6 +409,7 @@ const UserCard = ({ user, distance, priority, isOnline }) => {
         </div>
         <h3 className="user-name">
           {user.name}
+          {user.isVerified && <VerifiedBadge size={16} />}
           {isOnline && <span className="online-badge">Online</span>}
         </h3>
         <p className="user-tagline">
@@ -474,6 +476,7 @@ const UserListItem = ({ user, distance, priority, isOnline }) => {
           <div className="user-main-info">
             <h3 className="user-name-list">
               {user.name}
+              {user.isVerified && <VerifiedBadge size={16} />}
               {isOnline && <span className="online-badge-list">Online</span>}
             </h3>
             <p className="user-tagline-list">

@@ -57,10 +57,10 @@ export const sendMessage = async (req, res) => {
 
     // Populate user data for response
     const populatedMessage = await Message.findById(newMessage._id)
-      .populate('senderId', 'name email avatar')
-      .populate('recipientId', 'name email avatar')
+      .populate('senderId', 'name email avatar isVerified')
+      .populate('recipientId', 'name email avatar isVerified')
       .populate('replyTo', 'message senderId recipientId')
-      .populate('reactions.userId', 'name avatar')
+      .populate('reactions.userId', 'name avatar isVerified')
       .lean();
 
     // Send response immediately
@@ -140,7 +140,7 @@ export const getConversations = async (req, res) => {
         const conversations = await Conversation.find({ 
           participants: loggedInUserId 
         })
-        .populate('participants', 'name avatar email publicKeyJwk blockedUsers')
+        .populate('participants', 'name avatar email publicKeyJwk blockedUsers isVerified')
         .populate({
           path: 'messages',
           options: { sort: { createdAt: -1 }, limit: 50 },
@@ -449,8 +449,8 @@ export const sendFileMessage = async (req, res) => {
     await Promise.all([conversation.save(), newMessage.save()]);
 
     const populatedMessage = await Message.findById(newMessage._id)
-      .populate('senderId', 'name email avatar')
-      .populate('recipientId', 'name email avatar')
+      .populate('senderId', 'name email avatar isVerified')
+      .populate('recipientId', 'name email avatar isVerified')
       .lean();
 
     // Emit realtime event to sender and recipient rooms

@@ -11,6 +11,7 @@ import {
   CheckCircle,
   XCircle
 } from 'lucide-react';
+import VerifiedBadge from '../ui/VerifiedBadge';
 
 const ReportDetailsModal = ({ isOpen, onClose, report }) => {
   if (!isOpen || !report) return null;
@@ -131,8 +132,9 @@ const ReportDetailsModal = ({ isOpen, onClose, report }) => {
                         alt={report.reportedUser?.name}
                         className="w-6 h-6 rounded-full"
                       />
-                      <span className="text-sm font-medium text-orange-900">
+                      <span className="text-sm font-medium text-orange-900 flex items-center gap-1.5">
                         {report.reportedUser?.name || 'Deleted User'}
+                        {report.reportedUser?.isVerified && <VerifiedBadge size={14} />}
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -167,8 +169,9 @@ const ReportDetailsModal = ({ isOpen, onClose, report }) => {
                         alt={report.reportedBy?.name}
                         className="w-6 h-6 rounded-full"
                       />
-                      <span className="text-sm font-medium text-blue-900">
+                      <span className="text-sm font-medium text-blue-900 flex items-center gap-1.5">
                         {report.reportedBy?.name || 'Deleted User'}
+                        {report.reportedBy?.isVerified && <VerifiedBadge size={14} />}
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">

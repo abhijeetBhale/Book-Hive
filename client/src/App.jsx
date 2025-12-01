@@ -30,6 +30,7 @@ import Events from './pages/Events';
 import EventDetails from './pages/EventDetails';
 import BecomeOrganizer from './pages/BecomeOrganizer';
 import OrganizerDashboard from './pages/OrganizerDashboard';
+import GetVerified from './pages/GetVerified';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import { OnlineStatusProvider } from './context/OnlineStatusContext';
@@ -165,6 +166,7 @@ function App() {
                     <Route path="/events/:id" element={<EventDetails />} />
                     <Route path="/become-organizer" element={<ProtectedRoute><BecomeOrganizer /></ProtectedRoute>} />
                     <Route path="/organizer/dashboard" element={<ProtectedRoute><OrganizerDashboard /></ProtectedRoute>} />
+                    <Route path="/get-verified" element={<ProtectedRoute><GetVerified /></ProtectedRoute>} />
                   </Routes>
                 </Layout>
               } />

@@ -33,6 +33,7 @@ import contactRoutes from './routes/contact.js';
 import paymentRoutes from './routes/payment.js';
 import eventRoutes from './routes/eventRoutes.js';
 import organizerRoutes from './routes/organizerRoutes.js';
+import verificationRoutes from './routes/verificationRoutes.js';
 import { initializeDefaultAchievements } from './services/achievementService.js';
 import { initializeAllUserStats } from './services/userStatsService.js';
 import NotificationService from './services/notificationService.js';
@@ -150,6 +151,7 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/organizer', organizerRoutes);
+app.use('/api/verification', verificationRoutes);
 
 // Error handler middleware
 app.use(errorHandler);

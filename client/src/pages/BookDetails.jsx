@@ -10,6 +10,7 @@ import UpgradeModal from '../components/ui/UpgradeModal';
 import SEO from '../components/SEO';
 import { BASE_URL, generateStructuredData } from '../utils/seo';
 import toast from 'react-hot-toast';
+import VerifiedBadge from '../components/ui/VerifiedBadge';
 
 const PageWrapper = styled.div`
   background-color: #f9fafb;
@@ -100,6 +101,9 @@ const OwnerName = styled.p`
   font-size: 1.125rem;
   font-weight: 600;
   color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
 `;
 
 const ActionButton = styled.button`
@@ -296,7 +300,10 @@ const BookDetails = () => {
                 alt={book.owner.name}
                 size={50}
               />
-              <OwnerName>{book.owner.name}</OwnerName>
+              <OwnerName>
+                {book.owner.name}
+                {book.owner.isVerified && <VerifiedBadge size={16} />}
+              </OwnerName>
             </OwnerCard>
           </OwnerSection>
         </DetailsContainer>

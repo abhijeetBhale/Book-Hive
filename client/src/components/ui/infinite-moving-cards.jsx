@@ -2,6 +2,7 @@ import { cn } from "../../lib/utils";
 import React, { useEffect, useState, Fragment } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faStar, faStarHalfAlt } from "@fortawesome/free-solid-svg-icons";
+import VerifiedBadge from './VerifiedBadge';
 
 const Rating = ({ rating }) => (
   <div className="flex gap-0.5">
@@ -128,7 +129,10 @@ export const InfiniteMovingCards = ({
                   />
                 </div>
                 <div>
-                  <h5 className="text-lg font-medium text-gray-900">{item.name}</h5>
+                  <h5 className="text-lg font-medium text-gray-900 flex items-center gap-1.5">
+                    {item.name}
+                    {item.isVerified && <VerifiedBadge size={16} />}
+                  </h5>
                   {item.title && (
                     <p className="text-sm text-gray-500">{item.title}</p>
                   )}

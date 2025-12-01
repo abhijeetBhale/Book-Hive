@@ -3,6 +3,7 @@ import { eventsAPI } from '../../utils/api';
 import { Calendar, MapPin, Users, Eye, Loader, Search, Filter, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import VerifiedBadge from '../ui/VerifiedBadge';
 
 const EventsTab = () => {
     const [events, setEvents] = useState([]);
@@ -326,7 +327,10 @@ const EventsTab = () => {
                                     </div>
                                     <div>
                                         <label className="text-sm font-medium text-gray-500">Organizer</label>
-                                        <p className="text-gray-900">{selectedEvent.organizer?.name}</p>
+                                        <p className="text-gray-900 flex items-center gap-2">
+                                            {selectedEvent.organizer?.name}
+                                            {selectedEvent.organizer?.isVerified && <VerifiedBadge size={16} />}
+                                        </p>
                                         <p className="text-sm text-gray-500">{selectedEvent.organizer?.email}</p>
                                     </div>
                                 </div>

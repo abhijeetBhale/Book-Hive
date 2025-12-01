@@ -83,7 +83,7 @@ export const requestBook = async (req, res) => {
     await borrowRequest.save();
     
     // Get populated book data for notifications
-    const populatedBook = await Book.findById(book._id).populate('owner', 'name avatar');
+    const populatedBook = await Book.findById(book._id).populate('owner', 'name avatar isVerified');
     
     // Notify admins of new borrow request
     try {
@@ -385,7 +385,7 @@ export const getMyRequests = async (req, res) => {
   try {
     const requests = await BorrowRequest.find({ borrower: req.user._id })
       .populate('book', 'title coverImage')
-      .populate('owner', 'name email avatar')
+      .populate('owner', 'name email avatar isVerified')
       .sort({ createdAt: -1 });
 
     res.json({ requests });
@@ -417,8 +417,8 @@ export const updateRequestStatus = async (req, res) => {
     // Populate request data for notifications
     const populatedRequest = await BorrowRequest.findById(request._id)
       .populate('book', 'title coverImage')
-      .populate('borrower', 'name avatar')
-      .populate('owner', 'name avatar');
+      .populate('borrower', 'name avatar isVerified')
+      .populate('owner', 'name avatar isVerified');
 
     if (status === 'approved') {
       const defaultUntil = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
@@ -593,8 +593,8 @@ export const markAsBorrowed = async (req, res) => {
   try {
     const request = await BorrowRequest.findById(req.params.requestId)
       .populate('book')
-      .populate('borrower', 'name email')
-      .populate('owner', 'name email');
+      .populate('borrower', 'name email isVerified')
+      .populate('owner', 'name email isVerified');
 
     if (!request) {
       return res.status(404).json({ message: 'Borrow request not found' });
@@ -711,8 +711,8 @@ export const markAsReturned = async (req, res) => {
   try {
     const request = await BorrowRequest.findById(req.params.requestId)
       .populate('book')
-      .populate('borrower', 'name email')
-      .populate('owner', 'name email');
+      .populate('borrower', 'name email isVerified')
+      .populate('owner', 'name email isVerified');
 
     if (!request) {
       return res.status(404).json({ message: 'Borrow request not found' });
@@ -766,8 +766,8 @@ export const getAllBorrowRequests = async (req, res) => {
       status: { $in: ['approved', 'borrowed'] }
     })
       .populate('book', 'title coverImage lendingDuration')
-      .populate('borrower', 'name avatar')
-      .populate('owner', 'name avatar')
+      .populate('borrower', 'name avatar isVerified')
+      .populate('owner', 'name avatar isVerified')
       .sort({ createdAt: -1 });
 
     res.json(requests);

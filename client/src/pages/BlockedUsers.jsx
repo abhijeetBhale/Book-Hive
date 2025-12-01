@@ -4,6 +4,7 @@ import { messagesAPI } from '../utils/api';
 import { UserX, Unlock, Search, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import VerifiedBadge from '../components/ui/VerifiedBadge';
 
 const Container = styled.div`
   max-width: 800px;
@@ -120,6 +121,9 @@ const BlockedUserItem = styled.div`
       font-weight: 600;
       color: #2d3748;
       margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
     }
     
     .email {
@@ -326,7 +330,10 @@ const BlockedUsers = () => {
                   alt={user.name}
                 />
                 <div className="details">
-                  <div className="name">{user.name}</div>
+                  <div className="name">
+                    {user.name}
+                    {user.isVerified && <VerifiedBadge size={16} />}
+                  </div>
                   <div className="email">{user.email}</div>
                 </div>
               </div>

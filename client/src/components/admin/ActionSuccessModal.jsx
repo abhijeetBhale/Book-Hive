@@ -9,6 +9,7 @@ import {
   Clock,
   MessageSquare
 } from 'lucide-react';
+import VerifiedBadge from '../ui/VerifiedBadge';
 
 const ActionSuccessModal = ({ 
   isOpen, 
@@ -122,7 +123,10 @@ const ActionSuccessModal = ({
               <div className="flex items-center space-x-2">
                 <User className="w-4 h-4 text-gray-400" />
                 <span className="text-gray-600">Reported User:</span>
-                <span className="font-medium">{report?.reportedUser?.name}</span>
+                <span className="font-medium flex items-center gap-1.5">
+                  {report?.reportedUser?.name}
+                  {report?.reportedUser?.isVerified && <VerifiedBadge size={14} />}
+                </span>
               </div>
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="w-4 h-4 text-gray-400" />

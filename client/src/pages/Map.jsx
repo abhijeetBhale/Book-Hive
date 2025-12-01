@@ -9,6 +9,7 @@ import MapView from '../components/map/MapView';
 import { Loader, MapPin, Search, Calendar, UserCheck, Sliders, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import SEO from '../components/SEO';
 import { PAGE_SEO } from '../utils/seo';
+import VerifiedBadge from '../components/ui/VerifiedBadge';
 
 
 
@@ -289,6 +290,7 @@ const Map = () => {
                         <div className="user-main-info">
                           <span className="user-name">
                             {user.name}
+                            {user.isVerified && <VerifiedBadge size={14} />}
                             {user.isOnline && <span className="online-badge">Online</span>}
                           </span>
                           <div className="user-stats">

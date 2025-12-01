@@ -14,6 +14,7 @@ import {
   TrendingUp,
   BarChart3
 } from 'lucide-react';
+import VerifiedBadge from '../components/ui/VerifiedBadge';
 
 const StyledWrapper = styled.div`
   min-height: 100vh;
@@ -462,8 +463,18 @@ const Calendar = () => {
                     <div className="upcoming-book">{event.book.title}</div>
                     <div className="upcoming-details">
                       {event.isLender 
-                        ? `Lent to ${event.borrower.name}` 
-                        : `Borrowed from ${event.owner.name}`
+                        ? (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            Lent to {event.borrower.name}
+                            {event.borrower.isVerified && <VerifiedBadge size={12} />}
+                          </span>
+                        )
+                        : (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            Borrowed from {event.owner.name}
+                            {event.owner.isVerified && <VerifiedBadge size={12} />}
+                          </span>
+                        )
                       }
                     </div>
                   </div>

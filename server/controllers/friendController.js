@@ -212,12 +212,12 @@ export const getFriendsAndRequests = async (req, res) => {
     }
 
     const userId = req.user._id; // Fixed: use _id instead of id
-    const pending = await Friendship.find({ recipient: userId, status: 'pending' }).populate('requester', 'name avatar email');
-    const sent = await Friendship.find({ requester: userId, status: 'pending' }).populate('recipient', 'name avatar email');
+    const pending = await Friendship.find({ recipient: userId, status: 'pending' }).populate('requester', 'name avatar email isVerified');
+    const sent = await Friendship.find({ requester: userId, status: 'pending' }).populate('recipient', 'name avatar email isVerified');
     const accepted = await Friendship.find({ $or: [
       { requester: userId, status: 'accepted' },
       { recipient: userId, status: 'accepted' }
-    ]}).populate('requester recipient', 'name avatar email');
+    ]}).populate('requester recipient', 'name avatar email isVerified');
 
     res.json({ pending, sent, friends: accepted });
   } catch (err) {

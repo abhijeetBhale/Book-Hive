@@ -69,7 +69,7 @@ export const getPublishedTestimonials = async (req, res) => {
       isApproved: true, 
       isPublished: true 
     })
-    .populate('user', 'avatar')
+    .populate('user', 'avatar isVerified')
     .sort({ createdAt: -1 })
     .limit(20);
 
@@ -80,6 +80,7 @@ export const getPublishedTestimonials = async (req, res) => {
       review: testimonial.review,
       rating: testimonial.rating,
       avatar: testimonial.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(testimonial.name)}&background=4F46E5&color=ffffff&bold=true`,
+      isVerified: testimonial.user?.isVerified || false,
       createdAt: testimonial.createdAt
     }));
 

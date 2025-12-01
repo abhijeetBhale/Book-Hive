@@ -300,7 +300,7 @@ export const getAllBooks = async (req, res) => {
 // @route   GET /api/books/:id
 export const getBookById = async (req, res) => {
   try {
-    const book = await Book.findById(req.params.id).populate('owner', 'name email avatar location');
+    const book = await Book.findById(req.params.id).populate('owner', 'name email avatar location isVerified');
     if (book) {
       // Increment view count
       book.viewCount = (book.viewCount || 0) + 1;
@@ -593,7 +593,7 @@ export const getUserBooks = async (req, res) => {
 
     const [books, total] = await Promise.all([
       Book.find({ owner: userId })
-        .populate('owner', 'name email avatar location')
+        .populate('owner', 'name email avatar location isVerified')
         .skip((pageNum - 1) * limitNum)
         .limit(limitNum),
       Book.countDocuments({ owner: userId }),
@@ -624,7 +624,7 @@ export const getMyBooks = async (req, res) => {
 
     const [books, total] = await Promise.all([
       Book.find({ owner: req.user._id })
-        .populate('owner', 'name email avatar location')
+        .populate('owner', 'name email avatar location isVerified')
         .skip((pageNum - 1) * limitNum)
         .limit(limitNum),
       Book.countDocuments({ owner: req.user._id }),
@@ -654,7 +654,7 @@ export const searchByISBN = async (req, res) => {
 
     const books = await Book.find({
       isbn: { $regex: cleanISBN, $options: 'i' }
-    }).populate('owner', 'name email avatar location');
+    }).populate('owner', 'name email avatar location isVerified');
 
     res.json({ books, count: books.length });
   } catch (error) {
@@ -696,7 +696,7 @@ export const getBookSuggestions = async (req, res) => {
           { author: { $in: userAuthors } }
         ]
       })
-      .populate('owner', 'name email avatar location')
+      .populate('owner', 'name email avatar location isVerified')
       .sort({ viewCount: -1, createdAt: -1 })
       .limit(limitNum);
     } else {
@@ -706,7 +706,7 @@ export const getBookSuggestions = async (req, res) => {
         isAvailable: true,
         forBorrowing: true
       })
-      .populate('owner', 'name email avatar location')
+      .populate('owner', 'name email avatar location isVerified')
       .sort({ borrowCount: -1, viewCount: -1 })
       .limit(limitNum);
     }
@@ -734,7 +734,7 @@ export const getTrendingBooks = async (req, res) => {
       forBorrowing: true,
       createdAt: { $gte: thirtyDaysAgo }
     })
-    .populate('owner', 'name email avatar location')
+    .populate('owner', 'name email avatar location isVerified')
     .sort({ viewCount: -1, borrowCount: -1, createdAt: -1 })
     .limit(limitNum);
 
@@ -891,7 +891,7 @@ export const getBooksForSale = async (req, res) => {
 
     const [books, total] = await Promise.all([
       Book.find(query)
-        .populate('owner', 'name email avatar location')
+        .populate('owner', 'name email avatar location isVerified')
         .sort(sort)
         .skip((pageNum - 1) * limitNum)
         .limit(limitNum),

@@ -257,7 +257,8 @@ const Home = () => {
     imageUrl: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&color=fff`,
     profileUrl: `/profile/${user._id}`,
     userId: user._id,
-    userName: user.name
+    userName: user.name,
+    isVerified: user.isVerified || false
   }));
 
   const communityStats = [
@@ -304,7 +305,7 @@ const Home = () => {
             <h1 className="main-heading">
               {user ? (
                 <>
-                  Welcome back, <AuroraText>{user.name ? user.name.split(' ')[0] : 'Reader'}</AuroraText>
+                  Welcome Back, <AuroraText>{user.name ? user.name.split(' ')[0] : 'Reader'}</AuroraText>
                 </>
               ) : (
                 <>
@@ -830,7 +831,8 @@ const Home = () => {
                   name: testimonial.user || testimonial.name,
                   title: testimonial.title || '',
                   rating: testimonial.rating || 5,
-                  content: testimonial.review || testimonial.content
+                  content: testimonial.review || testimonial.content,
+                  isVerified: testimonial.isVerified || false
                 }))}
                 direction="left"
                 speed="slow"

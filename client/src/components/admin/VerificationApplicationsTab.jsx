@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { organizerAPI } from '../../utils/api';
-import { UserCheck, X, Check, Eye, Loader, Search, Filter } from 'lucide-react';
+import { BadgeCheck, X, Check, Eye, Loader, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import { io } from 'socket.io-client';
 import VerifiedBadge from '../ui/VerifiedBadge';
 
-const OrganizerApplicationsTab = () => {
+const VerificationApplicationsTab = () => {
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filters, setFilters] = useState({
@@ -19,39 +19,83 @@ const OrganizerApplicationsTab = () => {
         fetchApplications();
     }, [filters]);
 
+    // Setup real-time updates via socket.io
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+        const socket = io(base, { auth: { token }, transports: ['websocket', 'polling'] });
+
+        socket.on('connect', () => {
+            console.log('✅ VerificationApplicationsTab socket connected');
+        });
+
+        socket.on('verification_application:new', (data) => {
+            console.log('🔔 New verification application received in tab', data);
+            // Refresh the applications list
+            fetchApplications();
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, []);
+
     const fetchApplications = async () => {
         try {
             setLoading(true);
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+            
             // Build query params
-            const params = {};
+            const params = new URLSearchParams();
             if (filters.status && filters.status !== 'all') {
-                params.status = filters.status;
+                params.append('status', filters.status);
             }
             if (filters.search) {
-                params.search = filters.search;
+                params.append('search', filters.search);
             }
             
-            const response = await organizerAPI.getApplications(params);
-            console.log('Applications response:', response);
-            setApplications(response.data || []);
+            const response = await fetch(`${apiUrl}/verification/applications?${params}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            
+            const data = await response.json();
+            console.log('Verification applications response:', data);
+            setApplications(data.data || []);
         } catch (error) {
             console.error('Error fetching applications:', error);
-            toast.error(error.response?.data?.message || 'Failed to load organizer applications');
+            toast.error('Failed to load verification applications');
         } finally {
             setLoading(false);
         }
     };
 
     const handleApprove = async (applicationId) => {
-        if (!confirm('Are you sure you want to approve this organizer application?')) return;
+        if (!confirm('Are you sure you want to approve this verification application?')) return;
 
         try {
-            await organizerAPI.approveApplication(applicationId);
-            toast.success('Application approved successfully!');
-            fetchApplications();
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+            const response = await fetch(`${apiUrl}/verification/applications/${applicationId}/approve`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                toast.success('Application approved successfully!');
+                fetchApplications();
+            } else {
+                toast.error(data.message || 'Failed to approve application');
+            }
         } catch (error) {
             console.error('Error approving application:', error);
-            toast.error(error.response?.data?.message || 'Failed to approve application');
+            toast.error('Failed to approve application');
         }
     };
 
@@ -60,12 +104,27 @@ const OrganizerApplicationsTab = () => {
         if (!reason) return;
 
         try {
-            await organizerAPI.rejectApplication(applicationId, reason);
-            toast.success('Application rejected');
-            fetchApplications();
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+            const response = await fetch(`${apiUrl}/verification/applications/${applicationId}/reject`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ reason })
+            });
+
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                toast.success('Application rejected');
+                fetchApplications();
+            } else {
+                toast.error(data.message || 'Failed to reject application');
+            }
         } catch (error) {
             console.error('Error rejecting application:', error);
-            toast.error(error.response?.data?.message || 'Failed to reject application');
+            toast.error('Failed to reject application');
         }
     };
 
@@ -92,7 +151,7 @@ const OrganizerApplicationsTab = () => {
                             <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="Search by organization name or email..."
+                                placeholder="Search by name, email, or phone..."
                                 value={filters.search}
                                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -117,13 +176,13 @@ const OrganizerApplicationsTab = () => {
             <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200">
                     <h3 className="text-lg font-semibold text-gray-900">
-                        Organizer Applications ({applications.length})
+                        Verification Applications ({applications.length})
                     </h3>
                 </div>
 
                 {applications.length === 0 ? (
                     <div className="p-12 text-center">
-                        <UserCheck className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                        <BadgeCheck className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                         <p className="text-gray-500">No applications found</p>
                     </div>
                 ) : (
@@ -132,13 +191,13 @@ const OrganizerApplicationsTab = () => {
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Organization
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Type
+                                        User
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Contact
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Location
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Applied
@@ -157,21 +216,20 @@ const OrganizerApplicationsTab = () => {
                                         <td className="px-6 py-4">
                                             <div>
                                                 <div className="text-sm font-medium text-gray-900">
-                                                    {app.organizationName}
+                                                    {app.fullName}
                                                 </div>
                                                 <div className="text-sm text-gray-500">
                                                     {app.user?.name || 'N/A'}
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="inline-flex px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                                                {app.organizationType}
-                                            </span>
+                                        <td className="px-6 py-4">
+                                            <div className="text-sm text-gray-900">{app.email}</div>
+                                            <div className="text-sm text-gray-500">{app.phone}</div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="text-sm text-gray-900">{app.contactEmail}</div>
-                                            <div className="text-sm text-gray-500">{app.contactPhone}</div>
+                                            <div className="text-sm text-gray-900">{app.address?.city}</div>
+                                            <div className="text-sm text-gray-500">{app.address?.state}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             {format(new Date(app.createdAt), 'MMM dd, yyyy')}
@@ -242,15 +300,36 @@ const OrganizerApplicationsTab = () => {
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="text-sm font-medium text-gray-500">Organization Name</label>
-                                    <p className="text-gray-900 font-semibold text-lg">{selectedApplication.organizationName}</p>
+                                    <label className="text-sm font-medium text-gray-500">Full Name</label>
+                                    <p className="text-gray-900 font-semibold text-lg">{selectedApplication.fullName}</p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-sm font-medium text-gray-500">Organization Type</label>
-                                        <p className="text-gray-900">{selectedApplication.organizationType}</p>
+                                        <label className="text-sm font-medium text-gray-500">Email</label>
+                                        <p className="text-gray-900">{selectedApplication.email}</p>
                                     </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-500">Phone</label>
+                                        <p className="text-gray-900">{selectedApplication.phone}</p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium text-gray-500">Address</label>
+                                    <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">
+                                        {selectedApplication.address?.street}<br />
+                                        {selectedApplication.address?.city}, {selectedApplication.address?.state}<br />
+                                        {selectedApplication.address?.pincode}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium text-gray-500">Reason for Verification</label>
+                                    <p className="text-gray-900 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg">{selectedApplication.reason}</p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-sm font-medium text-gray-500">Status</label>
                                         <span
@@ -265,58 +344,6 @@ const OrganizerApplicationsTab = () => {
                                         </span>
                                     </div>
                                 </div>
-
-                                <div>
-                                    <label className="text-sm font-medium text-gray-500">Description</label>
-                                    <p className="text-gray-900 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg">{selectedApplication.description}</p>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-sm font-medium text-gray-500">Contact Email</label>
-                                        <p className="text-gray-900">{selectedApplication.contactEmail}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-sm font-medium text-gray-500">Contact Phone</label>
-                                        <p className="text-gray-900">{selectedApplication.contactPhone}</p>
-                                    </div>
-                                </div>
-
-                                {selectedApplication.website && (
-                                    <div>
-                                        <label className="text-sm font-medium text-gray-500">Website</label>
-                                        <a
-                                            href={selectedApplication.website}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-blue-600 hover:underline block"
-                                        >
-                                            {selectedApplication.website}
-                                        </a>
-                                    </div>
-                                )}
-
-                                {selectedApplication.verificationDocuments && selectedApplication.verificationDocuments.length > 0 && (
-                                    <div>
-                                        <label className="text-sm font-medium text-gray-500 mb-2 block">Verification Documents</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {selectedApplication.verificationDocuments.map((doc, index) => (
-                                                <a
-                                                    key={index}
-                                                    href={doc.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50"
-                                                >
-                                                    <Eye className="w-4 h-4 text-blue-600" />
-                                                    <span className="text-sm text-gray-700 truncate">
-                                                        {doc.name || `Document ${index + 1}`}
-                                                    </span>
-                                                </a>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
 
                                 <div className="border-t pt-4">
                                     <label className="text-sm font-medium text-gray-500">Applied By</label>
@@ -398,4 +425,4 @@ const OrganizerApplicationsTab = () => {
     );
 };
 
-export default OrganizerApplicationsTab;
+export default VerificationApplicationsTab;
