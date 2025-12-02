@@ -72,9 +72,33 @@ const Events = () => {
       }
 
       const response = await eventsAPI.getPublicEvents(params);
-      setEvents(response.data || response || []);
+      console.log('📡 Full API Response:', response);
+      
+      // The API returns { success, data, pagination }
+      // So we need to access response.data for the events array
+      let eventsData = [];
+      if (response.data && Array.isArray(response.data)) {
+        eventsData = response.data;
+      } else if (Array.isArray(response)) {
+        eventsData = response;
+      }
+      
+      console.log('📊 Events data:', eventsData);
+      console.log('📊 Number of events:', eventsData.length);
+      
+      setEvents(eventsData);
+      
+      if (eventsData.length === 0) {
+        console.log('⚠️ No events returned from API');
+        console.log('Query params:', params);
+      } else {
+        console.log('✅ Events loaded successfully:');
+        eventsData.forEach(e => console.log(`   - ${e.title}`));
+      }
     } catch (error) {
-      toast.error('Failed to load events');
+      console.error('Failed to fetch events:', error);
+      toast.error(error.response?.data?.message || 'Failed to load events');
+      setEvents([]);
     } finally {
       setLoading(false);
     }

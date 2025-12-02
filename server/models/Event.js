@@ -161,13 +161,13 @@ eventSchema.pre('save', function(next) {
   next();
 });
 
-// Update status to completed if event has ended
-eventSchema.pre('save', function(next) {
-  if (this.status === 'published' && this.endAt < new Date()) {
-    this.status = 'completed';
-  }
-  next();
-});
+// Update status to completed if event has ended (commented out to keep events visible)
+// eventSchema.pre('save', function(next) {
+//   if (this.status === 'published' && this.endAt < new Date()) {
+//     this.status = 'completed';
+//   }
+//   next();
+// });
 
 const Event = mongoose.model('Event', eventSchema);
 export default Event;

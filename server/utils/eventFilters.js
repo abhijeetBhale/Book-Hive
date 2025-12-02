@@ -112,15 +112,16 @@ export const buildEventQuery = (user, additionalFilters = {}) => {
     return query;
   }
 
-  // Organizer sees only their events
-  if (user.role === 'organizer') {
-    query.organizer = user._id;
-    return query;
+  // For public events endpoint, everyone sees published/completed public events
+  // Don't filter by organizer for public events
+  if (!query.organizer) {
+    // If status is not already set, show published and completed events
+    if (!query.status) {
+      query.status = { $in: ['published', 'completed'] };
+    }
+    query.isPublic = true;
   }
 
-  // Regular users see published public events
-  query.status = 'published';
-  query.isPublic = true;
   return query;
 };
 

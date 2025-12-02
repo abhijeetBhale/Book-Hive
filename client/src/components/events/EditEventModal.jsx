@@ -83,30 +83,42 @@ const EditEventModal = ({ isOpen, onClose, onSuccess, event }) => {
         eventType: formData.eventType,
         startAt: formData.startAt,
         endAt: formData.endAt,
-        address: formData.address.trim(),
-        location: {
-          venue: formData.venue.trim(),
-          address: formData.address.trim(),
-          coordinates: formData.latitude && formData.longitude 
-            ? [parseFloat(formData.longitude), parseFloat(formData.latitude)]
-            : undefined
-        },
         capacity: parseInt(formData.capacity) || 0,
         status: formData.status,
         isPublic: formData.isPublic,
         registrationRequired: formData.registrationRequired,
-        registrationFields: registrationFields,
+        registrationFields: registrationFields || [],
         tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         externalLink: formData.externalLink.trim(),
         contactEmail: formData.contactEmail.trim(),
         contactPhone: formData.contactPhone.trim()
       };
 
+      // Only include location if we have valid coordinates
+      if (formData.latitude && formData.longitude && formData.address) {
+        eventData.location = {
+          type: 'Point',
+          venue: formData.venue.trim(),
+          address: formData.address.trim(),
+          coordinates: [parseFloat(formData.longitude), parseFloat(formData.latitude)]
+        };
+      } else if (formData.address) {
+        // If no coordinates but have address, keep existing coordinates
+        eventData.location = {
+          type: 'Point',
+          venue: formData.venue.trim(),
+          address: formData.address.trim(),
+          coordinates: event.location?.coordinates || [0, 0]
+        };
+      }
+
+      console.log('Updating event with data:', eventData);
       await organizerAPI.updateEvent(event._id, eventData);
       toast.success('Event updated successfully!');
       onSuccess();
       onClose();
     } catch (error) {
+      console.error('Update error:', error);
       toast.error(error.response?.data?.message || 'Failed to update event');
     } finally {
       setLoading(false);

@@ -135,13 +135,35 @@ export const updateEvent = async (req, res) => {
       });
     }
 
-    // Update fields
-    Object.keys(req.body).forEach(key => {
-      if (key !== 'organizer') { // Prevent changing organizer
-        event[key] = req.body[key];
+    // Update fields with proper handling
+    const updateData = { ...req.body };
+    delete updateData.organizer; // Prevent changing organizer
+
+    // Handle location update properly
+    if (updateData.location) {
+      // Ensure location has the correct structure
+      if (!updateData.location.type) {
+        updateData.location.type = 'Point';
       }
+      // Ensure coordinates are numbers
+      if (updateData.location.coordinates) {
+        updateData.location.coordinates = updateData.location.coordinates.map(coord => 
+          typeof coord === 'string' ? parseFloat(coord) : coord
+        );
+      }
+    }
+
+    // Handle registrationFields - ensure it's an array
+    if (updateData.registrationFields && !Array.isArray(updateData.registrationFields)) {
+      updateData.registrationFields = [];
+    }
+
+    // Update the event
+    Object.keys(updateData).forEach(key => {
+      event[key] = updateData[key];
     });
 
+    console.log('Saving event update:', event.title);
     await event.save();
 
     res.json({
@@ -151,6 +173,7 @@ export const updateEvent = async (req, res) => {
     });
   } catch (error) {
     console.error('Update event error:', error);
+    console.error('Error details:', error.stack);
     res.status(500).json({ 
       success: false,
       message: 'Failed to update event',

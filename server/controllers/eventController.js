@@ -31,7 +31,7 @@ export const getPublicEvents = async (req, res) => {
       
       // Build match conditions for aggregation
       const matchConditions = {
-        status: 'published',
+        status: { $in: ['published', 'completed'] }, // Include completed events
         isPublic: true
       };
 
@@ -144,10 +144,12 @@ export const getPublicEvents = async (req, res) => {
       });
     } else {
       // No location filtering - use regular find query
-      const query = buildEventQuery(req.user, {
-        status: 'published',
+      const baseQuery = {
+        status: { $in: ['published', 'completed'] }, // Include completed events
         isPublic: true
-      });
+      };
+      
+      const query = buildEventQuery(req.user, baseQuery);
 
       // Date filters
       if (startDate) {
@@ -184,8 +186,21 @@ export const getPublicEvents = async (req, res) => {
 
       const total = await Event.countDocuments(query);
 
+      // Log for debugging
+      if (events.length === 0) {
+        const allEvents = await Event.countDocuments({});
+        const publishedEvents = await Event.countDocuments({ status: 'published' });
+        const publicEvents = await Event.countDocuments({ isPublic: true });
+        console.log(`📊 Event Stats: Total=${allEvents}, Published=${publishedEvents}, Public=${publicEvents}, Query Result=${events.length}`);
+      }
+
       // Sanitize events based on user role
       const sanitizedEvents = events.map(event => sanitizeEventForRole(event, req.user));
+
+      console.log(`📤 Sending ${sanitizedEvents.length} events to client (no location filter)`);
+      if (sanitizedEvents.length > 0) {
+        console.log('   Events:', sanitizedEvents.map(e => e.title).join(', '));
+      }
 
       res.json({
         success: true,
