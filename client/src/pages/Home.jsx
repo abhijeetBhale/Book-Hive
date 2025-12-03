@@ -7,7 +7,7 @@ import { hasValidLocation } from '../utils/locationHelpers';
 import atomicHabitsCover from '../assets/atomic_habits.png';
 import { useInView } from 'react-intersection-observer';
 import CountUp from 'react-countup';
-import { testimonialAPI, usersAPI } from '../utils/api';
+import { testimonialAPI, usersAPI, booksAPI } from '../utils/api';
 
 // Lazy load heavy components
 const Player = lazy(() => import('@lottiefiles/react-lottie-player').then(module => ({ default: module.Player })));
@@ -40,6 +40,7 @@ import TiltedCard from '../components/ui/TiltedCard';
 import SEO from '../components/SEO';
 import { PAGE_SEO, generateStructuredData } from '../utils/seo';
 import { InfiniteMovingCards } from '../components/ui/infinite-moving-cards';
+import DomeGallery from '../components/ui/DomeGallery';
 
 // Lazy load animation data
 let animationData = null;
@@ -105,6 +106,8 @@ const Home = () => {
   const [testimonialsLoaded, setTestimonialsLoaded] = useState(false);
   const [communityUsers, setCommunityUsers] = useState([]);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [platformBooks, setPlatformBooks] = useState([]);
+  const [booksLoaded, setBooksLoaded] = useState(false);
 
   const quotes = [
     { text: 'Community-Driven Book Sharing', icon: <BookOpen className="badge-icon" /> },
@@ -232,18 +235,96 @@ const Home = () => {
     }
   };
 
+  // Load books from the platform
+  useEffect(() => {
+    if (booksLoaded) return; // Prevent duplicate calls
+
+    const loadPlatformBooks = async () => {
+      try {
+        const response = await booksAPI.getAllBooks();
+        const books = response.data || [];
+        
+        // Filter and format books with valid cover images
+        const formattedBooks = books
+          .filter(book => book.coverUrl) // Only books with cover images
+          .map(book => ({
+            title: book.title,
+            author: book.author,
+            coverUrl: book.coverUrl,
+            description: book.description || book.summary || `A wonderful book by ${book.author}`,
+            _id: book._id
+          }))
+          .slice(0, 20); // Limit to 20 most recent books
+
+        setPlatformBooks(formattedBooks);
+        setBooksLoaded(true);
+      } catch (error) {
+        console.error('Failed to load platform books:', error);
+        setPlatformBooks([]);
+        setBooksLoaded(true);
+      }
+    };
+
+    loadPlatformBooks();
+  }, [booksLoaded]);
 
 
-  const recentlyAddedBooks = [
-    { title: 'The Midnight Library', author: 'Matt Haig', coverUrl: 'https://books.google.co.in/books/publisher/content?id=M53SDwAAQBAJ&pg=PP1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U2Lz0_4XfWJHNkQEVOk6UwFhlc96g&w=1280' },
-    { title: 'Klara and the Sun', author: 'Kazuo Ishiguro', coverUrl: 'https://books.google.co.in/books/publisher/content?id=u7XrDwAAQBAJ&pg=PP1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U3HiTPjEpy2pi6oGnAQjeNxFXkd4w&w=1280' },
-    { title: 'Project Hail Mary', author: 'Andy Weir', coverUrl: 'https://books.google.co.in/books/publisher/content?id=_RH2DwAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U3cS_iUgoRlkHZBGIDtqK3i0JOBXA&w=1280' },
-    { title: 'Atomic Habits', author: 'James Clear', coverUrl: 'https://books.google.co.in/books/publisher/content?id=fFCjDQAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U0AbHgCacqSvU34ynU1HMs_Qoqyqg&w=1280' },
-    { title: 'Where the Crawdads Sing', author: 'Delia Owens', coverUrl: 'https://books.google.co.in/books/publisher/content?id=jVB1DwAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U273neFckgV11hRtZTMj6ClDQMPUQ&w=1280' },
-    { title: 'The Four Winds', author: 'Kristin Hannah', coverUrl: 'https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcTN55MNMX5H9X5B2rFjZ2U3d4xWB40nDHxoziu9AIWIkzeiZ9-9&w=1280' },
-    { title: 'Educated', author: 'Tara Westover', coverUrl: 'https://books.google.co.in/books/publisher/content?id=J20qEAAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U1oY8c5HajTSig_nMgZf2foYGcdQQ&w=1280' },
-    { title: 'The Silent Patient', author: 'Alex Michaelides', coverUrl: 'https://books.google.co.in/books/publisher/content?id=a6NnDwAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U0sd_ARiItXsE4NzgkoT7C5xKacag&w=1280' },
+
+  // Default books to always show
+  const defaultBooks = [
+    { 
+      title: 'The Midnight Library', 
+      author: 'Matt Haig', 
+      coverUrl: 'https://books.google.co.in/books/publisher/content?id=M53SDwAAQBAJ&pg=PP1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U2Lz0_4XfWJHNkQEVOk6UwFhlc96g&w=1280',
+      description: 'Between life and death there is a library, and within that library, the shelves go on forever. Every book provides a chance to try another life you could have lived.'
+    },
+    { 
+      title: 'Klara and the Sun', 
+      author: 'Kazuo Ishiguro', 
+      coverUrl: 'https://books.google.co.in/books/publisher/content?id=u7XrDwAAQBAJ&pg=PP1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U3HiTPjEpy2pi6oGnAQjeNxFXkd4w&w=1280',
+      description: 'A thrilling book that offers a look at our changing world through the eyes of an unforgettable narrator, and one that explores the fundamental question: what does it mean to love?'
+    },
+    { 
+      title: 'Project Hail Mary', 
+      author: 'Andy Weir', 
+      coverUrl: 'https://books.google.co.in/books/publisher/content?id=_RH2DwAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U3cS_iUgoRlkHZBGIDtqK3i0JOBXA&w=1280',
+      description: 'A lone astronaut must save the earth from disaster in this incredible new science-based thriller from the author of The Martian.'
+    },
+    { 
+      title: 'Atomic Habits', 
+      author: 'James Clear', 
+      coverUrl: 'https://books.google.co.in/books/publisher/content?id=fFCjDQAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U0AbHgCacqSvU34ynU1HMs_Qoqyqg&w=1280',
+      description: 'No matter your goals, Atomic Habits offers a proven framework for improving every day. Learn how tiny changes can lead to remarkable results.'
+    },
+    { 
+      title: 'Where the Crawdads Sing', 
+      author: 'Delia Owens', 
+      coverUrl: 'https://books.google.co.in/books/publisher/content?id=jVB1DwAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U273neFckgV11hRtZTMj6ClDQMPUQ&w=1280',
+      description: 'A beautiful and haunting story of a young girl who raises herself in the marshes of North Carolina, becoming part of the natural world around her.'
+    },
+    { 
+      title: 'The Four Winds', 
+      author: 'Kristin Hannah', 
+      coverUrl: 'https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcTN55MNMX5H9X5B2rFjZ2U3d4xWB40nDHxoziu9AIWIkzeiZ9-9&w=1280',
+      description: 'An epic novel of love, heroism, and hope, set against the backdrop of one of America\'s most defining eras—the Great Depression.'
+    },
+    { 
+      title: 'Educated', 
+      author: 'Tara Westover', 
+      coverUrl: 'https://books.google.co.in/books/publisher/content?id=J20qEAAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U1oY8c5HajTSig_nMgZf2foYGcdQQ&w=1280',
+      description: 'A memoir about a young girl who, kept out of school, leaves her survivalist family and goes on to earn a PhD from Cambridge University.'
+    },
+    { 
+      title: 'The Silent Patient', 
+      author: 'Alex Michaelides', 
+      coverUrl: 'https://books.google.co.in/books/publisher/content?id=a6NnDwAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U0sd_ARiItXsE4NzgkoT7C5xKacag&w=1280',
+      description: 'A woman\'s act of violence against her husband and her refusal to speak sends shockwaves through a community in this gripping psychological thriller.'
+    },
   ];
+
+  // Combine default books with platform books
+  // Platform books come first (most recent), then default books fill the rest
+  const recentlyAddedBooks = [...platformBooks, ...defaultBooks];
 
   const bookOfTheMonth = {
     title: 'The Midnight Library',
@@ -356,19 +437,31 @@ const Home = () => {
               <h2 className="section-title">Fresh On The Shelves</h2>
               <p className="section-subtitle">See what books were recently added by members of the community.</p>
             </div>
-            <div className="books-carousel">
-              <div className="books-scroller">
-                {[...recentlyAddedBooks, ...recentlyAddedBooks].map((book, index) => (
-                  <Link to="/books" key={index} className="book-card">
-                    <img src={getFullImageUrl(book.coverUrl)} alt={`Cover of ${book.title}`} className="book-cover" />
-                    <div className="book-info">
-                      <h4 className="book-title">{book.title}</h4>
-                      <p className="book-author">{book.author}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
+          </div>
+          <div className="dome-gallery-fullwidth">
+            <DomeGallery
+              images={recentlyAddedBooks.map(book => ({
+                src: getFullImageUrl(book.coverUrl),
+                alt: `${book.title} by ${book.author}`,
+                title: book.title,
+                author: book.author,
+                description: book.description
+              }))}
+              fit={0.55}
+              fitBasis="width"
+              minRadius={400}
+              maxRadius={900}
+              padFactor={0.15}
+              overlayBlurColor="#ffffff"
+              imageBorderRadius="16px"
+              openedImageBorderRadius="24px"
+              openedImageWidth="320px"
+              openedImageHeight="520px"
+              grayscale={false}
+              segments={35}
+            />
+          </div>
+          <div className="content-container">
             <div className="explore-more-container">
               <Link to={user ? '/books' : '/register'} className="btn explore-more-btn group">
                 {user ? 'Discover More Books' : 'Explore More'}
@@ -1035,6 +1128,8 @@ const mapPulse = keyframes`
 const StyledWrapper = styled.div`
   min-height: 100vh;
   width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden; /* Prevent horizontal scroll */
   margin-top: -30px;
 
   .content-container {
@@ -1170,6 +1265,7 @@ const StyledWrapper = styled.div`
   .recently-added-section {
     padding: 6rem 0;
     background-color: white;
+    overflow: hidden; /* Prevent horizontal scroll */
 
     .section-header {
       text-align: center;
@@ -1247,6 +1343,37 @@ const StyledWrapper = styled.div`
     font-size: 0.875rem;
     color: #6b7280;
     margin: 0;
+  }
+
+  /* === FULL WIDTH DOME GALLERY CONTAINER === */
+  .dome-gallery-fullwidth {
+    width: 100%;
+    max-width: 100vw;
+    height: 700px;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    overflow: hidden; /* Prevent horizontal scroll */
+    padding: 0 1rem; /* Add padding to prevent edge cutoff */
+
+    @media (min-width: 768px) {
+      height: 750px;
+      padding: 0 2rem;
+    }
+
+    @media (min-width: 1024px) {
+      height: 800px;
+      padding: 0 3rem;
+    }
+
+    @media (min-width: 1536px) {
+      height: 850px;
+      padding: 0 4rem;
+    }
   }
 
   /* === NEW STYLES FOR EXPLORE MORE BUTTON === */
