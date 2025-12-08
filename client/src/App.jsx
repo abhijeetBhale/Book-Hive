@@ -39,6 +39,7 @@ import Books from './pages/Books';
 import BookDetails from './pages/BookDetails';
 import ModerationNotificationModal from './components/notifications/ModerationNotificationModal';
 import { notificationsAPI } from './utils/api';
+import Broadcasts from './pages/Broadcasts';
 
 
 
@@ -149,6 +150,7 @@ function App() {
 
                     <Route path="/books" element={<ProtectedRoute><Books /></ProtectedRoute>} />
                     <Route path="/books/:id" element={<ProtectedRoute><BookDetails /></ProtectedRoute>} />
+                    <Route path="/broadcasts" element={<ProtectedRoute><Broadcasts /></ProtectedRoute>} />
 
                     {/* Protected Routes */}
                     <Route path="/my-books" element={<ProtectedRoute><MyBooks /></ProtectedRoute>} />

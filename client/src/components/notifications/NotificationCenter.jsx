@@ -1,5 +1,18 @@
+/**
+ * NotificationCenter Component
+ * 
+ * Notification Types and their corresponding page links:
+ * - borrow_request, request_approved, request_denied, review_prompt, due_reminder, overdue_reminder -> /borrow-requests
+ * - new_message, broadcast_confirmed -> /messages
+ * - friend_request, friend_accepted -> /friends
+ * - broadcast_response -> /broadcasts
+ * - new_book_nearby, availability_alert -> /books/{bookId}
+ * - rating_received -> /profile
+ */
+
 import React, { useState, useEffect, useContext } from 'react';
 import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 import { 
   Bell, 
   X, 
@@ -332,6 +345,7 @@ const getNotificationIcon = (type) => {
 
 const NotificationCenter = ({ isOpen, onClose }) => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
@@ -390,7 +404,8 @@ const NotificationCenter = ({ isOpen, onClose }) => {
       // Navigate to the notification link if available
       const link = notification.link || notification.metadata?.link;
       if (link) {
-        window.location.href = link;
+        onClose(); // Close the notification panel before navigating
+        navigate(link);
       }
     } catch (error) {
       console.error('Error handling notification click:', error);

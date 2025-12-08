@@ -21,6 +21,7 @@
     "axios": "^1.11.0",
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
+    "cobe": "^0.6.5",
     "date-fns": "^4.1.0",
     "emoji-picker-react": "^4.14.0",
     "framer-motion": "^12.23.24",

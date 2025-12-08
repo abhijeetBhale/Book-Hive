@@ -60,10 +60,10 @@ export const sendFriendRequest = async (req, res) => {
         userId: recipientId, 
         type: 'friend_request', 
         title: 'New Friend Request',
-        message: 'You have a new friend request', 
+        message: 'You have a new friend request',
+        link: '/friends',
         metadata: { 
-          fromUserId: requesterId, 
-          link: '/friends' 
+          fromUserId: requesterId
         } 
       });
       
@@ -161,9 +161,9 @@ export const respondToFriendRequest = async (req, res) => {
           type: 'friend_accepted',
           title: 'Friend Request Accepted',
           message: `${req.user.name} accepted your friend request`,
+          link: '/friends',
           metadata: {
-            fromUserId: userId,
-            link: '/friends'
+            fromUserId: userId
           }
         });
         

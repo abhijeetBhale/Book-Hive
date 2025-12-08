@@ -26,6 +26,8 @@ main.sphere-main {
   position: absolute;
   inset: 0;
   display: grid;
+  margin-top: -70px;
+  margin-bottom: -70px;
   place-items: center;
   overflow: hidden;
   touch-action: none;

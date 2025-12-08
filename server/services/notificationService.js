@@ -28,12 +28,12 @@ class NotificationService {
         type,
         title: message.substring(0, 50), // First 50 chars as title
         message,
+        fromUserId,
+        link,
         metadata: {
           ...metadata,
           priority,
-          actionRequired,
-          fromUserId,
-          link
+          actionRequired
         }
       });
 
@@ -60,6 +60,7 @@ class NotificationService {
         type: notification.type,
         title: notification.title,
         message: notification.message,
+        link: notification.link,
         metadata: notification.metadata,
         createdAt: notification.createdAt,
         isRead: notification.isRead || false

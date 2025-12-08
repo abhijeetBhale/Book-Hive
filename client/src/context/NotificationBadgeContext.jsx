@@ -15,6 +15,7 @@ export const NotificationBadgeProvider = ({ children }) => {
     community: 0,           // Community notifications
     map: 0,                 // Map-related notifications
     myBooks: 0,             // My books notifications
+    broadcasts: 0,          // New broadcasts
     events: 0,              // New events
     reports: 0,             // New reports
     topBooks: 0,            // New top books
@@ -130,6 +131,15 @@ export const NotificationBadgeProvider = ({ children }) => {
       setBadges(prev => ({ ...prev, organizerApplications: prev.organizerApplications + 1 }));
     });
     socket.on('organizer_application:updated', fetchBadgeCounts);
+
+    // Broadcasts
+    socket.on('broadcast:new', () => {
+      setBadges(prev => ({ ...prev, broadcasts: prev.broadcasts + 1 }));
+    });
+    socket.on('broadcast:response', () => {
+      setBadges(prev => ({ ...prev, broadcasts: prev.broadcasts + 1 }));
+    });
+    socket.on('broadcast:fulfilled', fetchBadgeCounts);
 
     return () => {
       socket.disconnect();

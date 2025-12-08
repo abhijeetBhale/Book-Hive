@@ -41,6 +41,7 @@ import SEO from '../components/SEO';
 import { PAGE_SEO, generateStructuredData } from '../utils/seo';
 import { InfiniteMovingCards } from '../components/ui/infinite-moving-cards';
 import DomeGallery from '../components/ui/DomeGallery';
+import { Globe as GlobeComponent } from '../components/ui/Globe';
 
 // Lazy load animation data
 let animationData = null;
@@ -120,10 +121,10 @@ const Home = () => {
     const interval = setInterval(() => {
       setQuoteIndex((prevIndex) => (prevIndex + 1) % quotes.length);
     }, 4000);
-    
+
     // Load animation data lazily
     loadAnimationData().then(data => setLottieData(data));
-    
+
     return () => clearInterval(interval);
   }, [quotes.length]);
 
@@ -243,7 +244,7 @@ const Home = () => {
       try {
         const response = await booksAPI.getAllBooks();
         const books = response.data || [];
-        
+
         // Filter and format books with valid cover images
         const formattedBooks = books
           .filter(book => book.coverUrl) // Only books with cover images
@@ -272,51 +273,51 @@ const Home = () => {
 
   // Default books to always show
   const defaultBooks = [
-    { 
-      title: 'The Midnight Library', 
-      author: 'Matt Haig', 
+    {
+      title: 'The Midnight Library',
+      author: 'Matt Haig',
       coverUrl: 'https://books.google.co.in/books/publisher/content?id=M53SDwAAQBAJ&pg=PP1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U2Lz0_4XfWJHNkQEVOk6UwFhlc96g&w=1280',
       description: 'Between life and death there is a library, and within that library, the shelves go on forever. Every book provides a chance to try another life you could have lived.'
     },
-    { 
-      title: 'Klara and the Sun', 
-      author: 'Kazuo Ishiguro', 
+    {
+      title: 'Klara and the Sun',
+      author: 'Kazuo Ishiguro',
       coverUrl: 'https://books.google.co.in/books/publisher/content?id=u7XrDwAAQBAJ&pg=PP1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U3HiTPjEpy2pi6oGnAQjeNxFXkd4w&w=1280',
       description: 'A thrilling book that offers a look at our changing world through the eyes of an unforgettable narrator, and one that explores the fundamental question: what does it mean to love?'
     },
-    { 
-      title: 'Project Hail Mary', 
-      author: 'Andy Weir', 
+    {
+      title: 'Project Hail Mary',
+      author: 'Andy Weir',
       coverUrl: 'https://books.google.co.in/books/publisher/content?id=_RH2DwAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U3cS_iUgoRlkHZBGIDtqK3i0JOBXA&w=1280',
       description: 'A lone astronaut must save the earth from disaster in this incredible new science-based thriller from the author of The Martian.'
     },
-    { 
-      title: 'Atomic Habits', 
-      author: 'James Clear', 
+    {
+      title: 'Atomic Habits',
+      author: 'James Clear',
       coverUrl: 'https://books.google.co.in/books/publisher/content?id=fFCjDQAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U0AbHgCacqSvU34ynU1HMs_Qoqyqg&w=1280',
       description: 'No matter your goals, Atomic Habits offers a proven framework for improving every day. Learn how tiny changes can lead to remarkable results.'
     },
-    { 
-      title: 'Where the Crawdads Sing', 
-      author: 'Delia Owens', 
+    {
+      title: 'Where the Crawdads Sing',
+      author: 'Delia Owens',
       coverUrl: 'https://books.google.co.in/books/publisher/content?id=jVB1DwAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U273neFckgV11hRtZTMj6ClDQMPUQ&w=1280',
       description: 'A beautiful and haunting story of a young girl who raises herself in the marshes of North Carolina, becoming part of the natural world around her.'
     },
-    { 
-      title: 'The Four Winds', 
-      author: 'Kristin Hannah', 
+    {
+      title: 'The Four Winds',
+      author: 'Kristin Hannah',
       coverUrl: 'https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcTN55MNMX5H9X5B2rFjZ2U3d4xWB40nDHxoziu9AIWIkzeiZ9-9&w=1280',
       description: 'An epic novel of love, heroism, and hope, set against the backdrop of one of America\'s most defining eras—the Great Depression.'
     },
-    { 
-      title: 'Educated', 
-      author: 'Tara Westover', 
+    {
+      title: 'Educated',
+      author: 'Tara Westover',
       coverUrl: 'https://books.google.co.in/books/publisher/content?id=J20qEAAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U1oY8c5HajTSig_nMgZf2foYGcdQQ&w=1280',
       description: 'A memoir about a young girl who, kept out of school, leaves her survivalist family and goes on to earn a PhD from Cambridge University.'
     },
-    { 
-      title: 'The Silent Patient', 
-      author: 'Alex Michaelides', 
+    {
+      title: 'The Silent Patient',
+      author: 'Alex Michaelides',
       coverUrl: 'https://books.google.co.in/books/publisher/content?id=a6NnDwAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U0sd_ARiItXsE4NzgkoT7C5xKacag&w=1280',
       description: 'A woman\'s act of violence against her husband and her refusal to speak sends shockwaves through a community in this gripping psychological thriller.'
     },
@@ -349,7 +350,7 @@ const Home = () => {
   ];
 
   // Updated data to match the new testimonial card design
-  
+
 
   const { ref: howItWorksRef, inView: isHowItWorksVisible } = useInView({ threshold: 0.1 });
   const { ref: statsRef, inView: isStatsVisible } = useInView({ threshold: 0.3 });
@@ -384,23 +385,12 @@ const Home = () => {
               </div>
             </div>
             <h1 className="main-heading">
-              {user ? (
-                <>
-                  Welcome Back, <AuroraText>{user.name ? user.name.split(' ')[0] : 'Reader'}</AuroraText>
-                </>
-              ) : (
-                <>
-                  Welcome to <AuroraText>BookHive</AuroraText>
-                </>
-              )}
+              Read Any Book. <AuroraText>Without Buying It.</AuroraText>
             </h1>
             <p className="sub-heading">
-              {user ? (
-                "Let's discover your next favorite book or connect with readers near you."
-              ) : (
-                "The community-driven platform that connects book lovers, enables book sharing, and builds reading communities in your neighborhood."
-              )}
+              Borrow books from friendly neighbors in your area. It's free, it's easy, and you'll discover amazing reads you never knew existed.
             </p>
+
             <div className="button-group">
               {user ? (
                 <>
@@ -428,7 +418,7 @@ const Home = () => {
               )}
             </div>
           </div>
-        </section>
+        </section>     
 
         {/* Recently Added Books Section */}
         <section className="recently-added-section">
@@ -536,47 +526,47 @@ const Home = () => {
             </div>
             <div className="how-it-works-grid">
               {/* Card 1 - Create an Account */}
-            <div className="how-card card-left">
-              <div className="how-card-icon">
-                <UserPlus size={24} />
-              </div>
-              <h3 className="how-card-title">Create an Account</h3>
-              <div className="how-card-visual">
-                
-                {/* SMOOTH GOOGLE LOGIN MOCKUP */}
-                <div className="login-mockup-card">
-                  <div className="login-header">
-                    <span className="login-title">Sign in to BookHive</span>
-                    <span className="login-subtitle">Welcome back! Please enter your details.</span>
-                  </div>
-                  
-                  <div className="mock-google-btn">
-                    <svg className="google-icon" viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
-                      <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
-                        <path fill="#4285F4" d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z" />
-                        <path fill="#34A853" d="M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.824 60.329 L -10.684 57.329 C -11.764 58.049 -13.134 58.489 -14.754 58.489 C -17.884 58.489 -20.534 56.379 -21.484 53.529 L -25.464 53.529 L -25.464 56.619 C -23.494 60.539 -19.444 63.239 -14.754 63.239 Z" />
-                        <path fill="#FBBC05" d="M -21.484 53.529 C -21.734 52.809 -21.864 52.039 -21.864 51.239 C -21.864 50.439 -21.724 49.669 -21.484 48.949 L -21.484 45.859 L -25.464 45.859 C -26.284 47.479 -26.754 49.299 -26.754 51.239 C -26.754 53.179 -26.284 54.999 -25.464 56.619 L -21.484 53.529 Z" />
-                        <path fill="#EA4335" d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.099 -17.884 43.989 -14.754 43.989 Z" />
-                      </g>
-                    </svg>
-                    <span>Sign in with Google</span>
-                  </div>
-
-                  <div className="mock-divider">
-                    <span>or</span>
-                  </div>
-
-                  <div className="mock-input-field">
-                    <span className="placeholder">user@gmail.com</span>
-                  </div>
-                  
-                  <div className="mock-input-btn">
-                    <span>Continue</span>
-                  </div>
+              <div className="how-card card-left">
+                <div className="how-card-icon">
+                  <UserPlus size={24} />
                 </div>
+                <h3 className="how-card-title">Create an Account</h3>
+                <div className="how-card-visual">
 
+                  {/* SMOOTH GOOGLE LOGIN MOCKUP */}
+                  <div className="login-mockup-card">
+                    <div className="login-header">
+                      <span className="login-title">Sign in to BookHive</span>
+                      <span className="login-subtitle">Welcome back! Please enter your details.</span>
+                    </div>
+
+                    <div className="mock-google-btn">
+                      <svg className="google-icon" viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+                        <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
+                          <path fill="#4285F4" d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z" />
+                          <path fill="#34A853" d="M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.824 60.329 L -10.684 57.329 C -11.764 58.049 -13.134 58.489 -14.754 58.489 C -17.884 58.489 -20.534 56.379 -21.484 53.529 L -25.464 53.529 L -25.464 56.619 C -23.494 60.539 -19.444 63.239 -14.754 63.239 Z" />
+                          <path fill="#FBBC05" d="M -21.484 53.529 C -21.734 52.809 -21.864 52.039 -21.864 51.239 C -21.864 50.439 -21.724 49.669 -21.484 48.949 L -21.484 45.859 L -25.464 45.859 C -26.284 47.479 -26.754 49.299 -26.754 51.239 C -26.754 53.179 -26.284 54.999 -25.464 56.619 L -21.484 53.529 Z" />
+                          <path fill="#EA4335" d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.099 -17.884 43.989 -14.754 43.989 Z" />
+                        </g>
+                      </svg>
+                      <span>Sign in with Google</span>
+                    </div>
+
+                    <div className="mock-divider">
+                      <span>or</span>
+                    </div>
+
+                    <div className="mock-input-field">
+                      <span className="placeholder">user@gmail.com</span>
+                    </div>
+
+                    <div className="mock-input-btn">
+                      <span>Continue</span>
+                    </div>
+                  </div>
+
+                </div>
               </div>
-            </div>
 
               {/* Card 2 - Connect with readers (Featured/Purple) */}
               <div className="how-card card-center">
@@ -634,57 +624,57 @@ const Home = () => {
               </div>
 
               {/* Card 3 - Borrowing & Lending */}
-            <div className="how-card card-right">
-              <div className="how-card-icon">
-                <BookOpen size={24} />
-              </div>
-              <h3 className="how-card-title">Borrow & Exchange</h3>
-              <p className="how-card-description">
-                Found a book you love? Send a request with one tap. Coordinate the exchange via our secure chat and track your lending history effortlessly.
-              </p>
-              
-              <div className="how-card-visual">
-                <div className="phone-mockup">
-                  <div className="phone-screen">
-                    <div className="phone-content">
-                      
-                      {/* Mini App UI: Book Request Screen */}
-                      <div className="app-ui-container">
-                        <div className="app-nav">
-                          <div className="nav-dot"></div>
-                          <div className="nav-line"></div>
-                        </div>
-                        
-                        <div className="app-book-preview">
-                          <div className="mini-book-cover">
-                            <img
-                              src={atomicHabitsCover}
-                              alt="Atomic Habits cover art"
-                              className="mini-book-cover-image"
-                            />
-                            <span className="mini-book-spine"></span>
+              <div className="how-card card-right">
+                <div className="how-card-icon">
+                  <BookOpen size={24} />
+                </div>
+                <h3 className="how-card-title">Borrow & Exchange</h3>
+                <p className="how-card-description">
+                  Found a book you love? Send a request with one tap. Coordinate the exchange via our secure chat and track your lending history effortlessly.
+                </p>
+
+                <div className="how-card-visual">
+                  <div className="phone-mockup">
+                    <div className="phone-screen">
+                      <div className="phone-content">
+
+                        {/* Mini App UI: Book Request Screen */}
+                        <div className="app-ui-container">
+                          <div className="app-nav">
+                            <div className="nav-dot"></div>
+                            <div className="nav-line"></div>
                           </div>
+
+                          <div className="app-book-preview">
+                            <div className="mini-book-cover">
+                              <img
+                                src={atomicHabitsCover}
+                                alt="Atomic Habits cover art"
+                                className="mini-book-cover-image"
+                              />
+                              <span className="mini-book-spine"></span>
+                            </div>
+                          </div>
+
+                          <div className="app-book-info">
+                            <span className="mini-title">Atomic Habits</span>
+                            <span className="mini-author">James Clear</span>
+                            <div className="mini-status">
+                              <span className="status-dot"></span>
+                              Available • 2km away
+                            </div>
+                          </div>
+
+                          <button className="app-request-btn">
+                            Request Book
+                          </button>
                         </div>
 
-                        <div className="app-book-info">
-                          <span className="mini-title">Atomic Habits</span>
-                          <span className="mini-author">James Clear</span>
-                          <div className="mini-status">
-                            <span className="status-dot"></span>
-                            Available • 2km away
-                          </div>
-                        </div>
-
-                        <button className="app-request-btn">
-                          Request Book
-                        </button>
                       </div>
-
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
             </div>
 
             <div className="how-it-works-cta">
@@ -698,6 +688,9 @@ const Home = () => {
 
         {/* Community Stats Section */}
         <section className="stats-section" ref={statsRef}>
+          <div className="globe-background-stats">
+            <GlobeComponent />
+          </div>
           <div className="content-container">
             <div className="section-header">
               <h2 className="section-title">Our Community By The Numbers</h2>
@@ -966,92 +959,92 @@ const Home = () => {
 
         {/* CTA Section */}
         <section className="cta-section">
-           {/* Footer Section */}
-        <footer className="footer-section">
-          <div className="footer-content">
-            <div className="footer-top">
-              <div className="footer-heading">
-                <h2>Ready to Join the BookHive Community?</h2>
-                <p>Start sharing your love for books, discover new reads, and connect with fellow readers in your area.</p>
-              </div>
-              <div className="footer-links-grid">
-                <div className="footer-column">
-                  <h3>About BookHive</h3>
-                  <ul>
-                    <li><Link to="/about">Our Story</Link></li>
-                    <li><Link to="/team">Team</Link></li>
-                    {/* <li><Link to="/careers">Careers</Link></li> */}
-                  </ul>
+          {/* Footer Section */}
+          <footer className="footer-section">
+            <div className="footer-content">
+              <div className="footer-top">
+                <div className="footer-heading">
+                  <h2>Ready to Join the BookHive Community?</h2>
+                  <p>Start sharing your love for books, discover new reads, and connect with fellow readers in your area.</p>
                 </div>
-                
-                <div className="footer-column">
-                  <h3>Explore</h3>
-                  <ul>
-                    <li><Link to="/users">Community</Link></li>
-                    <li><Link to="/books">Discover Books</Link></li>
-                    <li><Link to="/events">Events</Link></li>
-                  </ul>
-                </div>
-                
-                <div className="footer-column">
-                  <h3>Support</h3>
-                  <ul>
-                    <li><Link to="/help">Help Center</Link></li>
-                    <li><Link to="/contact">Contact Us</Link></li>
-                    <li><Link to="/faq">FAQs</Link></li>
-                  </ul>
-                </div>
-                
-                <div className="footer-column">
-                  <h3>Stay Connected</h3>
-                  <div className="social-links">
-                    <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-                      <Facebook size={20} />
-                    </a>
-                    <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-                      <Instagram size={20} />
-                    </a>
-                    <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
-                      <Linkedin size={20} />
-                    </a>
-                    <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
-                      <Youtube size={20} />
-                    </a>
+                <div className="footer-links-grid">
+                  <div className="footer-column">
+                    <h3>About BookHive</h3>
+                    <ul>
+                      <li><Link to="/about">Our Story</Link></li>
+                      <li><Link to="/team">Team</Link></li>
+                      {/* <li><Link to="/careers">Careers</Link></li> */}
+                    </ul>
                   </div>
-                  <div className="newsletter">
-                    <p className="newsletter-label">Newsletter</p>
-                    <form className="newsletter-form" onSubmit={(e) => e.preventDefault()}>
-                      <input 
-                        type="email" 
-                        placeholder="Sign up - email" 
-                        className="newsletter-input"
-                      />
-                      <button type="submit" className="newsletter-submit" aria-label="Subscribe">
-                        <Send size={18} />
-                      </button>
-                    </form>
+
+                  <div className="footer-column">
+                    <h3>Explore</h3>
+                    <ul>
+                      <li><Link to="/users">Community</Link></li>
+                      <li><Link to="/books">Discover Books</Link></li>
+                      <li><Link to="/events">Events</Link></li>
+                    </ul>
+                  </div>
+
+                  <div className="footer-column">
+                    <h3>Support</h3>
+                    <ul>
+                      <li><Link to="/help">Help Center</Link></li>
+                      <li><Link to="/contact">Contact Us</Link></li>
+                      <li><Link to="/faq">FAQs</Link></li>
+                    </ul>
+                  </div>
+
+                  <div className="footer-column">
+                    <h3>Stay Connected</h3>
+                    <div className="social-links">
+                      <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                        <Facebook size={20} />
+                      </a>
+                      <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                        <Instagram size={20} />
+                      </a>
+                      <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+                        <Linkedin size={20} />
+                      </a>
+                      <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+                        <Youtube size={20} />
+                      </a>
+                    </div>
+                    <div className="newsletter">
+                      <p className="newsletter-label">Newsletter</p>
+                      <form className="newsletter-form" onSubmit={(e) => e.preventDefault()}>
+                        <input
+                          type="email"
+                          placeholder="Sign up - email"
+                          className="newsletter-input"
+                        />
+                        <button type="submit" className="newsletter-submit" aria-label="Subscribe">
+                          <Send size={18} />
+                        </button>
+                      </form>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              <div className="footer-actions">
+                <Link to="/users" className="footer-btn explore-btn">
+                  <Globe size={20} />
+                  Explore Community
+                  <ArrowRight size={18} />
+                </Link>
+                <Link to="/contact" className="footer-btn contact-btn">
+                  <MessageCircle size={20} />
+                  Get in Touch
+                </Link>
+              </div>
+
+              <div className="footer-bottom">
+                <p>© 2025 BookHive. All rights reserved.</p>
+              </div>
             </div>
-            
-            <div className="footer-actions">
-              <Link to="/users" className="footer-btn explore-btn">
-                <Globe size={20} />
-                Explore Community
-                <ArrowRight size={18} />
-              </Link>
-              <Link to="/contact" className="footer-btn contact-btn">
-                <MessageCircle size={20} />
-                Get in Touch
-              </Link>
-            </div>
-            
-            <div className="footer-bottom">
-              <p>© 2025 BookHive. All rights reserved.</p>
-            </div>
-          </div>
-        </footer>
+          </footer>
         </section>
 
         {/* Location Permission Modal */}
@@ -1137,6 +1130,7 @@ const StyledWrapper = styled.div`
     z-index: 2;
     max-width: 80rem;
     margin: 0 auto;
+    margin-top: -40px;
     padding: 0 1rem;
     @media (min-width: 640px) { padding: 0 1.5rem; }
     @media (min-width: 1024px) { padding: 0 2rem; }
@@ -2173,8 +2167,35 @@ const StyledWrapper = styled.div`
 
   /* Stats Section */
   .stats-section {
+  position: relative;
   background-color: white; 
-  padding: 6rem 0; 
+  padding: 6rem 0;
+  overflow: hidden;
+
+  .globe-background-stats {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.12;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    @media (max-width: 768px) {
+      opacity: 0.08;
+      top: 45%;
+    }
+  }
+
+  .content-container {
+    position: relative;
+    z-index: 1;
+  }
 
   .section-header {
     text-align: center;
@@ -2208,17 +2229,17 @@ const StyledWrapper = styled.div`
 }
 
 .stat-item {
-  background-color: #f9fafb; 
-  border: 1px solid #f3f4f6;
-  border-radius: 1.5rem;
+  // background-color: #f9fafb; 
+  // border: 1px solid #f3f4f6;
+  // border-radius: 1.5rem;
   padding: 2.5rem 2rem;
   text-align: center;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 
-  &:hover {
-    transform: translateY(-0.5rem);
-    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  }
+  // &:hover {
+  //   transform: translateY(-0.5rem);
+  //   box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  // }
 }
 
 .stat-number {

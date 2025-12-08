@@ -9,6 +9,7 @@ import {
   ArrowLeftRight,
   MessageSquare,
   Heart,
+  AudioWaveform,
   Bell,
   Trash2,
   LibraryBig,
@@ -241,7 +242,6 @@ const Navbar = () => {
   // Conditional navigation based on user role
   const getNavLinks = () => {
     const baseLinks = [
-      { to: '/events', text: 'Events', icon: <LibraryBig size={24} />, badgeKey: 'events', showForAll: true },
       { to: '/map', text: 'Map', icon: <Map size={24} />, badgeKey: 'map', showForAll: true },
     ];
 
@@ -249,6 +249,7 @@ const Navbar = () => {
     const userLinks = [
       ...baseLinks,
       { to: '/users', text: 'Community', icon: <Users size={24} />, badgeKey: 'community' },
+      { to: '/broadcasts', text: 'Broadcasts', icon: <AudioWaveform size={24} />, badgeKey: 'broadcasts' },
       { to: '/my-books', text: 'My Books', icon: <BookMarked size={24} />, badgeKey: 'myBooks' },
       { to: '/borrow-requests', text: 'Requests', icon: <ArrowLeftRight size={24} />, badgeKey: 'requests' },
       { to: '/messages', text: 'Messages', icon: <MessageSquare size={24} />, badgeKey: 'messages' },

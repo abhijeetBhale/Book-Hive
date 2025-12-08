@@ -889,7 +889,9 @@ const StyledWrapper = styled.div`
       }
   }
 
-  .content-area { min-height: 500px; }
+  .content-area { 
+    min-height: 500px; 
+  }
   .loading-state {
     display: flex; justify-content: center; align-items: center; height: 500px;
     .animate-spin { width: 3rem; height: 3rem; color: #4F46E5; }

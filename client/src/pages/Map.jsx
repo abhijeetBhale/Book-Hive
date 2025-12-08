@@ -6,7 +6,7 @@ import { AuthContext } from '../context/AuthContext';
 import { useOnlineStatus } from '../context/OnlineStatusContext';
 import toast from 'react-hot-toast';
 import MapView from '../components/map/MapView';
-import { Loader, MapPin, Search, Calendar, UserCheck, Sliders, ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { Loader, MapPin, Search, Calendar, UserCheck, Sliders, ChevronLeft, ChevronRight, Star, PartyPopper } from 'lucide-react';
 import SEO from '../components/SEO';
 import { PAGE_SEO } from '../utils/seo';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
@@ -329,6 +329,12 @@ const Map = () => {
             </div>
           </div>
           <div className="controls">
+            <button
+              className="control-btn"
+              onClick={() => navigate('/events')}
+            >
+              <PartyPopper size={16} /> Events
+            </button>
             <button
               className="control-btn"
               onClick={() => navigate('/calendar')}

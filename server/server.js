@@ -8,6 +8,7 @@ import cron from 'node-cron';
 import hpp from 'hpp';
 import passport from 'passport';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import { Server as SocketIOServer } from 'socket.io';
 import messageRoutes from './routes/messages.js';
 import errorHandler from './middleware/errorHandler.js';
@@ -34,6 +35,7 @@ import paymentRoutes from './routes/payment.js';
 import eventRoutes from './routes/eventRoutes.js';
 import organizerRoutes from './routes/organizerRoutes.js';
 import verificationRoutes from './routes/verificationRoutes.js';
+import broadcastRoutes from './routes/broadcasts.js';
 import { initializeDefaultAchievements } from './services/achievementService.js';
 import { initializeAllUserStats } from './services/userStatsService.js';
 import NotificationService from './services/notificationService.js';
@@ -152,6 +154,7 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/organizer', organizerRoutes);
 app.use('/api/verification', verificationRoutes);
+app.use('/api/broadcasts', broadcastRoutes);
 
 // Error handler middleware
 app.use(errorHandler);
@@ -247,12 +250,15 @@ io.on('connection', async (socket) => {
 
   socket.join(`user:${userId}`);
   
-  // Check if user is admin and join admin room
+  // Check if user is admin and join admin room (only if DB is connected)
   try {
-    const user = await User.findById(userId).select('role');
-    if (user && (user.role === 'admin' || user.role === 'superadmin')) {
-      socket.join('admin-room');
-      console.log(`Admin user ${userId} joined admin-room`);
+    // Wait a bit to ensure DB is connected
+    if (mongoose.connection.readyState === 1) {
+      const user = await User.findById(userId).select('role');
+      if (user && (user.role === 'admin' || user.role === 'superadmin')) {
+        socket.join('admin-room');
+        console.log(`Admin user ${userId} joined admin-room`);
+      }
     }
   } catch (error) {
     console.error('Error checking user role for admin room:', error);
