@@ -134,7 +134,26 @@ const SectionHeader = styled.div`
 `;
 
 const FriendsList = styled.div`
-  /* No scroll styling - content flows naturally */
+  max-height: 500px;
+  overflow-y: auto;
+  
+  /* Custom scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f8f9fa;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #9D54F5;
+    // border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: #adb5bd;
+  }
 `;
 
 const Actions = styled.div`
