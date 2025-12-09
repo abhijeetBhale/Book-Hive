@@ -105,3 +105,14 @@ export const formatDistance = (distance) => {
   
   return `${distance}km away`;
 };
+
+/**
+ * Show location warning modal for users without location
+ * @param {string} userName - Name of the user without location
+ */
+export const showLocationWarning = (userName) => {
+  // Dispatch custom event that components can listen to
+  window.dispatchEvent(new CustomEvent('show-location-warning', {
+    detail: { userName }
+  }));
+};

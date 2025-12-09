@@ -87,11 +87,25 @@ const Map = () => {
         if (currentUser?.location?.coordinates && currentUser.location.coordinates.length === 2) {
           try {
             const { data } = await usersAPI.getUsersWithBooks();
-            let usersWithCoords = data.users.filter(user =>
-              user.location?.coordinates &&
-              user.location.coordinates.length === 2 &&
-              user._id !== currentUser?._id
-            );
+            let usersWithCoords = data.users.filter(user => {
+              // Filter out users without valid location coordinates
+              if (!user.location?.coordinates || user.location.coordinates.length !== 2) {
+                return false;
+              }
+              
+              const [lng, lat] = user.location.coordinates;
+              // Exclude users with default [0, 0] coordinates (no location set)
+              if (lng === 0 && lat === 0) {
+                return false;
+              }
+              
+              // Exclude current user
+              if (user._id === currentUser?._id) {
+                return false;
+              }
+              
+              return true;
+            });
 
             const currentUserLat = currentUser.location.coordinates[1];
             const currentUserLon = currentUser.location.coordinates[0];

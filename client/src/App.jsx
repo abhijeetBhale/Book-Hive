@@ -38,6 +38,7 @@ import { NotificationBadgeProvider } from './context/NotificationBadgeContext';
 import Books from './pages/Books';
 import BookDetails from './pages/BookDetails';
 import ModerationNotificationModal from './components/notifications/ModerationNotificationModal';
+import LocationWarningModal from './components/ui/LocationWarningModal';
 import { notificationsAPI } from './utils/api';
 import Broadcasts from './pages/Broadcasts';
 
@@ -49,6 +50,8 @@ function NotificationHandler() {
   const [moderationNotifications, setModerationNotifications] = useState([]);
   const [showModerationModal, setShowModerationModal] = useState(false);
   const [hasCheckedNotifications, setHasCheckedNotifications] = useState(false);
+  const [showLocationWarning, setShowLocationWarning] = useState(false);
+  const [locationWarningUser, setLocationWarningUser] = useState('');
 
   // Check for moderation notifications when user logs in
   useEffect(() => {
@@ -89,6 +92,17 @@ function NotificationHandler() {
     }
   }, [user]);
 
+  // Listen for global location warning events
+  useEffect(() => {
+    const handleLocationWarning = (event) => {
+      setLocationWarningUser(event.detail.userName);
+      setShowLocationWarning(true);
+    };
+
+    window.addEventListener('show-location-warning', handleLocationWarning);
+    return () => window.removeEventListener('show-location-warning', handleLocationWarning);
+  }, []);
+
   const handleCloseModerationModal = async () => {
     try {
       // Mark notifications as read
@@ -105,11 +119,18 @@ function NotificationHandler() {
   };
 
   return (
-    <ModerationNotificationModal
-      isOpen={showModerationModal}
-      onClose={handleCloseModerationModal}
-      notifications={moderationNotifications}
-    />
+    <>
+      <ModerationNotificationModal
+        isOpen={showModerationModal}
+        onClose={handleCloseModerationModal}
+        notifications={moderationNotifications}
+      />
+      <LocationWarningModal
+        isOpen={showLocationWarning}
+        onClose={() => setShowLocationWarning(false)}
+        userName={locationWarningUser}
+      />
+    </>
   );
 }
 

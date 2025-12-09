@@ -10,6 +10,8 @@ import ReviewsModal from '../components/ReviewsModal';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
 import AnimatedButton from '../components/ui/AnimatedButton';
 import UpgradeModal from '../components/ui/UpgradeModal';
+import LocationWarningModal from '../components/ui/LocationWarningModal';
+import { hasValidLocation } from '../utils/locationHelpers';
 import { io } from 'socket.io-client';
 
 
@@ -598,6 +600,7 @@ const UserProfile = () => {
   const [sendingFriendRequest, setSendingFriendRequest] = useState(false);
   const [showReviewsModal, setShowReviewsModal] = useState(false);
   const [upgradeModalData, setUpgradeModalData] = useState(null);
+  const [showLocationWarning, setShowLocationWarning] = useState(false);
 
 
   // ✨ ADDED: Effect to lock body scroll when a modal is open
@@ -866,7 +869,8 @@ const UserProfile = () => {
   };
 
   const handleDistanceClick = () => {
-    if (user?.location?.coordinates) {
+    // Check if user has valid location
+    if (hasValidLocation(user)) {
       // Navigate to map page with user data to show their popup
       navigate('/map', {
         state: {
@@ -881,8 +885,8 @@ const UserProfile = () => {
         }
       });
     } else {
-      // Fallback to just opening the map
-      navigate('/map');
+      // Show location warning modal
+      setShowLocationWarning(true);
     }
   };
 
@@ -939,12 +943,17 @@ const UserProfile = () => {
               <BookOpen size={16} />
               <span>{totalBooksCount} {totalBooksCount === 1 ? 'Book' : 'Books'} in Bookshelf</span>
             </div>
-            {distance !== null && (
+            {distance !== null ? (
               <div className="stat-item clickable-distance" onClick={handleDistanceClick}>
                 <MapPin size={16} />
                 <span>{distance} km away</span>
               </div>
-            )}
+            ) : !hasValidLocation(user) ? (
+              <div className="stat-item clickable-distance" onClick={handleDistanceClick}>
+                <MapPin size={16} />
+                <span>Location not set</span>
+              </div>
+            ) : null}
           </div>
 
           {/* Rating Display with Star Level */}
@@ -1071,6 +1080,12 @@ const UserProfile = () => {
         open={showReviewsModal}
         onClose={() => setShowReviewsModal(false)}
         userId={user._id}
+        userName={user.name}
+      />
+
+      <LocationWarningModal
+        isOpen={showLocationWarning}
+        onClose={() => setShowLocationWarning(false)}
         userName={user.name}
       />
     </StyledWrapper>
