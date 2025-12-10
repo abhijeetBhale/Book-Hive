@@ -360,9 +360,9 @@ const Home = () => {
   }));
 
   const communityStats = [
-    { number: '800+', label: 'Books Shared' },
-    { number: '200+', label: 'Active Members' },
-    { number: '12', label: 'Local Communities' },
+    { number: '200+', label: `Books Shared in last 24 hours` },
+    { number: '50+', label: 'Active Members' },
+    { number: '10', label: 'Local Communities' },
   ];
 
   // Updated data to match the new testimonial card design
@@ -773,23 +773,7 @@ const Home = () => {
               </div>
               <div className="map-visual-container">
                 <div className="map-background">
-                  <div className="building" style={{ top: '18%', left: '22%' }}></div>
-                  <div className="building" style={{ top: '22%', left: '28%' }}></div>
-                  <div className="building" style={{ top: '48%', left: '28%' }}></div>
-                  <div className="building" style={{ top: '52%', left: '32%' }}></div>
-                  <div className="building" style={{ top: '33%', left: '52%' }}></div>
-                  <div className="building" style={{ top: '37%', left: '58%' }}></div>
-                  <div className="building" style={{ top: '63%', left: '68%' }}></div>
-                  <div className="building" style={{ top: '67%', left: '72%' }}></div>
-                  <div className="building" style={{ top: '42%', left: '42%' }}></div>
-                  <div className="building" style={{ top: '48%', left: '48%' }}></div>
-                  <div className="user-pin" style={{ top: '20%', left: '59%' }}></div>
-                  <div className="user-pin" style={{ top: '50%', left: '28%' }}></div>
-                  <div className="user-pin" style={{ top: '37%', left: '50%' }}></div>
-                  <div className="user-pin" style={{ top: '54%', left: '70%' }}></div>
-                  <div className="user-pin" style={{ top: '65%', left: '70%' }}></div>
-                  <div className="user-pin" style={{ top: '86%', left: '20%' }}></div>
-                  <div className="user-pin main-user-pin" style={{ top: '70%', left: '49%' }}></div>
+                  {/* Community screenshot shows the actual interface */}
                 </div>
               </div>
             </div>
@@ -2362,11 +2346,11 @@ const StyledWrapper = styled.div`
   .map-background {
     position: relative;
     width: 100%;
-    aspect-ratio: 1 / 1;
-    max-width: 500px;
+    aspect-ratio: 4 / 3;
+    max-width: 750px;
     margin: 0 auto;
     background-color: #f4f1ec; 
-    background: url('/static-map.png') center center/cover no-repeat;
+    background: url('/community-interface-new.png') center center/cover no-repeat;
     border-radius: 2rem;
     border: 1px solid #e5e7eb;
     box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.15);
