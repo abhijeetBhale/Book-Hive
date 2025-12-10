@@ -13,18 +13,6 @@
       "sizes": "100x100",
       "type": "image/png",
       "purpose": "any maskable"
-    },
-    {
-      "src": "/icons8-bee-100.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons8-bee-100.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
     }
   ],
   "categories": ["books", "social", "lifestyle"],
@@ -38,7 +26,7 @@
       "icons": [
         {
           "src": "/icons8-bee-100.png",
-          "sizes": "96x96"
+          "sizes": "100x100"
         }
       ]
     },
@@ -50,7 +38,7 @@
       "icons": [
         {
           "src": "/icons8-bee-100.png",
-          "sizes": "96x96"
+          "sizes": "100x100"
         }
       ]
     }

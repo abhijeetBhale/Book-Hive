@@ -630,10 +630,12 @@ const UserProfile = () => {
       if (currentUser && id !== currentUser._id) {
         try {
           const friendsResponse = await friendsAPI.getAll();
-          const { pending, sent, friends } = friendsResponse.data;
+          const { pending = [], sent = [], friends = [] } = friendsResponse.data || {};
 
             // Check if there's a pending request from this user to current user
-            const pendingRequest = pending.find(req => req.requester._id === id);
+            const pendingRequest = pending.find(req => 
+              req && req.requester && req.requester._id === id
+            );
             if (pendingRequest) {
               setFriendshipStatus('pending');
               setFriendshipId(pendingRequest._id);
@@ -641,7 +643,9 @@ const UserProfile = () => {
             }
 
             // Check if current user sent a request to this user
-            const sentRequest = sent.find(req => req.recipient._id === id);
+            const sentRequest = sent.find(req => 
+              req && req.recipient && req.recipient._id === id
+            );
             if (sentRequest) {
               setFriendshipStatus('sent');
               setFriendshipId(sentRequest._id);
@@ -650,7 +654,8 @@ const UserProfile = () => {
 
             // Check if they are already friends
             const friendship = friends.find(f =>
-              (f.requester._id === id) || (f.recipient._id === id)
+              f && f.requester && f.recipient && 
+              (f.requester._id === id || f.recipient._id === id)
             );
             if (friendship) {
               setFriendshipStatus('friends');
@@ -663,6 +668,9 @@ const UserProfile = () => {
             setFriendshipId(null);
           } catch (error) {
             console.error('Error checking friendship status:', error);
+            // Set default state on error
+            setFriendshipStatus(null);
+            setFriendshipId(null);
           }
         }
       } catch (error) {
@@ -796,8 +804,50 @@ const UserProfile = () => {
       setFriendshipStatus('sent');
       toast.success(`Friend request sent to ${user.name}!`);
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Failed to send friend request';
-      toast.error(errorMessage);
+      console.error('Friend request error:', error);
+      
+      // Handle specific error cases
+      if (error.response?.status === 409) {
+        // Users are already friends or request already exists
+        const errorMessage = error.response?.data?.message || 'You are already friends or a request is pending';
+        toast.info(errorMessage);
+        
+        // Refresh the friendship status to get the correct state
+        if (currentUser && user._id !== currentUser._id) {
+          try {
+            const friendsResponse = await friendsAPI.getAll();
+            const { pending = [], sent = [], friends = [] } = friendsResponse.data || {};
+
+            // Check current status and update accordingly
+            const pendingRequest = pending.find(req => 
+              req && req.requester && req.requester._id === user._id
+            );
+            const sentRequest = sent.find(req => 
+              req && req.recipient && req.recipient._id === user._id
+            );
+            const friendship = friends.find(f =>
+              f && f.requester && f.recipient && 
+              (f.requester._id === user._id || f.recipient._id === user._id)
+            );
+
+            if (friendship) {
+              setFriendshipStatus('friends');
+              setFriendshipId(friendship._id);
+            } else if (pendingRequest) {
+              setFriendshipStatus('pending');
+              setFriendshipId(pendingRequest._id);
+            } else if (sentRequest) {
+              setFriendshipStatus('sent');
+              setFriendshipId(sentRequest._id);
+            }
+          } catch (refreshError) {
+            console.error('Error refreshing friendship status:', refreshError);
+          }
+        }
+      } else {
+        const errorMessage = error.response?.data?.message || 'Failed to send friend request';
+        toast.error(errorMessage);
+      }
     } finally {
       setSendingFriendRequest(false);
     }

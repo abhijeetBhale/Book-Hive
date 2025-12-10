@@ -243,16 +243,32 @@ const Home = () => {
     const loadPlatformBooks = async () => {
       try {
         const response = await booksAPI.getAllBooks();
-        const books = response.data || [];
+        
+        // Ensure we have a valid response and data is an array
+        if (!response || !response.data) {
+          console.warn('No data received from books API');
+          setPlatformBooks([]);
+          setBooksLoaded(true);
+          return;
+        }
+
+        const books = Array.isArray(response.data) ? response.data : [];
+        
+        if (books.length === 0) {
+          // No books available - this is normal, not an error
+          setPlatformBooks([]);
+          setBooksLoaded(true);
+          return;
+        }
 
         // Filter and format books with valid cover images
         const formattedBooks = books
-          .filter(book => book.coverUrl) // Only books with cover images
+          .filter(book => book && book.coverUrl) // Only books with cover images
           .map(book => ({
-            title: book.title,
-            author: book.author,
+            title: book.title || 'Unknown Title',
+            author: book.author || 'Unknown Author',
             coverUrl: book.coverUrl,
-            description: book.description || book.summary || `A wonderful book by ${book.author}`,
+            description: book.description || book.summary || `A wonderful book by ${book.author || 'Unknown Author'}`,
             _id: book._id
           }))
           .slice(0, 20); // Limit to 20 most recent books

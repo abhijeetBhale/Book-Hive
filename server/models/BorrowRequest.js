@@ -74,6 +74,22 @@ const borrowRequestSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     }
+  }],
+  // Reminder tracking
+  remindersSent: {
+    type: Number,
+    default: 0
+  },
+  lastReminderDate: {
+    type: Date
+  },
+  reminderHistory: [{
+    type: {
+      type: String,
+      enum: ['two_days_before', 'due_date', 'overdue']
+    },
+    sentAt: Date,
+    daysDiff: Number
   }]
 }, {
   timestamps: true

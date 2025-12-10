@@ -610,6 +610,7 @@ const BorrowRequests = () => {
           isReceived={activeTab === 'received'}
           onClose={() => setShowDeniedModal(false)}
           onDelete={handleDeleteRequest}
+          onOpenDeleteModal={setDeleteConfirmModal}
         />
       )}
 
@@ -661,7 +662,7 @@ const DeleteConfirmModal = ({ isOpen, bookTitle, onClose, onConfirm }) => {
 };
 
 // Denied Requests Modal Component
-const DeniedRequestsModal = ({ requests, isReceived, onClose, onDelete }) => {
+const DeniedRequestsModal = ({ requests, isReceived, onClose, onDelete, onOpenDeleteModal }) => {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -700,7 +701,7 @@ const DeniedRequestsModal = ({ requests, isReceived, onClose, onDelete }) => {
                     <p className="denied-date">Denied on: {formatDate(req.updatedAt || req.createdAt)}</p>
                   </div>
                   <button
-                    onClick={() => setDeleteConfirmModal({ open: true, requestId: req._id, bookTitle: req.book?.title })}
+                    onClick={() => onOpenDeleteModal({ open: true, requestId: req._id, bookTitle: req.book?.title })}
                     className="delete-denied-btn"
                     title="Delete from history"
                   >

@@ -24,7 +24,9 @@ const notificationSchema = new mongoose.Schema({
       'book_returned',
       'overdue_reminder',
       'event_invitation',
-      'event_reminder'
+      'event_reminder',
+      'due_reminder',
+      'borrower_reminder'
     ],
     required: true
   },

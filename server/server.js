@@ -164,10 +164,12 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// Schedule reminder service (daily at 9 AM)
-cron.schedule('0 9 * * *', async () => {
-  console.log('Running daily reminder service...');
-  await sendOverdueReminders();
+// Schedule consolidated reminder service - Run twice daily (9 AM, 6 PM)
+// This sends consolidated daily digest emails to prevent spam
+cron.schedule('0 9,18 * * *', async () => {
+  const now = new Date().toLocaleTimeString();
+  console.log(`📧 Running consolidated book return reminder service at ${now}...`);
+  await sendOverdueReminders(io);
 });
 
 // Start server
@@ -291,12 +293,7 @@ io.on('connection', async (socket) => {
   });
 });
 
-// Enhanced reminder service with socket.io integration
-// Run hourly checks during business hours (9 AM to 6 PM)
-cron.schedule('0 9-18 * * *', async () => {
-  console.log('Running hourly reminder check with real-time notifications...');
-  await sendOverdueReminders(io);
-});
+
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
