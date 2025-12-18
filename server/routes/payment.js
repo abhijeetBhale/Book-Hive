@@ -4,7 +4,9 @@ import {
   verifyPayment,
   getVerificationStatus,
   createDepositOrder,
-  verifyDepositPayment
+  verifyDepositPayment,
+  createLendingFeeOrder,
+  verifyLendingFeePayment
 } from '../controllers/paymentController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -19,5 +21,9 @@ router.get('/verification-status', protect, getVerificationStatus);
 // Security Deposit Routes
 router.post('/create-deposit-order', protect, createDepositOrder);
 router.post('/verify-deposit-payment', protect, verifyDepositPayment);
+
+// Lending Fee Routes
+router.post('/create-lending-fee-order', protect, createLendingFeeOrder);
+router.post('/verify-lending-fee-payment', protect, verifyLendingFeePayment);
 
 export default router;

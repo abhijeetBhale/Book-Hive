@@ -113,6 +113,36 @@ export const getDashboardOverview = catchAsync(async (req, res, next) => {
   }
 });
 
+// Helper function for dashboard overview
+async function getSystemStats() {
+  try {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const [dailyActiveUsers, dailyNewUsers, dailyNewBooks, dailyBorrowRequests] = await Promise.all([
+      User.countDocuments({ lastActive: { $gte: startOfDay } }).catch(() => 0),
+      User.countDocuments({ createdAt: { $gte: startOfDay } }).catch(() => 0),
+      Book.countDocuments({ createdAt: { $gte: startOfDay } }).catch(() => 0),
+      BorrowRequest.countDocuments({ createdAt: { $gte: startOfDay } }).catch(() => 0)
+    ]);
+
+    return {
+      dailyActiveUsers,
+      dailyNewUsers,
+      dailyNewBooks,
+      dailyBorrowRequests
+    };
+  } catch (error) {
+    console.error('Error in getSystemStats:', error);
+    return {
+      dailyActiveUsers: 0,
+      dailyNewUsers: 0,
+      dailyNewBooks: 0,
+      dailyBorrowRequests: 0
+    };
+  }
+}
+
 // @desc    Get all users with pagination and filters
 // @route   GET /api/admin/users
 // @access  Private (Super Admin only)
@@ -367,226 +397,7 @@ export const deleteBook = catchAsync(async (req, res, next) => {
   });
 });
 
-// @desc    Get system analytics
-// @route   GET /api/admin/analytics
-// @access  Private (Super Admin only)
-export const getAnalytics = catchAsync(async (req, res, next) => {
-  const { period = '30d' } = req.query;
 
-  let startDate;
-  switch (period) {
-    case '7d':
-      startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      break;
-    case '30d':
-      startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      break;
-    case '90d':
-      startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-      break;
-    case '1y':
-      startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-      break;
-    default:
-      startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  }
-
-  // Get analytics data
-  const [userGrowth, bookGrowth, borrowActivity, topUsers, topBooks] = await Promise.all([
-    getUserGrowthData(startDate),
-    getBookGrowthData(startDate),
-    getBorrowActivityData(startDate),
-    getTopUsers(),
-    getTopBooks()
-  ]);
-
-  res.status(200).json({
-    status: 'success',
-    data: {
-      userGrowth,
-      bookGrowth,
-      borrowActivity,
-      topUsers,
-      topBooks
-    }
-  });
-});
-
-// Helper functions
-async function getSystemStats() {
-  try {
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    const [dailyActiveUsers, dailyNewUsers, dailyNewBooks, dailyBorrowRequests] = await Promise.all([
-      User.countDocuments({ lastActive: { $gte: startOfDay } }).catch(() => 0),
-      User.countDocuments({ createdAt: { $gte: startOfDay } }).catch(() => 0),
-      Book.countDocuments({ createdAt: { $gte: startOfDay } }).catch(() => 0),
-      BorrowRequest.countDocuments({ createdAt: { $gte: startOfDay } }).catch(() => 0)
-    ]);
-
-    return {
-      dailyActiveUsers,
-      dailyNewUsers,
-      dailyNewBooks,
-      dailyBorrowRequests
-    };
-  } catch (error) {
-    console.error('Error in getSystemStats:', error);
-    return {
-      dailyActiveUsers: 0,
-      dailyNewUsers: 0,
-      dailyNewBooks: 0,
-      dailyBorrowRequests: 0
-    };
-  }
-}
-
-async function getUserGrowthData(startDate) {
-  const users = await User.aggregate([
-    { $match: { createdAt: { $gte: startDate } } },
-    {
-      $group: {
-        _id: {
-          year: { $year: '$createdAt' },
-          month: { $month: '$createdAt' },
-          day: { $dayOfMonth: '$createdAt' }
-        },
-        count: { $sum: 1 }
-      }
-    },
-    { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } }
-  ]);
-
-  return users.map(item => ({
-    date: new Date(item._id.year, item._id.month - 1, item._id.day),
-    count: item.count
-  }));
-}
-
-async function getBookGrowthData(startDate) {
-  const books = await Book.aggregate([
-    { $match: { createdAt: { $gte: startDate } } },
-    {
-      $group: {
-        _id: {
-          year: { $year: '$createdAt' },
-          month: { $month: '$createdAt' },
-          day: { $dayOfMonth: '$createdAt' }
-        },
-        count: { $sum: 1 }
-      }
-    },
-    { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } }
-  ]);
-
-  return books.map(item => ({
-    date: new Date(item._id.year, item._id.month - 1, item._id.day),
-    count: item.count
-  }));
-}
-
-async function getBorrowActivityData(startDate) {
-  const activity = await BorrowRequest.aggregate([
-    { $match: { createdAt: { $gte: startDate } } },
-    {
-      $group: {
-        _id: {
-          year: { $year: '$createdAt' },
-          month: { $month: '$createdAt' },
-          day: { $dayOfMonth: '$createdAt' },
-          status: '$status'
-        },
-        count: { $sum: 1 }
-      }
-    },
-    { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } }
-  ]);
-
-  return activity.map(item => ({
-    date: new Date(item._id.year, item._id.month - 1, item._id.day),
-    status: item._id.status,
-    count: item.count
-  }));
-}
-
-async function getTopUsers() {
-  return await User.aggregate([
-    {
-      $lookup: {
-        from: 'books',
-        localField: '_id',
-        foreignField: 'owner',
-        as: 'books'
-      }
-    },
-    {
-      $lookup: {
-        from: 'borrowrequests',
-        localField: '_id',
-        foreignField: 'borrower',
-        as: 'borrowRequests'
-      }
-    },
-    {
-      $addFields: {
-        bookCount: { $size: '$books' },
-        borrowCount: { $size: '$borrowRequests' },
-        totalActivity: { $add: [{ $size: '$books' }, { $size: '$borrowRequests' }] }
-      }
-    },
-    { $sort: { totalActivity: -1 } },
-    { $limit: 10 },
-    {
-      $project: {
-        name: 1,
-        email: 1,
-        avatar: 1,
-        bookCount: 1,
-        borrowCount: 1,
-        totalActivity: 1
-      }
-    }
-  ]);
-}
-
-async function getTopBooks() {
-  return await Book.aggregate([
-    {
-      $lookup: {
-        from: 'borrowrequests',
-        localField: '_id',
-        foreignField: 'book',
-        as: 'borrowRequests'
-      }
-    },
-    {
-      $addFields: {
-        borrowCount: { $size: '$borrowRequests' }
-      }
-    },
-    { $sort: { borrowCount: -1 } },
-    { $limit: 10 },
-    {
-      $lookup: {
-        from: 'users',
-        localField: 'owner',
-        foreignField: '_id',
-        as: 'owner'
-      }
-    },
-    {
-      $project: {
-        title: 1,
-        author: 1,
-        coverImage: 1,
-        borrowCount: 1,
-        'owner.name': 1,
-        'owner.email': 1
-      }
-    }
-  ]);
-}
 
 // @desc    Get all borrow requests with filters
 // @route   GET /api/admin/borrow-requests
@@ -643,6 +454,299 @@ export const getBorrowRequests = catchAsync(async (req, res, next) => {
       }
     }
   });
+});
+
+// @desc    Get lending fees for admin dashboard
+// @route   GET /api/admin/lending-fees
+// @access  Private (Super Admin only)
+export const getLendingFees = catchAsync(async (req, res, next) => {
+  const {
+    page = 1,
+    limit = 20,
+    search,
+    status,
+    sortBy = 'paymentCompletedAt',
+    sortOrder = 'desc'
+  } = req.query;
+
+  let query = {
+    lendingFee: { $gt: 0 }, // Only get requests with lending fees
+  };
+
+  if (status && status !== 'all') {
+    query.lendingFeeStatus = status;
+  }
+
+  const sortOptions = {};
+  sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+  const lendingFees = await BorrowRequest.find(query)
+    .populate('book', 'title author coverImage')
+    .populate('borrower', 'name email avatar')
+    .populate('owner', 'name email avatar')
+    .sort(sortOptions)
+    .limit(limit * 1)
+    .skip((page - 1) * limit)
+    .lean();
+
+  // Filter by search if provided
+  let filteredFees = lendingFees;
+  if (search) {
+    filteredFees = lendingFees.filter(fee =>
+      fee.book?.title?.toLowerCase().includes(search.toLowerCase()) ||
+      fee.borrower?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      fee.owner?.name?.toLowerCase().includes(search.toLowerCase())
+    );
+  }
+
+  const total = await BorrowRequest.countDocuments(query);
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      lendingFees: filteredFees,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    }
+  });
+});
+
+// @desc    Get comprehensive analytics data
+// @route   GET /api/admin/analytics
+// @access  Private (Super Admin only)
+export const getAnalytics = catchAsync(async (req, res, next) => {
+  const { period = '30d' } = req.query;
+  
+  // Calculate date range based on period
+  const now = new Date();
+  let startDate;
+  
+  switch (period) {
+    case '7d':
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      break;
+    case '30d':
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      break;
+    case '90d':
+      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      break;
+    case '1y':
+      startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      break;
+    default:
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+
+  // Previous period for comparison
+  const periodLength = now.getTime() - startDate.getTime();
+  const previousStartDate = new Date(startDate.getTime() - periodLength);
+
+  try {
+    // Current period stats
+    const [
+      totalUsers,
+      totalBooks,
+      totalBorrowRequests,
+      totalLendingFees,
+      currentUsers,
+      currentBooks,
+      currentBorrowRequests,
+      currentLendingFees,
+      previousUsers,
+      previousBooks,
+      previousBorrowRequests,
+      previousLendingFees,
+      topCategories,
+      userEngagement,
+      bookStats
+    ] = await Promise.all([
+      // Total counts
+      User.countDocuments(),
+      Book.countDocuments(),
+      BorrowRequest.countDocuments(),
+      BorrowRequest.countDocuments({ lendingFee: { $gt: 0 }, lendingFeeStatus: 'paid' }),
+      
+      // Current period
+      User.countDocuments({ createdAt: { $gte: startDate } }),
+      Book.countDocuments({ createdAt: { $gte: startDate } }),
+      BorrowRequest.countDocuments({ createdAt: { $gte: startDate } }),
+      BorrowRequest.countDocuments({ 
+        createdAt: { $gte: startDate },
+        lendingFee: { $gt: 0 },
+        lendingFeeStatus: 'paid'
+      }),
+      
+      // Previous period
+      User.countDocuments({ 
+        createdAt: { $gte: previousStartDate, $lt: startDate }
+      }),
+      Book.countDocuments({ 
+        createdAt: { $gte: previousStartDate, $lt: startDate }
+      }),
+      BorrowRequest.countDocuments({ 
+        createdAt: { $gte: previousStartDate, $lt: startDate }
+      }),
+      BorrowRequest.countDocuments({ 
+        createdAt: { $gte: previousStartDate, $lt: startDate },
+        lendingFee: { $gt: 0 },
+        lendingFeeStatus: 'paid'
+      }),
+      
+      // Additional analytics
+      Book.aggregate([
+        { $group: { _id: '$category', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 10 }
+      ]),
+      
+      // User engagement metrics
+      BorrowRequest.aggregate([
+        { $match: { createdAt: { $gte: startDate } } },
+        { $group: {
+          _id: '$borrower',
+          requestCount: { $sum: 1 },
+          avgResponseTime: { $avg: '$metadata.communicationQuality.responseTime' }
+        }},
+        { $group: {
+          _id: null,
+          activeUsers: { $sum: 1 },
+          avgRequestsPerUser: { $avg: '$requestCount' },
+          avgResponseTime: { $avg: '$avgResponseTime' }
+        }}
+      ]),
+      
+      // Book statistics
+      Book.aggregate([
+        { $group: {
+          _id: null,
+          totalBooks: { $sum: 1 },
+          booksWithFees: { $sum: { $cond: [{ $gt: ['$lendingFee', 0] }, 1, 0] } },
+          avgLendingFee: { $avg: '$lendingFee' },
+          totalViews: { $sum: '$viewCount' },
+          avgRating: { $avg: '$rating.average' }
+        }}
+      ])
+    ]);
+
+    // Calculate growth rates
+    const userGrowthRate = previousUsers > 0 ? ((currentUsers - previousUsers) / previousUsers * 100) : 0;
+    const bookGrowthRate = previousBooks > 0 ? ((currentBooks - previousBooks) / previousBooks * 100) : 0;
+    const borrowGrowthRate = previousBorrowRequests > 0 ? ((currentBorrowRequests - previousBorrowRequests) / previousBorrowRequests * 100) : 0;
+    const feeGrowthRate = previousLendingFees > 0 ? ((currentLendingFees - previousLendingFees) / previousLendingFees * 100) : 0;
+
+    // Calculate revenue metrics
+    const totalRevenue = await BorrowRequest.aggregate([
+      { $match: { lendingFeeStatus: 'paid' } },
+      { $group: { _id: null, total: { $sum: '$lendingFee' } } }
+    ]);
+
+    const platformRevenue = await BorrowRequest.aggregate([
+      { $match: { lendingFeeStatus: 'paid' } },
+      { $group: { _id: null, total: { $sum: '$platformFee' } } }
+    ]);
+
+    const ownerEarnings = await BorrowRequest.aggregate([
+      { $match: { lendingFeeStatus: 'paid' } },
+      { $group: { _id: null, total: { $sum: '$ownerEarnings' } } }
+    ]);
+
+    // User activity metrics
+    const userActivity = await User.aggregate([
+      { $match: { lastLogin: { $gte: startDate } } },
+      { $group: {
+        _id: null,
+        dailyActiveUsers: { $sum: { $cond: [
+          { $gte: ['$lastLogin', new Date(now.getTime() - 24 * 60 * 60 * 1000)] }, 1, 0
+        ]}},
+        weeklyActiveUsers: { $sum: { $cond: [
+          { $gte: ['$lastLogin', new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)] }, 1, 0
+        ]}},
+        monthlyActiveUsers: { $sum: 1 }
+      }}
+    ]);
+
+    const analytics = {
+      period,
+      dateRange: { startDate, endDate: now },
+      
+      // Overview metrics
+      overview: {
+        totalUsers,
+        totalBooks,
+        totalBorrowRequests,
+        totalLendingFees,
+        userGrowthRate: Math.round(userGrowthRate * 100) / 100,
+        bookGrowthRate: Math.round(bookGrowthRate * 100) / 100,
+        borrowGrowthRate: Math.round(borrowGrowthRate * 100) / 100,
+        feeGrowthRate: Math.round(feeGrowthRate * 100) / 100
+      },
+      
+      // Current period metrics
+      currentPeriod: {
+        newUsers: currentUsers,
+        newBooks: currentBooks,
+        newBorrowRequests: currentBorrowRequests,
+        paidLendingFees: currentLendingFees
+      },
+      
+      // Revenue metrics
+      revenue: {
+        totalRevenue: totalRevenue[0]?.total || 0,
+        platformRevenue: platformRevenue[0]?.total || 0,
+        ownerEarnings: ownerEarnings[0]?.total || 0
+      },
+      
+      // User engagement
+      engagement: {
+        dailyActiveUsers: userActivity[0]?.dailyActiveUsers || 0,
+        weeklyActiveUsers: userActivity[0]?.weeklyActiveUsers || 0,
+        monthlyActiveUsers: userActivity[0]?.monthlyActiveUsers || 0,
+        avgRequestsPerUser: userEngagement[0]?.avgRequestsPerUser || 0,
+        avgResponseTime: userEngagement[0]?.avgResponseTime || 0
+      },
+      
+      // Book statistics
+      books: {
+        totalBooks,
+        booksWithFees: bookStats[0]?.booksWithFees || 0,
+        avgLendingFee: bookStats[0]?.avgLendingFee || 0,
+        totalViews: bookStats[0]?.totalViews || 0,
+        avgRating: bookStats[0]?.avgRating || 0,
+        topCategories: topCategories.slice(0, 5)
+      },
+      
+      // Platform health
+      health: {
+        successfulBorrows: await BorrowRequest.countDocuments({ 
+          status: 'returned',
+          createdAt: { $gte: startDate }
+        }),
+        overdueBooks: await BorrowRequest.countDocuments({ 
+          status: 'borrowed',
+          dueDate: { $lt: now }
+        }),
+        averageRating: bookStats[0]?.avgRating || 0,
+        userRetentionRate: userActivity[0]?.monthlyActiveUsers > 0 ? 
+          (userActivity[0]?.weeklyActiveUsers / userActivity[0]?.monthlyActiveUsers * 100) : 0
+      }
+    };
+
+    res.status(200).json({
+      status: 'success',
+      data: analytics
+    });
+  } catch (error) {
+    console.error('Analytics calculation error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to calculate analytics'
+    });
+  }
 });
 
 // @desc    Update borrow request status

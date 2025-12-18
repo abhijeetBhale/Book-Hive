@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { booksAPI, borrowAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import { getFullImageUrl } from '../utils/imageHelpers';
-import { Loader, Shield } from 'lucide-react';
+import { Loader, Shield, Wallet } from 'lucide-react';
 import OptimizedAvatar from '../components/OptimizedAvatar';
 import UpgradeModal from '../components/ui/UpgradeModal';
 import SEO from '../components/SEO';
@@ -268,6 +268,30 @@ const BookDetails = () => {
               <span style={{ fontWeight: 600 }}>
                 Security Deposit: ₹{book.securityDeposit}
               </span>
+            </div>
+          )}
+
+          {book.lendingFee > 0 && (
+            <div style={{
+              marginTop: '1rem',
+              padding: '0.75rem',
+              backgroundColor: '#ecfdf5',
+              borderRadius: '0.5rem',
+              border: '1px solid #a7f3d0',
+              color: '#065f46',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <Wallet size={20} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>
+                  Lending Fee: ₹{book.lendingFee.toFixed(2)}
+                </span>
+                <span style={{ fontSize: '0.875rem', color: '#047857' }}>
+                  A small fee to support the book sharing community
+                </span>
+              </div>
             </div>
           )}
 

@@ -305,6 +305,44 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   }],
+  // Wallet and Earnings
+  wallet: {
+    totalEarnings: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    pendingEarnings: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    withdrawnAmount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    transactions: [{
+      type: {
+        type: String,
+        enum: ['lending_fee', 'withdrawal', 'refund'],
+        required: true
+      },
+      amount: {
+        type: Number,
+        required: true
+      },
+      borrowRequestId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'BorrowRequest'
+      },
+      description: String,
+      createdAt: {
+        type: Date,
+        default: Date.now
+      }
+    }]
+  },
 }, {
   timestamps: true
 })

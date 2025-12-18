@@ -1,6 +1,8 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import User from '../models/User.js';
+import BorrowRequest from '../models/BorrowRequest.js';
+import Book from '../models/Book.js';
 
 // Verification badge price in paise (99 rupees = 9900 paise)
 const VERIFICATION_PRICE = 9900;
@@ -352,6 +354,192 @@ export const verifyDepositPayment = async (req, res) => {
     });
   } catch (error) {
     console.error('Verify deposit payment error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to verify payment',
+      error: error.message 
+    });
+  }
+};
+
+// Platform commission rate (20%)
+const PLATFORM_COMMISSION_RATE = 0.2;
+
+// @desc    Create order for lending fee payment
+// @route   POST /api/payment/create-lending-fee-order
+export const createLendingFeeOrder = async (req, res) => {
+  try {
+    const { borrowRequestId } = req.body;
+    const userId = req.user._id;
+
+    if (!razorpay) {
+      return res.status(503).json({ 
+        message: 'Payment service is not configured. Please contact support.',
+        error: 'Razorpay not initialized'
+      });
+    }
+
+    const borrowRequest = await BorrowRequest.findById(borrowRequestId)
+      .populate('book')
+      .populate('owner', 'name email');
+    
+    if (!borrowRequest) {
+      return res.status(404).json({ message: 'Borrow request not found' });
+    }
+
+    if (borrowRequest.borrower.toString() !== userId.toString()) {
+      return res.status(403).json({ message: 'Not authorized. Only the borrower can pay the lending fee.' });
+    }
+
+    if (borrowRequest.status !== 'approved') {
+      return res.status(400).json({ 
+        message: 'Borrow request must be approved before paying lending fee',
+        currentStatus: borrowRequest.status
+      });
+    }
+
+    // Get lending fee from book
+    const book = borrowRequest.book;
+    const lendingFee = book.lendingFee || 0;
+
+    if (lendingFee <= 0) {
+      return res.status(400).json({ 
+        message: 'This book has no lending fee. Payment not required.' 
+      });
+    }
+
+    if (borrowRequest.lendingFeeStatus === 'paid') {
+      return res.status(400).json({ 
+        message: 'Lending fee has already been paid for this request' 
+      });
+    }
+
+    // Calculate platform fee and owner earnings
+    const platformFee = Math.round(lendingFee * PLATFORM_COMMISSION_RATE * 100) / 100; // Round to 2 decimals
+    const ownerEarnings = Math.round((lendingFee - platformFee) * 100) / 100;
+
+    // Update borrow request with fee information
+    borrowRequest.lendingFee = lendingFee;
+    borrowRequest.platformFee = platformFee;
+    borrowRequest.ownerEarnings = ownerEarnings;
+    borrowRequest.lendingFeeStatus = 'pending';
+    await borrowRequest.save();
+
+    const amount = Math.round(lendingFee * 100); // Convert to paise
+
+    const options = {
+      amount,
+      currency: 'INR',
+      receipt: `lend_${borrowRequestId.toString().slice(-8)}_${Date.now().toString().slice(-8)}`,
+      payment_capture: 1,
+      notes: {
+        userId: userId.toString(),
+        purpose: 'lending_fee',
+        borrowRequestId: borrowRequestId.toString(),
+        bookId: book._id.toString(),
+        ownerId: borrowRequest.owner._id.toString(),
+        lendingFee: lendingFee.toString(),
+        platformFee: platformFee.toString(),
+        ownerEarnings: ownerEarnings.toString()
+      }
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    res.json({
+      success: true,
+      order: {
+        id: order.id,
+        amount: order.amount,
+        currency: order.currency
+      },
+      key: process.env.RAZORPAY_KEY_ID,
+      lendingFee: lendingFee,
+      platformFee: platformFee,
+      ownerEarnings: ownerEarnings
+    });
+  } catch (error) {
+    console.error('Create lending fee order error:', error);
+    res.status(500).json({ 
+      message: 'Failed to create payment order',
+      error: error.message 
+    });
+  }
+};
+
+// @desc    Verify lending fee payment and distribute earnings
+// @route   POST /api/payment/verify-lending-fee-payment
+export const verifyLendingFeePayment = async (req, res) => {
+  try {
+    if (!process.env.RAZORPAY_KEY_SECRET) {
+      return res.status(503).json({ 
+        success: false,
+        message: 'Payment service is not configured. Please contact support.' 
+      });
+    }
+
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, borrowRequestId } = req.body;
+
+    // Verify signature
+    const body = razorpay_order_id + '|' + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(body.toString())
+      .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Payment verification failed - Invalid signature' 
+      });
+    }
+
+    // Get borrow request with populated data
+    const borrowRequest = await BorrowRequest.findById(borrowRequestId)
+      .populate('owner', 'name email')
+      .populate('book', 'title');
+    
+    if (!borrowRequest) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Borrow request not found' 
+      });
+    }
+
+    // Update borrow request payment status
+    borrowRequest.lendingFeeStatus = 'paid';
+    borrowRequest.lendingFeePaymentId = razorpay_payment_id;
+    borrowRequest.paymentCompletedAt = new Date();
+    await borrowRequest.save();
+
+    // Add earnings to owner's wallet
+    const owner = await User.findById(borrowRequest.owner._id);
+    if (owner) {
+      owner.wallet.totalEarnings = (owner.wallet.totalEarnings || 0) + borrowRequest.ownerEarnings;
+      owner.wallet.pendingEarnings = (owner.wallet.pendingEarnings || 0) + borrowRequest.ownerEarnings;
+      
+      // Add transaction record
+      owner.wallet.transactions.push({
+        type: 'lending_fee',
+        amount: borrowRequest.ownerEarnings,
+        borrowRequestId: borrowRequest._id,
+        description: `Earned ₹${borrowRequest.ownerEarnings} from lending "${borrowRequest.book.title}" (Platform fee: ₹${borrowRequest.platformFee})`
+      });
+      
+      await owner.save();
+    }
+
+    res.json({
+      success: true,
+      message: 'Lending fee paid successfully! The owner has been credited.',
+      paymentDetails: {
+        lendingFee: borrowRequest.lendingFee,
+        platformFee: borrowRequest.platformFee,
+        ownerEarnings: borrowRequest.ownerEarnings
+      }
+    });
+  } catch (error) {
+    console.error('Verify lending fee payment error:', error);
     res.status(500).json({ 
       success: false,
       message: 'Failed to verify payment',

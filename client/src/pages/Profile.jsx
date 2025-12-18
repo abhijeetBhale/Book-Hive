@@ -97,10 +97,21 @@ const Profile = () => {
 
   // Listen for review updates to refresh profile data
   useEffect(() => {
-    const handleReviewUpdate = (event) => {
+    const handleReviewUpdate = async (event) => {
       if (event.detail?.userId === user._id) {
-        // Refresh user profile to get updated review count and star level
-        fetchProfile();
+        // Instead of calling fetchProfile which might overwrite user state,
+        // fetch only the updated rating data and merge it with existing user data
+        try {
+          const { data } = await authAPI.getProfile();
+          setUser(prevUser => ({
+            ...prevUser,
+            rating: data.rating // Only update the rating field
+          }));
+        } catch (error) {
+          console.error('Failed to update rating data:', error);
+          // Fallback to full profile refresh if needed
+          fetchProfile();
+        }
       }
     };
 

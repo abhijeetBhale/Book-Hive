@@ -10,6 +10,7 @@ import {
   getAnalytics,
   getBorrowRequests,
   updateBorrowRequest,
+  getLendingFees,
   getBookClubs,
   updateBookClub,
   deleteBookClub,
@@ -49,6 +50,9 @@ router.delete('/books/:id', auditLogger('DELETE_BOOK'), deleteBook);
 // Borrow requests management routes
 router.get('/borrow-requests', auditLogger('VIEW_BORROW_REQUESTS'), getBorrowRequests);
 router.put('/borrow-requests/:id', auditLogger('UPDATE_BORROW_REQUEST'), updateBorrowRequest);
+
+// Lending fees management routes
+router.get('/lending-fees', auditLogger('VIEW_LENDING_FEES'), getLendingFees);
 
 // Book clubs management routes
 router.get('/book-clubs', auditLogger('VIEW_BOOK_CLUBS'), getBookClubs);

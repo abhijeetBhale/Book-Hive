@@ -18,6 +18,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { useNotificationBadges } from '../../context/NotificationBadgeContext';
 import OptimizedAvatar from '../ui/OptimizedAvatar';
 import Button from '../ui/Button';
+import PremiumTooltip from '../ui/PremiumTooltip';
 import beeIcon from '../../assets/icons8-bee-100.png';
 import LoginButton from '../LoginButton';
 import SignButton from '../SignButton';
@@ -242,18 +243,61 @@ const Navbar = () => {
   // Conditional navigation based on user role
   const getNavLinks = () => {
     const baseLinks = [
-      { to: '/map', text: 'Map', icon: <Map size={24} />, badgeKey: 'map', showForAll: true },
+      { 
+        to: '/map', 
+        text: 'Map', 
+        tooltip: 'Explore nearby readers and books',
+        icon: <Map size={24} />, 
+        badgeKey: 'map', 
+        showForAll: true 
+      },
     ];
 
     // Regular user links (always shown for authenticated users)
     const userLinks = [
       ...baseLinks,
-      { to: '/users', text: 'Community', icon: <Users size={24} />, badgeKey: 'community' },
-      { to: '/broadcasts', text: 'Broadcasts', icon: <AudioWaveform size={24} />, badgeKey: 'broadcasts' },
-      { to: '/my-books', text: 'My Books', icon: <BookMarked size={24} />, badgeKey: 'myBooks' },
-      { to: '/borrow-requests', text: 'Requests', icon: <ArrowLeftRight size={24} />, badgeKey: 'requests' },
-      { to: '/messages', text: 'Messages', icon: <MessageSquare size={24} />, badgeKey: 'messages' },
-      { to: '/friends', text: 'Friends', icon: <Heart size={24} />, badgeKey: 'friends' },
+      { 
+        to: '/users', 
+        text: 'Community', 
+        tooltip: 'Connect with fellow book lovers',
+        icon: <Users size={24} />, 
+        badgeKey: 'community' 
+      },
+      { 
+        to: '/broadcasts', 
+        text: 'Broadcasts', 
+        tooltip: 'Stay updated with community announcements',
+        icon: <AudioWaveform size={24} />, 
+        badgeKey: 'broadcasts' 
+      },
+      { 
+        to: '/my-books', 
+        text: 'My Books', 
+        tooltip: 'Manage your personal library',
+        icon: <BookMarked size={24} />, 
+        badgeKey: 'myBooks' 
+      },
+      { 
+        to: '/borrow-requests', 
+        text: 'Requests', 
+        tooltip: 'Handle borrowing and lending requests',
+        icon: <ArrowLeftRight size={24} />, 
+        badgeKey: 'requests' 
+      },
+      { 
+        to: '/messages', 
+        text: 'Messages', 
+        tooltip: 'Chat with other community members',
+        icon: <MessageSquare size={24} />, 
+        badgeKey: 'messages' 
+      },
+      { 
+        to: '/friends', 
+        text: 'Friends', 
+        tooltip: 'Connect with your reading buddies',
+        icon: <Heart size={24} />, 
+        badgeKey: 'friends' 
+      },
     ];
 
     return userLinks;
@@ -289,38 +333,38 @@ const Navbar = () => {
               <div className="flex items-center space-x-20">
                 {user &&
                   navLinks.map((link) => (
-                    <NavLink
-                      key={link.to}
-                      to={link.to}
-                      className={({ isActive }) =>
-                        `transition-colors duration-300 ${isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'}`
-                      }
-                      title={link.text}
-                    >
-                      {({ isActive }) => (
-                        <div className="relative flex flex-col items-center pt-4 pb-4">
-                          <div className="relative">
-                            {link.icon}
-                            {badges[link.badgeKey] > 0 && (
-                              <span
-                                className="absolute bg-red-500 rounded-full shadow-lg"
-                                style={{
-                                  width: '10px',
-                                  height: '10px',
-                                  border: '2px solid white',
-                                  top: '-2px',
-                                  right: '-2px',
-                                  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-                                }}
-                              />
-                            )}
+                    <PremiumTooltip key={link.to} text={link.tooltip} delay={300}>
+                      <NavLink
+                        to={link.to}
+                        className={({ isActive }) =>
+                          `transition-colors duration-300 ${isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'}`
+                        }
+                      >
+                        {({ isActive }) => (
+                          <div className="relative flex flex-col items-center pt-4 pb-4">
+                            <div className="relative">
+                              {link.icon}
+                              {badges[link.badgeKey] > 0 && (
+                                <span
+                                  className="absolute bg-red-500 rounded-full shadow-lg"
+                                  style={{
+                                    width: '10px',
+                                    height: '10px',
+                                    border: '2px solid white',
+                                    top: '-2px',
+                                    right: '-2px',
+                                    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                                  }}
+                                />
+                              )}
+                            </div>
+                            <span
+                              className={`absolute bottom-1 h-1.5 w-3.5 right-0.9 rounded-full bg-green-500 transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}
+                            ></span>
                           </div>
-                          <span
-                            className={`absolute bottom-1 h-1.5 w-3.5 right-0.9 rounded-full bg-green-500 transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}
-                          ></span>
-                        </div>
-                      )}
-                    </NavLink>
+                        )}
+                      </NavLink>
+                    </PremiumTooltip>
                   ))}
               </div>
             </div>
@@ -331,49 +375,52 @@ const Navbar = () => {
                 <div className="flex items-center gap-4">
                   {/* Admin Dashboard Button */}
                   {(user.role === 'admin' || user.role === 'superadmin') && (
-                    <Link
-                      to="/admin-dashboard-secure"
-                      className="relative px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2"
-                      title="Admin Dashboard"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                        <path d="M2 17l10 5 10-5"></path>
-                        <path d="M2 12l10 5 10-5"></path>
-                      </svg>
-                      Admin
-                      {adminBadgeCount > 0 && (
-                        <span
-                          className="absolute bg-red-500 rounded-full shadow-lg"
-                          style={{
-                            width: '10px',
-                            height: '10px',
-                            border: '2px solid white',
-                            top: '-2px',
-                            right: '-2px',
-                            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-                          }}
-                        />
-                      )}
-                    </Link>
+                    <PremiumTooltip text="Access admin dashboard and manage platform" delay={300}>
+                      <Link
+                        to="/admin-dashboard-secure"
+                        className="relative px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                          <path d="M2 17l10 5 10-5"></path>
+                          <path d="M2 12l10 5 10-5"></path>
+                        </svg>
+                        Admin
+                        {adminBadgeCount > 0 && (
+                          <span
+                            className="absolute bg-red-500 rounded-full shadow-lg"
+                            style={{
+                              width: '10px',
+                              height: '10px',
+                              border: '2px solid white',
+                              top: '-2px',
+                              right: '-2px',
+                              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                            }}
+                          />
+                        )}
+                      </Link>
+                    </PremiumTooltip>
                   )}
 
                   {/* Notification Bell */}
                   <div className="relative" style={{ zIndex: 10000 }}>
-                    <button
-                      onClick={() => {
-                        setShowNotificationDropdown(!showNotificationDropdown);
-                        setShowNotificationCenter(false);
-                      }}
-                      className="relative p-2 text-gray-600 hover:text-primary transition-colors duration-300"
-                    >
-                      <Bell size={24} />
-                      {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                          {unreadCount > 9 ? '9+' : unreadCount}
-                        </span>
-                      )}
-                    </button>
+                    <PremiumTooltip text="View notifications and updates" delay={300}>
+                      <button
+                        onClick={() => {
+                          setShowNotificationDropdown(!showNotificationDropdown);
+                          setShowNotificationCenter(false);
+                        }}
+                        className="relative p-2 text-gray-600 hover:text-primary transition-colors duration-300"
+                      >
+                        <Bell size={24} />
+                        {unreadCount > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </span>
+                        )}
+                      </button>
+                    </PremiumTooltip>
 
                     {/* Notification Dropdown */}
                     {showNotificationDropdown && (
@@ -448,17 +495,19 @@ const Navbar = () => {
                     )}
                   </div>
 
-                  <Link to="/profile" className="relative">
-                    <OptimizedAvatar
-                      src={user.avatar}
-                      name={user.name}
-                      alt="avatar"
-                      size="md"
-                    />
-                    {unreadCount > 0 && (
-                      <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" />
-                    )}
-                  </Link>
+                  <PremiumTooltip text="View and edit your profile" delay={300}>
+                    <Link to="/profile" className="relative">
+                      <OptimizedAvatar
+                        src={user.avatar}
+                        name={user.name}
+                        alt="avatar"
+                        size="md"
+                      />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" />
+                      )}
+                    </Link>
+                  </PremiumTooltip>
                   <Button onClick={logout} variant="secondary" className="cursor-pointer">
                     Logout
                   </Button>

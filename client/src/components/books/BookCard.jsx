@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
-import { User, Calendar, Tag, Star } from 'lucide-react';
+import { User, Calendar, Tag, Star, Wallet } from 'lucide-react';
 import { getFullImageUrl } from '../../utils/imageHelpers';
 import OptimizedImage from '../ui/OptimizedImage';
 import VerifiedBadge from '../ui/VerifiedBadge';
@@ -90,6 +90,16 @@ const BookCard = memo(({ book, onDelete }) => {
             <span className="text-gray-600 text-sm">
               Rating: {book.rating.average.toFixed(1)}/5.0 
               {book.rating.count > 0 && ` (Based on ${book.rating.count} rating${book.rating.count !== 1 ? 's' : ''})`}
+            </span>
+          </div>
+        )}
+
+        {/* Lending Fee (if available) */}
+        {book.forBorrowing && book.lendingFee > 0 && (
+          <div className="flex items-center gap-2 mb-4">
+            <Wallet className="h-5 w-5 text-green-600 flex-shrink-0" />
+            <span className="text-gray-600 text-sm font-semibold">
+              Lending Fee: <span className="text-green-600">₹{book.lendingFee.toFixed(2)}</span>
             </span>
           </div>
         )}

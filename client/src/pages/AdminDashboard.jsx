@@ -68,10 +68,13 @@ const AdminDashboard = () => {
   const [books, setBooks] = useState([]);
   const [booksForSale, setBooksForSale] = useState([]);
   const [borrowRequests, setBorrowRequests] = useState([]);
+  const [lendingFees, setLendingFees] = useState([]);
   const [bookClubs, setBookClubs] = useState([]);
   const [reports, setReports] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [reviewStats, setReviewStats] = useState(null);
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [analyticsFilter, setAnalyticsFilter] = useState('30d');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tabErrors, setTabErrors] = useState({});
@@ -95,8 +98,7 @@ const AdminDashboard = () => {
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
 
-  // Analytics-specific state
-  const [analyticsFilter, setAnalyticsFilter] = useState('7d');
+  // Analytics-specific state (already declared above)
 
   // Reviews-specific state
   const [selectedReview, setSelectedReview] = useState(null);
@@ -357,6 +359,9 @@ const AdminDashboard = () => {
         case 'borrows':
           fetchBorrowRequests();
           break;
+        case 'lending-fees':
+          fetchLendingFees();
+          break;
         case 'clubs':
           fetchBookClubs();
           break;
@@ -505,6 +510,31 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchLendingFees = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        page: pagination.page,
+        limit: pagination.limit,
+        ...filters
+      };
+      const response = await adminAPIService.getLendingFees(params);
+      setLendingFees(response.data.data.lendingFees || []);
+      if (response.data.data.pagination) {
+        setPagination(prev => ({
+          ...prev,
+          ...response.data.data.pagination
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching lending fees:', error);
+      setLendingFees([]);
+      setTabErrors(prev => ({ ...prev, 'lending-fees': 'Failed to load lending fees' }));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchBookClubs = async () => {
     try {
       setLoading(true);
@@ -589,10 +619,11 @@ const AdminDashboard = () => {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await adminAPIService.getAnalytics('30d');
-      // Analytics data is already in dashboardData, so we don't need separate state
+      const response = await adminAPIService.getAnalytics({ period: analyticsFilter });
+      setAnalyticsData(response.data.data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
+      setTabErrors(prev => ({ ...prev, analytics: 'Failed to load analytics' }));
     } finally {
       setLoading(false);
     }
@@ -2005,6 +2036,255 @@ const AdminDashboard = () => {
     </div>
   );
 
+  const renderLendingFees = () => (
+    <div className="space-y-6">
+      {loading && (
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 text-center">
+          <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
+          <p className="text-gray-600">Loading lending fees...</p>
+        </div>
+      )}
+
+      {tabErrors['lending-fees'] && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+          <div className="flex items-center">
+            <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
+            <p className="text-red-700">{tabErrors['lending-fees']}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <DollarSign className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Collected</p>
+              <p className="text-2xl font-bold text-gray-900">
+                ₹{lendingFees.reduce((sum, fee) => sum + (fee.lendingFee || 0), 0).toFixed(2)}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <TrendingUp className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Platform Revenue</p>
+              <p className="text-2xl font-bold text-gray-900">
+                ₹{lendingFees.reduce((sum, fee) => sum + (fee.platformFee || 0), 0).toFixed(2)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div className="flex items-center">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Users className="w-6 h-6 text-purple-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Owner Earnings</p>
+              <p className="text-2xl font-bold text-gray-900">
+                ₹{lendingFees.reduce((sum, fee) => sum + (fee.ownerEarnings || 0), 0).toFixed(2)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div className="flex items-center">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <Activity className="w-6 h-6 text-orange-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Transactions</p>
+              <p className="text-2xl font-bold text-gray-900">{lendingFees.length}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by book title, owner, or borrower..."
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Transactions</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Lending Fees Table */}
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Lending Fee Transactions ({lendingFees.length})</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Book</th>
+                <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
+                <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Borrower</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fee Amount</th>
+                <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Platform Fee</th>
+                <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner Earnings</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {lendingFees.filter(fee =>
+                filters.search === '' ||
+                fee.book?.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
+                fee.owner?.name?.toLowerCase().includes(filters.search.toLowerCase()) ||
+                fee.borrower?.name?.toLowerCase().includes(filters.search.toLowerCase())
+              ).filter(fee =>
+                filters.status === 'all' || fee.lendingFeeStatus === filters.status
+              ).length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="px-6 py-12 text-center text-gray-500">
+                    <DollarSign className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg font-medium mb-2">No lending fee transactions found</p>
+                    <p className="text-sm">Transactions will appear here when users pay lending fees</p>
+                  </td>
+                </tr>
+              ) : (
+                lendingFees.filter(fee =>
+                  filters.search === '' ||
+                  fee.book?.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
+                  fee.owner?.name?.toLowerCase().includes(filters.search.toLowerCase()) ||
+                  fee.borrower?.name?.toLowerCase().includes(filters.search.toLowerCase())
+                ).filter(fee =>
+                  filters.status === 'all' || fee.lendingFeeStatus === filters.status
+                ).map((fee) => (
+                  <tr key={fee._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          {fee.book?.coverImage ? (
+                            <img className="h-10 w-10 rounded object-cover" src={fee.book.coverImage} alt="" />
+                          ) : (
+                            <div className="h-10 w-10 rounded bg-gray-200 flex items-center justify-center">
+                              <BookOpen className="h-5 w-5 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{fee.book?.title || 'Unknown Book'}</div>
+                          <div className="text-sm text-gray-500">{fee.book?.author || 'Unknown Author'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-8 w-8">
+                          <img className="h-8 w-8 rounded-full" src={fee.owner?.avatar || '/default-avatar.png'} alt="" />
+                        </div>
+                        <div className="ml-3">
+                          <div className="text-sm font-medium text-gray-900">{fee.owner?.name || 'Unknown Owner'}</div>
+                          <div className="text-sm text-gray-500">{fee.owner?.email || 'No email'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-8 w-8">
+                          <img className="h-8 w-8 rounded-full" src={fee.borrower?.avatar || '/default-avatar.png'} alt="" />
+                        </div>
+                        <div className="ml-3">
+                          <div className="text-sm font-medium text-gray-900">{fee.borrower?.name || 'Unknown Borrower'}</div>
+                          <div className="text-sm text-gray-500">{fee.borrower?.email || 'No email'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      ₹{(fee.lendingFee || 0).toFixed(2)}
+                    </td>
+                    <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ₹{(fee.platformFee || 0).toFixed(2)}
+                    </td>
+                    <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ₹{(fee.ownerEarnings || 0).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        fee.lendingFeeStatus === 'paid'
+                          ? 'bg-green-100 text-green-800'
+                          : fee.lendingFeeStatus === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {fee.lendingFeeStatus || 'Unknown'}
+                      </span>
+                    </td>
+                    <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {fee.paymentCompletedAt ? new Date(fee.paymentCompletedAt).toLocaleDateString() : 
+                       fee.createdAt ? new Date(fee.createdAt).toLocaleDateString() : 'Unknown'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => {
+                            // View transaction details
+                            alert(`Transaction Details:\n\nBook: ${fee.book?.title}\nOwner: ${fee.owner?.name}\nBorrower: ${fee.borrower?.name}\nFee: ₹${fee.lendingFee}\nPlatform Fee: ₹${fee.platformFee}\nOwner Earnings: ₹${fee.ownerEarnings}\nStatus: ${fee.lendingFeeStatus}\nPayment ID: ${fee.lendingFeePaymentId || 'N/A'}`);
+                          }}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {fee.lendingFeeStatus === 'paid' && (
+                          <button
+                            onClick={() => {
+                              // Mark as processed/paid to owner
+                              if (confirm(`Mark owner earnings (₹${fee.ownerEarnings}) as paid to ${fee.owner?.name}?`)) {
+                                toast.success(`Marked ₹${fee.ownerEarnings} as paid to ${fee.owner?.name}`);
+                              }
+                            }}
+                            className="text-green-600 hover:text-green-900"
+                            title="Mark as paid to owner"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderClubs = () => (
     <div className="space-y-6">
       {loading && (
@@ -2122,6 +2402,19 @@ const AdminDashboard = () => {
       );
     }
 
+    if (tabErrors.analytics) {
+      return (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <div className="flex items-center">
+            <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
+            <p className="text-red-700">{tabErrors.analytics}</p>
+          </div>
+        </div>
+      );
+    }
+
+    const analytics = analyticsData || {};
+
     return (
       <div className="space-y-6">
         {/* Analytics Header */}
@@ -2132,7 +2425,10 @@ const AdminDashboard = () => {
               {['7d', '30d', '90d', '1y'].map((period) => (
                 <button
                   key={period}
-                  onClick={() => setAnalyticsFilter(period)}
+                  onClick={() => {
+                    setAnalyticsFilter(period);
+                    fetchAnalytics();
+                  }}
                   className={`px-3 py-1 text-sm rounded-lg ${analyticsFilter === period
                     ? 'bg-blue-100 text-blue-700'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -2147,16 +2443,18 @@ const AdminDashboard = () => {
         </div>
 
         {/* Analytics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <Users className="w-6 h-6 text-blue-600" />
               </div>
-              <TrendingUp className="w-5 h-5 text-green-500" />
+              <TrendingUp className={`w-5 h-5 ${(analytics.overview?.userGrowthRate || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`} />
             </div>
             <h4 className="text-lg font-semibold text-gray-900">User Growth</h4>
-            <p className="text-2xl font-bold text-blue-600 mt-2">+{dashboardData?.overview?.userGrowthRate || 12.5}%</p>
+            <p className="text-2xl font-bold text-blue-600 mt-2">
+              {(analytics.overview?.userGrowthRate || 0) >= 0 ? '+' : ''}{(analytics.overview?.userGrowthRate || 0).toFixed(1)}%
+            </p>
             <p className="text-sm text-gray-500">vs previous period</p>
           </div>
 
@@ -2165,10 +2463,12 @@ const AdminDashboard = () => {
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                 <BookOpen className="w-6 h-6 text-green-600" />
               </div>
-              <TrendingUp className="w-5 h-5 text-green-500" />
+              <TrendingUp className={`w-5 h-5 ${(analytics.overview?.bookGrowthRate || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`} />
             </div>
             <h4 className="text-lg font-semibold text-gray-900">Book Additions</h4>
-            <p className="text-2xl font-bold text-green-600 mt-2">+{dashboardData?.overview?.bookGrowthRate || 8.3}%</p>
+            <p className="text-2xl font-bold text-green-600 mt-2">
+              {(analytics.overview?.bookGrowthRate || 0) >= 0 ? '+' : ''}{(analytics.overview?.bookGrowthRate || 0).toFixed(1)}%
+            </p>
             <p className="text-sm text-gray-500">vs previous period</p>
           </div>
 
@@ -2177,22 +2477,26 @@ const AdminDashboard = () => {
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                 <ArrowLeftRight className="w-6 h-6 text-purple-600" />
               </div>
-              <TrendingUp className="w-5 h-5 text-green-500" />
+              <TrendingUp className={`w-5 h-5 ${(analytics.overview?.borrowGrowthRate || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`} />
             </div>
             <h4 className="text-lg font-semibold text-gray-900">Borrow Rate</h4>
-            <p className="text-2xl font-bold text-purple-600 mt-2">+15.7%</p>
+            <p className="text-2xl font-bold text-purple-600 mt-2">
+              {(analytics.overview?.borrowGrowthRate || 0) >= 0 ? '+' : ''}{(analytics.overview?.borrowGrowthRate || 0).toFixed(1)}%
+            </p>
             <p className="text-sm text-gray-500">vs previous period</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Activity className="w-6 h-6 text-orange-600" />
+                <DollarSign className="w-6 h-6 text-orange-600" />
               </div>
-              <TrendingUp className="w-5 h-5 text-green-500" />
+              <TrendingUp className={`w-5 h-5 ${(analytics.overview?.feeGrowthRate || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`} />
             </div>
-            <h4 className="text-lg font-semibold text-gray-900">Engagement</h4>
-            <p className="text-2xl font-bold text-orange-600 mt-2">+22.1%</p>
+            <h4 className="text-lg font-semibold text-gray-900">Revenue Growth</h4>
+            <p className="text-2xl font-bold text-orange-600 mt-2">
+              {(analytics.overview?.feeGrowthRate || 0) >= 0 ? '+' : ''}{(analytics.overview?.feeGrowthRate || 0).toFixed(1)}%
+            </p>
             <p className="text-sm text-gray-500">vs previous period</p>
           </div>
         </div>
@@ -2204,110 +2508,161 @@ const AdminDashboard = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Daily Active Users</span>
-                <span className="font-semibold">{dashboardData?.systemStats?.dailyActiveUsers || 0}</span>
+                <span className="font-semibold">{analytics.engagement?.dailyActiveUsers || 0}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Average Session Duration</span>
-                <span className="font-semibold">12m 34s</span>
+                <span className="text-gray-600">Weekly Active Users</span>
+                <span className="font-semibold">{analytics.engagement?.weeklyActiveUsers || 0}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Return User Rate</span>
-                <span className="font-semibold">68.5%</span>
+                <span className="text-gray-600">Monthly Active Users</span>
+                <span className="font-semibold">{analytics.engagement?.monthlyActiveUsers || 0}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Book Discovery Rate</span>
-                <span className="font-semibold">45.2%</span>
+                <span className="text-gray-600">Avg Requests per User</span>
+                <span className="font-semibold">{(analytics.engagement?.avgRequestsPerUser || 0).toFixed(1)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">User Retention Rate</span>
+                <span className="font-semibold">{(analytics.health?.userRetentionRate || 0).toFixed(1)}%</span>
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Platform Performance</h4>
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Current Period Stats</h4>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Total Transactions</span>
-                <span className="font-semibold">{dashboardData?.overview?.totalBorrowRequests || 0}</span>
+                <span className="text-gray-600">New Users</span>
+                <span className="font-semibold text-blue-600">+{analytics.currentPeriod?.newUsers || 0}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Success Rate</span>
-                <span className="font-semibold">94.7%</span>
+                <span className="text-gray-600">New Books</span>
+                <span className="font-semibold text-green-600">+{analytics.currentPeriod?.newBooks || 0}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Average Response Time</span>
-                <span className="font-semibold">1.2s</span>
+                <span className="text-gray-600">Borrow Requests</span>
+                <span className="font-semibold text-purple-600">+{analytics.currentPeriod?.newBorrowRequests || 0}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">System Uptime</span>
-                <span className="font-semibold">99.9%</span>
+                <span className="text-gray-600">Paid Fees</span>
+                <span className="font-semibold text-orange-600">+{analytics.currentPeriod?.paidLendingFees || 0}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Additional Analytics Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* User Activity Chart */}
+        {/* Revenue Analytics */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">User Activity Trend</h4>
-            <div className="h-48 bg-gradient-to-t from-blue-50 to-transparent rounded-lg flex items-end justify-center p-4">
-              <div className="text-center">
-                <BarChart3 className="w-12 h-12 text-blue-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">Activity visualization</p>
-                <p className="text-xs text-gray-400">Based on {analyticsFilter} data</p>
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Revenue Analytics</h4>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Total Revenue</span>
+                <span className="font-semibold text-green-600">₹{(analytics.revenue?.totalRevenue || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Platform Revenue</span>
+                <span className="font-semibold text-blue-600">₹{(analytics.revenue?.platformRevenue || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Owner Earnings</span>
+                <span className="font-semibold text-purple-600">₹{(analytics.revenue?.ownerEarnings || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Paid Transactions</span>
+                <span className="font-semibold">{analytics.currentPeriod?.paidLendingFees || 0}</span>
               </div>
             </div>
           </div>
 
-          {/* Book Categories Distribution */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Category Distribution</h4>
-            <div className="h-48 bg-gradient-to-t from-purple-50 to-transparent rounded-lg flex items-end justify-center p-4">
-              <div className="text-center">
-                <PieChart className="w-12 h-12 text-purple-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">Category breakdown</p>
-                <p className="text-xs text-gray-400">Top categories by book count</p>
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Book Statistics</h4>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Books with Fees</span>
+                <span className="font-semibold">{analytics.books?.booksWithFees || 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Average Fee</span>
+                <span className="font-semibold">₹{(analytics.books?.avgLendingFee || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Total Views</span>
+                <span className="font-semibold">{(analytics.books?.totalViews || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Average Rating</span>
+                <div className="flex items-center space-x-1">
+                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                  <span className="font-semibold">{(analytics.books?.avgRating || 0).toFixed(1)}</span>
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* System Health */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">System Health</h4>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">CPU Usage</span>
-                <div className="flex items-center space-x-2">
-                  <div className="w-16 bg-gray-200 rounded-full h-2">
-                    <div className="bg-green-500 h-2 rounded-full" style={{ width: '35%' }}></div>
-                  </div>
-                  <span className="text-sm font-medium">35%</span>
+        {/* Top Categories */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4">Top Book Categories</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {(analytics.books?.topCategories || []).map((category, index) => (
+              <div key={index} className="text-center p-4 bg-gray-50 rounded-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <BookOpen className="w-6 h-6 text-blue-600" />
                 </div>
+                <h5 className="font-medium text-gray-900 mb-1">{category._id || 'Uncategorized'}</h5>
+                <p className="text-2xl font-bold text-blue-600">{category.count}</p>
+                <p className="text-xs text-gray-500">books</p>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Memory</span>
-                <div className="flex items-center space-x-2">
-                  <div className="w-16 bg-gray-200 rounded-full h-2">
-                    <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '68%' }}></div>
-                  </div>
-                  <span className="text-sm font-medium">68%</span>
-                </div>
+            ))}
+            {(!analytics.books?.topCategories || analytics.books.topCategories.length === 0) && (
+              <div className="col-span-full text-center py-8">
+                <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500">No category data available</p>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Storage</span>
-                <div className="flex items-center space-x-2">
-                  <div className="w-16 bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: '42%' }}></div>
-                  </div>
-                  <span className="text-sm font-medium">42%</span>
-                </div>
+            )}
+          </div>
+        </div>
+
+        {/* Platform Performance */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <h4 className="text-lg font-semibold text-gray-900 mb-4">Platform Performance</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Network</span>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium text-green-600">Healthy</span>
-                </div>
+              <h5 className="font-semibold text-gray-900 mb-1">Successful Borrows</h5>
+              <p className="text-2xl font-bold text-green-600">{analytics.health?.successfulBorrows || 0}</p>
+              <p className="text-xs text-gray-500">completed transactions</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <AlertTriangle className="w-8 h-8 text-red-600" />
               </div>
+              <h5 className="font-semibold text-gray-900 mb-1">Overdue Books</h5>
+              <p className="text-2xl font-bold text-red-600">{analytics.health?.overdueBooks || 0}</p>
+              <p className="text-xs text-gray-500">need attention</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Star className="w-8 h-8 text-yellow-600" />
+              </div>
+              <h5 className="font-semibold text-gray-900 mb-1">Platform Rating</h5>
+              <p className="text-2xl font-bold text-yellow-600">{(analytics.health?.averageRating || 0).toFixed(1)}</p>
+              <p className="text-xs text-gray-500">out of 5.0</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <TrendingUp className="w-8 h-8 text-blue-600" />
+              </div>
+              <h5 className="font-semibold text-gray-900 mb-1">Retention Rate</h5>
+              <p className="text-2xl font-bold text-blue-600">{(analytics.health?.userRetentionRate || 0).toFixed(1)}%</p>
+              <p className="text-xs text-gray-500">weekly/monthly users</p>
             </div>
           </div>
         </div>
@@ -3231,9 +3586,9 @@ const AdminDashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div className="min-h-screen bg-gray-50 flex overflow-hidden" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg flex flex-col">
+      <div className="w-64 bg-white shadow-lg flex flex-col flex-shrink-0">
         {/* Logo */}
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
@@ -3315,6 +3670,18 @@ const AdminDashboard = () => {
               <ArrowLeftRight className="w-4 h-4 mr-3" />
               Borrow Requests
               {getNotificationBadge(notificationCounts.borrows, 'borrows')}
+            </button>
+
+            <button
+              onClick={() => handleTabChange('lending-fees')}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'lending-fees'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+            >
+              <DollarSign className="w-4 h-4 mr-3" />
+              Lending Fees
+              {getNotificationBadge(notificationCounts.lendingFees, 'lending-fees')}
             </button>
 
             <button
@@ -3443,9 +3810,10 @@ const AdminDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Content Area */}
-        <div className="flex-1 p-6 overflow-auto bg-gray-50">
+        <div className="flex-1 p-4 lg:p-6 overflow-auto bg-gray-50">
+          <div className="max-w-7xl mx-auto w-full">
           {/* Tab Header with Refresh Button */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900 capitalize">{activeTab}</h2>
@@ -3467,6 +3835,9 @@ const AdminDashboard = () => {
                   case 'borrows':
                     fetchBorrowRequests();
                     break;
+                  case 'lending-fees':
+                    fetchLendingFees();
+                    break;
                   case 'clubs':
                     fetchBookClubs();
                     break;
@@ -3487,20 +3858,22 @@ const AdminDashboard = () => {
               Refresh
             </button>
           </div>
-          {activeTab === 'overview' && renderOverview()}
-          {activeTab === 'users' && renderUsers()}
-          {activeTab === 'books' && renderBooks()}
-          {activeTab === 'books-for-sale' && renderBooksForSale()}
-          {activeTab === 'borrows' && renderBorrows()}
-          {activeTab === 'clubs' && renderClubs()}
-          {activeTab === 'reviews' && renderReviews()}
-          {activeTab === 'analytics' && renderAnalytics()}
-          {activeTab === 'reports' && renderReports()}
-          {activeTab === 'settings' && renderSettings()}
-          {activeTab === 'help' && renderHelp()}
-          {activeTab === 'organizer-applications' && <OrganizerApplicationsTab />}
-          {activeTab === 'events' && <EventsTab />}
-          {activeTab === 'verification' && <VerificationApplicationsTab />}
+            {activeTab === 'overview' && renderOverview()}
+            {activeTab === 'users' && renderUsers()}
+            {activeTab === 'books' && renderBooks()}
+            {activeTab === 'books-for-sale' && renderBooksForSale()}
+            {activeTab === 'borrows' && renderBorrows()}
+            {activeTab === 'lending-fees' && renderLendingFees()}
+            {activeTab === 'clubs' && renderClubs()}
+            {activeTab === 'reviews' && renderReviews()}
+            {activeTab === 'analytics' && renderAnalytics()}
+            {activeTab === 'reports' && renderReports()}
+            {activeTab === 'settings' && renderSettings()}
+            {activeTab === 'help' && renderHelp()}
+            {activeTab === 'organizer-applications' && <OrganizerApplicationsTab />}
+            {activeTab === 'events' && <EventsTab />}
+            {activeTab === 'verification' && <VerificationApplicationsTab />}
+          </div>
         </div>
       </div>
 

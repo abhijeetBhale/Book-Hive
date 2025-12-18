@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Loader, Check, X, ArrowRight, Inbox, CheckCircle, EyeOff, Eye, Trash2, BookOpen, User, MessageSquare, Shield } from 'lucide-react';
+import { Loader, Check, X, ArrowRight, Inbox, CheckCircle, EyeOff, Eye, Trash2, BookOpen, User, MessageSquare, Shield, Wallet } from 'lucide-react';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import toast from 'react-hot-toast';
 import { borrowAPI, reviewsAPI } from '../utils/api';
 import { formatDate } from '../utils/dateHelpers';
 import ReviewModal from '../components/ReviewModal';
 import DepositPaymentModal from '../components/borrow/DepositPaymentModal';
+import LendingFeePaymentModal from '../components/borrow/LendingFeePaymentModal';
 import { Link } from 'react-router-dom';
 
 const BorrowRequests = () => {
@@ -21,6 +22,7 @@ const BorrowRequests = () => {
   const [reviewedRequests, setReviewedRequests] = useState(new Set());
   const [deleteConfirmModal, setDeleteConfirmModal] = useState({ open: false, requestId: null, bookTitle: null });
   const [depositModal, setDepositModal] = useState({ open: false, borrowRequest: null });
+  const [lendingFeeModal, setLendingFeeModal] = useState({ open: false, borrowRequest: null });
 
   const fetchData = async () => {
     setLoading(true);
@@ -392,16 +394,52 @@ const BorrowRequests = () => {
                   */}
 
                   {req.status === 'approved' && (
-                    <div className="card-actions">
-                      <Link to={`/messages?userId=${req.owner._id}`} className="btn message-btn">
-                        <MessageSquare size={16} /> Message {req.owner?.name}
-                      </Link>
-                      <div className="status-info">
-                        <span className="status-text">
-                          ✅ Coordinate pickup details through messaging
-                        </span>
+                    <>
+                      {req.lendingFee > 0 && req.lendingFeeStatus === 'pending' && (
+                        <div style={{
+                          backgroundColor: '#ecfdf5',
+                          border: '1px solid #10B981',
+                          borderRadius: '8px',
+                          padding: '1rem',
+                          marginTop: '0.75rem',
+                          marginBottom: '0.75rem'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <Wallet size={18} color="#059669" />
+                            <strong style={{ color: '#065f46' }}>Lending Fee Required</strong>
+                          </div>
+                          <p style={{ fontSize: '0.875rem', color: '#047857', margin: '0 0 0.75rem 0' }}>
+                            The owner charges ₹{req.lendingFee} for lending this book. This fee supports the book sharing community.
+                          </p>
+                          <button 
+                            onClick={() => setLendingFeeModal({ open: true, borrowRequest: req })}
+                            className="btn"
+                            style={{
+                              backgroundColor: '#10B981',
+                              color: 'white',
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.5rem'
+                            }}
+                          >
+                            <Wallet size={16} />
+                            Pay Lending Fee (₹{req.lendingFee})
+                          </button>
+                        </div>
+                      )}
+                      <div className="card-actions">
+                        <Link to={`/messages?userId=${req.owner._id}`} className="btn message-btn">
+                          <MessageSquare size={16} /> Message {req.owner?.name}
+                        </Link>
+                        <div className="status-info">
+                          <span className="status-text">
+                            ✅ Coordinate pickup details through messaging
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    </>
                   )}
                   {req.status === 'borrowed' && (
                     <div className="card-actions">
@@ -597,6 +635,16 @@ const BorrowRequests = () => {
         onClose={() => setDepositModal({ open: false, borrowRequest: null })}
         onSuccess={() => {
           fetchData(); // Refresh the data to show updated deposit status
+        }}
+      />
+
+      {/* Lending Fee Payment Modal */}
+      <LendingFeePaymentModal
+        isOpen={lendingFeeModal.open}
+        borrowRequest={lendingFeeModal.borrowRequest}
+        onClose={() => setLendingFeeModal({ open: false, borrowRequest: null })}
+        onSuccess={() => {
+          fetchData(); // Refresh the data to show updated payment status
         }}
       />
 

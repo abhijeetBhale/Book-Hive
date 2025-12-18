@@ -37,6 +37,30 @@ const borrowRequestSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // Lending Fee Payment fields
+  lendingFee: {
+    type: Number,
+    default: 0
+  },
+  lendingFeeStatus: {
+    type: String,
+    enum: ['pending', 'paid', 'refunded', 'not_required'],
+    default: 'not_required'
+  },
+  lendingFeePaymentId: {
+    type: String
+  },
+  platformFee: {
+    type: Number,
+    default: 0 // Platform commission (20% of lending fee)
+  },
+  ownerEarnings: {
+    type: Number,
+    default: 0 // Amount owner receives after platform fee (80% of lending fee)
+  },
+  paymentCompletedAt: {
+    type: Date
+  },
   // Transaction metadata for rating calculations
   metadata: {
     handoverDate: Date,

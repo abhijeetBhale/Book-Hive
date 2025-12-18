@@ -31,7 +31,6 @@ adminAPI.interceptors.response.use(
 export const adminAPIService = {
   // Dashboard
   getDashboard: () => adminAPI.get('/dashboard'),
-  getAnalytics: (period = '30d') => adminAPI.get(`/analytics?period=${period}`),
   getBookSharingActivity: (period = 'monthly') => adminAPI.get(`/book-sharing-activity?period=${period}`),
   getTopCategories: () => adminAPI.get('/top-categories'),
 
@@ -48,6 +47,12 @@ export const adminAPIService = {
   // Borrow Requests Management
   getBorrowRequests: (params = {}) => adminAPI.get('/borrow-requests', { params }),
   updateBorrowRequest: (id, data) => adminAPI.put(`/borrow-requests/${id}`, data),
+
+  // Lending Fees Management
+  getLendingFees: (params = {}) => adminAPI.get('/lending-fees', { params }),
+
+  // Analytics
+  getAnalytics: (params = {}) => adminAPI.get('/analytics', { params }),
 
   // Book Clubs Management
   getBookClubs: (params = {}) => adminAPI.get('/book-clubs', { params }),

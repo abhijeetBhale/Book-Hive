@@ -90,6 +90,12 @@ const bookSchema = new mongoose.Schema({
     min: 0,
     default: 0, // 0 means no deposit required
   },
+  // Lending Fee (amount owner charges for lending the book)
+  lendingFee: {
+    type: Number,
+    min: 0,
+    default: 0, // 0 means free lending
+  },
   // Selling options
   forSelling: {
     type: Boolean,

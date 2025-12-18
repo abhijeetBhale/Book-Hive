@@ -78,7 +78,11 @@ export const requestBook = async (req, res) => {
       borrower: req.user._id,
       owner: book.owner,
       depositStatus: book.securityDeposit > 0 ? 'pending' : 'not_required',
-      depositAmount: book.securityDeposit || 0
+      depositAmount: book.securityDeposit || 0,
+      lendingFee: book.lendingFee || 0,
+      lendingFeeStatus: book.lendingFee > 0 ? 'pending' : 'not_required',
+      platformFee: book.lendingFee > 0 ? Math.round((book.lendingFee * 0.2) * 100) / 100 : 0,
+      ownerEarnings: book.lendingFee > 0 ? Math.round((book.lendingFee * 0.8) * 100) / 100 : 0
     });
     await borrowRequest.save();
     

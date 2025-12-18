@@ -336,7 +336,8 @@ export const createBook = async (req, res) => {
       isAvailableForBorrowing,
       isCurrentlyAvailable,
       coverImageUrl,
-      securityDeposit 
+      securityDeposit,
+      lendingFee
     } = req.body;
     
     let finalCoverImageUrl;
@@ -388,7 +389,8 @@ export const createBook = async (req, res) => {
         marketPrice: priceValidationResult.priceComparison?.marketPrice,
         priceValidation: priceValidationResult
       }),
-      securityDeposit: securityDeposit ? Number(securityDeposit) : 0
+      securityDeposit: securityDeposit ? Number(securityDeposit) : 0,
+      lendingFee: lendingFee ? (Number(lendingFee) >= 0 ? Number(lendingFee) : 0) : 0
     });
     
     const createdBook = await book.save();
@@ -447,7 +449,8 @@ export const updateBook = async (req, res) => {
       isAvailableForBorrowing,
       isCurrentlyAvailable,
       coverImageUrl,
-      securityDeposit 
+      securityDeposit,
+      lendingFee 
     } = req.body;
 
     const book = await Book.findById(req.params.id);
@@ -505,6 +508,10 @@ export const updateBook = async (req, res) => {
       
       if (securityDeposit !== undefined) {
         book.securityDeposit = Number(securityDeposit);
+      }
+      
+      if (lendingFee !== undefined) {
+        book.lendingFee = Number(lendingFee) >= 0 ? Number(lendingFee) : 0;
       }
 
       if (priceValidationResult) {

@@ -161,6 +161,7 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
       forBorrowing: true,
       forSelling: false,
       lendingDuration: 14,
+      lendingFee: 0,
       sellingPrice: '',
       condition: 'Good',
       ...initialData
@@ -893,24 +894,54 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
         {(watch('forBorrowing') || watch('forSelling')) && (
           <>
             {watch('forBorrowing') && (
-              <div className="form-group">
-                <label htmlFor="lendingDuration">Lending Duration (Days)</label>
-                <input
-                  id="lendingDuration"
-                  type="number"
-                  min="1"
-                  max="365"
-                  defaultValue="14"
-                  placeholder="e.g., 14"
-                  {...register('lendingDuration', {
-                    min: { value: 1, message: 'Minimum 1 day' },
-                    max: { value: 365, message: 'Maximum 365 days' }
-                  })}
-                />
-                <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                  How many days can borrowers keep this book?
-                </p>
-              </div>
+              <>
+                <div className="form-group">
+                  <label htmlFor="lendingDuration">Lending Duration (Days)</label>
+                  <input
+                    id="lendingDuration"
+                    type="number"
+                    min="1"
+                    max="365"
+                    defaultValue="14"
+                    placeholder="e.g., 14"
+                    {...register('lendingDuration', {
+                      min: { value: 1, message: 'Minimum 1 day' },
+                      max: { value: 365, message: 'Maximum 365 days' }
+                    })}
+                  />
+                  <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    How many days can borrowers keep this book?
+                  </p>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="lendingFee">Lending Fee (₹)</label>
+                  <input
+                    id="lendingFee"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    defaultValue="0"
+                    placeholder="e.g., 10.00"
+                    {...register('lendingFee', {
+                      min: { value: 0, message: 'Fee cannot be negative' }
+                    })}
+                  />
+                  <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                    Set a fee for borrowers to support the book sharing community. Set 0 for free lending.
+                  </p>
+                  <div style={{ 
+                    marginTop: '0.5rem', 
+                    padding: '0.5rem', 
+                    backgroundColor: '#ecfdf5', 
+                    border: '1px solid #a7f3d0', 
+                    borderRadius: '0.375rem' 
+                  }}>
+                    <p style={{ fontSize: '0.75rem', color: '#065f46', fontWeight: '500', margin: 0 }}>
+                      💡 Recommended: ₹5-₹20 for most books
+                    </p>
+                  </div>
+                </div>
+              </>
             )}
 
             {watch('forSelling') && (
@@ -1190,8 +1221,19 @@ const MyBooks = () => {
           data.append('coverImageUrl', selectedGoogleBook.coverImage);
         }
       } else {
-        data.append(key, formData[key]);
+        // Ensure lendingFee is always included, default to 0 if not provided
+        if (key === 'lendingFee') {
+          const feeValue = formData[key] || 0;
+          data.append(key, String(feeValue));
+        } else {
+          data.append(key, formData[key]);
+        }
       }
+    }
+    
+    // Explicitly ensure lendingFee is included even if not provided
+    if (formData.lendingFee === undefined || formData.lendingFee === null || formData.lendingFee === '') {
+      data.append('lendingFee', '0');
     }
 
     try {

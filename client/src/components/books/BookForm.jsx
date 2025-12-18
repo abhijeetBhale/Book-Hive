@@ -5,7 +5,12 @@ import { BOOK_CATEGORIES, BOOK_CONDITIONS } from '../../utils/constants';
 
 const BookForm = ({ onSubmit, initialData = {}, isSubmitting }) => {
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
-    defaultValues: initialData,
+    defaultValues: {
+      forBorrowing: initialData.forBorrowing !== undefined ? initialData.forBorrowing : true,
+      lendingFee: initialData.lendingFee || 0,
+      lendingDuration: initialData.lendingDuration || 14,
+      ...initialData,
+    },
   });
   const [coverPreview, setCoverPreview] = useState(initialData.coverImage || null);
   const [priceValidation, setPriceValidation] = useState(null);
@@ -147,27 +152,53 @@ const BookForm = ({ onSubmit, initialData = {}, isSubmitting }) => {
         {errors.description && <p className="text-red-600 text-sm mt-2 font-medium">{errors.description.message}</p>}
       </div>
 
-      {/* Lending Duration and Selling Price */}
+      {/* Lending Duration, Lending Fee and Selling Price */}
       {(watchForBorrowing || watchForSelling) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {watchForBorrowing && (
-            <div>
-              <label className="block text-lg font-bold text-gray-900 mb-3">Lending Duration (Days)</label>
-              <input 
-                type="number" 
-                {...register('lendingDuration', { 
-                  min: { value: 1, message: 'Minimum 1 day' },
-                  max: { value: 365, message: 'Maximum 365 days' }
-                })} 
-                min="1" 
-                max="365"
-                defaultValue="14"
-                className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] text-gray-900 font-medium text-lg placeholder-gray-500 transition-all duration-200" 
-                placeholder="e.g., 14"
-              />
-              {errors.lendingDuration && <p className="text-red-600 text-sm mt-2 font-medium">{errors.lendingDuration.message}</p>}
-              <p className="text-sm text-gray-600 mt-2">How many days can borrowers keep this book?</p>
-            </div>
+            <>
+              <div>
+                <label className="block text-lg font-bold text-gray-900 mb-3">Lending Duration (Days)</label>
+                <input 
+                  type="number" 
+                  {...register('lendingDuration', { 
+                    min: { value: 1, message: 'Minimum 1 day' },
+                    max: { value: 365, message: 'Maximum 365 days' }
+                  })} 
+                  min="1" 
+                  max="365"
+                  defaultValue={initialData.lendingDuration || 14}
+                  className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] text-gray-900 font-medium text-lg placeholder-gray-500 transition-all duration-200" 
+                  placeholder="e.g., 14"
+                />
+                {errors.lendingDuration && <p className="text-red-600 text-sm mt-2 font-medium">{errors.lendingDuration.message}</p>}
+                <p className="text-sm text-gray-600 mt-2">How many days can borrowers keep this book?</p>
+              </div>
+              <div>
+                <label className="block text-lg font-bold text-gray-900 mb-3">Lending Fee (₹)</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  {...register('lendingFee', { 
+                    min: { value: 0, message: 'Fee cannot be negative' },
+                    valueAsNumber: true
+                  })} 
+                  min="0"
+                  defaultValue={initialData.lendingFee || 0}
+                  className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-[#10B981]/20 focus:border-[#10B981] text-gray-900 font-medium text-lg placeholder-gray-500 transition-all duration-200" 
+                  placeholder="e.g., 10.00"
+                />
+                {errors.lendingFee && <p className="text-red-600 text-sm mt-2 font-medium">{errors.lendingFee.message}</p>}
+                <p className="text-sm text-gray-600 mt-2">
+                  Set a fee for borrowers to support the book sharing community. Set 0 for free lending.
+                </p>
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                  <p className="text-xs text-blue-700 font-medium">
+                    💡 Recommended: ₹5-₹20 for most books
+                  </p>
+                </div>
+              </div>
+            </>
           )}
           
           {watchForSelling && (
@@ -256,6 +287,7 @@ const BookForm = ({ onSubmit, initialData = {}, isSubmitting }) => {
               type="checkbox"
               id="forBorrowing"
               {...register('forBorrowing')}
+              defaultChecked={initialData.forBorrowing !== undefined ? initialData.forBorrowing : true}
               className="h-5 w-5 text-[#4F46E5] focus:ring-4 focus:ring-[#4F46E5]/20 border-2 border-gray-300 rounded-lg"
             />
             <label htmlFor="forBorrowing" className="ml-3 block text-lg font-bold text-gray-900">
