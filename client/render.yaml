@@ -2,8 +2,13 @@ services:
   - type: web
     name: bookhive-frontend
     env: static
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
+    envVars:
+      - key: NODE_VERSION
+        value: 22.16.0
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=4096
     routes:
       - type: rewrite
         source: /robots.txt
@@ -14,6 +19,12 @@ services:
       - type: rewrite
         source: /manifest.json
         destination: /manifest.json
+      - type: rewrite
+        source: /sw.js
+        destination: /sw.js
+      - type: rewrite
+        source: /browserconfig.xml
+        destination: /browserconfig.xml
       - type: rewrite
         source: /google*.html
         destination: /google*.html

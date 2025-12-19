@@ -4,52 +4,53 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    react({
-      // Enable React Fast Refresh for better development experience
-      fastRefresh: true,
-    }),
-    tailwindcss()
-  ],
+  plugins: [react(), tailwindcss()],
   assetsInclude: ['**/*.lottie'],
   
-  // Build optimizations
+  // Simplified build configuration for reliable deployment
   build: {
-    // Enable code splitting for better caching
+    // Disable source maps for production
+    sourcemap: false,
+    // Increase chunk size warning limit
+    chunkSizeWarningLimit: 1000,
+    // Use esbuild for minification (more reliable than terser)
+    minify: 'esbuild',
+    // Target modern browsers
+    target: 'es2015',
+    // Rollup options
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separate vendor chunks for better caching
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['styled-components', 'lucide-react'],
-          utils: ['axios', 'socket.io-client']
+        // Simple manual chunks for better caching
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react';
+            }
+            if (id.includes('lucide-react') || id.includes('styled-components')) {
+              return 'ui';
+            }
+            return 'vendor';
+          }
         }
-      }
-    },
-    // Enable source maps for production debugging
-    sourcemap: false,
-    // Optimize chunk size
-    chunkSizeWarningLimit: 1000,
-    // Enable minification
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.log in production
-        drop_debugger: true
+      },
+      // Suppress warnings that might cause build failures
+      onwarn(warning, warn) {
+        // Ignore eval warnings from lottie files
+        if (warning.code === 'EVAL') {
+          return;
+        }
+        // Ignore circular dependency warnings
+        if (warning.code === 'CIRCULAR_DEPENDENCY') {
+          return;
+        }
+        warn(warning);
       }
     }
   },
 
-  // Performance optimizations
+  // Dependency optimization
   optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react-router-dom',
-      'axios',
-      'styled-components',
-      'lucide-react'
-    ]
+    include: ['react', 'react-dom', 'react-router-dom']
   },
 
   server: {
