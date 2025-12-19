@@ -1,312 +1,160 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
-import { Image as ImageIcon, AlertCircle } from 'lucide-react';
-
-const ImageContainer = styled.div`
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: #f3f4f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const Image = styled.img`
-  width: 100%;
-  height: 100%;
-  object-fit: ${props => props.$objectFit || 'cover'};
-  transition: opacity 0.3s ease;
-  opacity: ${props => props.$loaded ? 1 : 0};
-`;
-
-const LoadingState = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f9fafb;
-  color: #9ca3af;
-  
-  .spinner {
-    animation: spin 1s linear infinite;
-    margin-bottom: 0.5rem;
-  }
-  
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-`;
-
-const ErrorState = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: #f9fafb;
-  color: #9ca3af;
-  text-align: center;
-  padding: 1rem;
-  
-  svg {
-    margin-bottom: 0.5rem;
-  }
-  
-  .error-text {
-    font-size: 0.875rem;
-    font-weight: 500;
-  }
-`;
-
-const QualityBadge = styled.div`
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  opacity: ${props => props.$show ? 1 : 0};
-  transition: opacity 0.3s ease;
-`;
-
-// In-memory cache for successfully loaded images
-const imageCache = new Map();
-
-// Load cached images from sessionStorage on mount
-const loadCacheFromStorage = () => {
-  try {
-    const cached = sessionStorage.getItem('imageCache');
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      Object.entries(parsed).forEach(([key, value]) => {
-        imageCache.set(key, value);
-      });
-    }
-  } catch (err) {
-    // Ignore cache load errors
-  }
-};
-
-// Save cache to sessionStorage
-const saveCacheToStorage = () => {
-  try {
-    const cacheObj = {};
-    imageCache.forEach((value, key) => {
-      cacheObj[key] = value;
-    });
-    sessionStorage.setItem('imageCache', JSON.stringify(cacheObj));
-  } catch (err) {
-    // Ignore cache save errors (e.g., quota exceeded)
-  }
-};
-
-// Load cache on first import
-loadCacheFromStorage();
 
 const OptimizedImage = ({ 
   src, 
   alt, 
-  fallbackSrc, 
-  objectFit = 'cover',
-  showQualityBadge = false,
-  onLoad,
-  onError,
-  className,
-  style,
+  width, 
+  height, 
+  className = '', 
+  placeholder = '/placeholder-book.png',
+  lazy = true,
+  quality = 80,
   ...props 
 }) => {
-  // Check if image is already cached
-  const cachedSrc = imageCache.get(src);
-  const initialSrc = cachedSrc || src;
-  
-  const [currentSrc, setCurrentSrc] = useState(initialSrc);
-  const [loaded, setLoaded] = useState(!!cachedSrc);
-  const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(!cachedSrc);
-  const [imageQuality, setImageQuality] = useState(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 2;
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [isInView, setIsInView] = useState(!lazy);
+  const imgRef = useRef(null);
+  const observerRef = useRef(null);
 
-  // Reset states when src changes
+  // Intersection Observer for lazy loading
   useEffect(() => {
-    const cached = imageCache.get(src);
-    if (cached) {
-      // Use cached version immediately
-      setCurrentSrc(cached);
-      setLoaded(true);
-      setError(false);
-      setLoading(false);
-    } else {
-      setCurrentSrc(src);
-      setLoaded(false);
-      setError(false);
-      setLoading(true);
-      setImageQuality(null);
-      setRetryCount(0);
-    }
-  }, [src]);
+    if (!lazy || isInView) return;
 
-  // Optimize image URL for better quality and reliability
-  const optimizeImageUrl = (url) => {
-    if (!url) return url;
-    
-    // Skip optimization for placeholder images
-    if (url.includes('placehold.co')) return url;
-    
-    // Google Books image optimization
-    if (url.includes('books.google.com') || url.includes('googleusercontent.com')) {
-      // Remove size restrictions and add high quality parameters
-      let optimizedUrl = url.replace(/&zoom=\d+/, '&zoom=1');
-      optimizedUrl = optimizedUrl.replace(/&w=\d+/, '');
-      optimizedUrl = optimizedUrl.replace(/&h=\d+/, '');
-      optimizedUrl = optimizedUrl.replace(/=s\d+-c/, '=s800-c'); // Increase size for Google user content
-      
-      // Add high quality parameters if not present
-      if (!optimizedUrl.includes('fife=')) {
-        optimizedUrl += optimizedUrl.includes('?') ? '&' : '?';
-        optimizedUrl += 'fife=w800-h1200';
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsInView(true);
+            observerRef.current?.disconnect();
+          }
+        });
+      },
+      {
+        rootMargin: '50px', // Start loading 50px before image comes into view
+        threshold: 0.1
       }
-      
-      // Ensure HTTPS
-      optimizedUrl = optimizedUrl.replace(/^http:/, 'https:');
-      
-      return optimizedUrl;
+    );
+
+    if (imgRef.current) {
+      observerRef.current.observe(imgRef.current);
     }
-    
-    // Open Library image optimization
-    if (url.includes('covers.openlibrary.org')) {
-      // Use large size if not already specified
-      let optimizedUrl = url;
-      if (url.includes('-S.jpg')) {
-        optimizedUrl = url.replace('-S.jpg', '-L.jpg');
-      } else if (url.includes('-M.jpg')) {
-        optimizedUrl = url.replace('-M.jpg', '-L.jpg');
-      }
-      // Ensure HTTPS
-      optimizedUrl = optimizedUrl.replace(/^http:/, 'https:');
-      return optimizedUrl;
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [lazy, isInView]);
+
+  // Optimize image URL (you can integrate with image CDN services here)
+  const getOptimizedSrc = (originalSrc) => {
+    if (!originalSrc || originalSrc.includes('placeholder')) {
+      return originalSrc;
     }
+
+    // If using a CDN like Cloudinary, you can add transformations here
+    // Example: return `${originalSrc}?w=${width}&h=${height}&q=${quality}&f=auto`;
     
-    // Cloudinary optimization (if using Cloudinary)
-    if (url.includes('cloudinary.com')) {
-      // Ensure proper transformations
-      if (!url.includes('/upload/')) return url;
-      
-      const parts = url.split('/upload/');
-      const transformations = 'f_auto,q_auto,w_800,h_1200,c_limit';
-      return `${parts[0]}/upload/${transformations}/${parts[1]}`;
-    }
-    
-    // Ensure HTTPS for all URLs
-    return url.replace(/^http:/, 'https:');
+    return originalSrc;
   };
 
-  const handleImageLoad = (e) => {
-    const img = e.target;
-    setLoaded(true);
-    setLoading(false);
-    setError(false);
-    
-    // Cache the successful image URL in memory
-    imageCache.set(src, currentSrc);
-    
-    // Persist to sessionStorage for page reloads
-    saveCacheToStorage();
-    
-    // Determine image quality based on dimensions
-    const quality = img.naturalWidth > 400 ? 'HD' : img.naturalWidth > 200 ? 'Good' : 'Low';
-    setImageQuality(quality);
-    
-    if (onLoad) onLoad(e);
+  const handleLoad = () => {
+    setIsLoaded(true);
+    setIsError(false);
   };
 
-  const handleImageError = (e) => {
-    setLoading(false);
-    
-    // Don't retry if we're already using the fallback
-    if (currentSrc === fallbackSrc || currentSrc.includes('placehold.co')) {
-      setError(true);
-      if (onError) onError(e);
-      return;
-    }
-    
-    // Try fallback source immediately if available
-    if (fallbackSrc && currentSrc !== fallbackSrc) {
-      setCurrentSrc(fallbackSrc);
-      setError(false);
-      setLoading(true);
-      setRetryCount(0);
-      return;
-    }
-    
-    // Only retry once with cache-busting for non-fallback images
-    if (retryCount < 1 && !currentSrc.includes('retry=')) {
-      setTimeout(() => {
-        const separator = currentSrc.includes('?') ? '&' : '?';
-        const newSrc = `${currentSrc}${separator}retry=1&t=${Date.now()}`;
-        setCurrentSrc(newSrc);
-        setRetryCount(1);
-        setLoading(true);
-        setError(false);
-      }, 300);
-      return;
-    }
-    
-    setError(true);
-    if (onError) onError(e);
+  const handleError = () => {
+    setIsError(true);
+    setIsLoaded(false);
   };
 
-  const optimizedSrc = optimizeImageUrl(currentSrc);
+  const imageSrc = isInView ? getOptimizedSrc(src) : placeholder;
 
   return (
-    <ImageContainer className={className} style={style} {...props}>
-      {optimizedSrc && !error && (
-        <Image
-          src={optimizedSrc}
+    <ImageContainer 
+      ref={imgRef} 
+      className={className}
+      width={width}
+      height={height}
+      {...props}
+    >
+      {/* Placeholder/Loading state */}
+      {!isLoaded && !isError && (
+        <PlaceholderDiv width={width} height={height}>
+          <LoadingSpinner />
+        </PlaceholderDiv>
+      )}
+      
+      {/* Actual image */}
+      {isInView && (
+        <StyledImage
+          src={isError ? placeholder : imageSrc}
           alt={alt}
-          $objectFit={objectFit}
-          $loaded={loaded}
-          onLoad={handleImageLoad}
-          onError={handleImageError}
+          width={width}
+          height={height}
+          onLoad={handleLoad}
+          onError={handleError}
+          isLoaded={isLoaded}
+          loading={lazy ? 'lazy' : 'eager'}
+          decoding="async"
         />
-      )}
-      
-      {loading && !error && (
-        <LoadingState>
-          <ImageIcon className="spinner" size={24} />
-        </LoadingState>
-      )}
-      
-      {error && (
-        <ErrorState>
-          <AlertCircle size={32} />
-          <div className="error-text">
-            {alt ? `Failed to load ${alt}` : 'Image failed to load'}
-          </div>
-        </ErrorState>
-      )}
-      
-      {showQualityBadge && imageQuality && loaded && (
-        <QualityBadge $show={loaded}>
-          {imageQuality}
-        </QualityBadge>
       )}
     </ImageContainer>
   );
 };
+
+const ImageContainer = styled.div`
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  width: ${props => props.width ? `${props.width}px` : 'auto'};
+  height: ${props => props.height ? `${props.height}px` : 'auto'};
+`;
+
+const PlaceholderDiv = styled.div`
+  width: ${props => props.width ? `${props.width}px` : '100%'};
+  height: ${props => props.height ? `${props.height}px` : '200px'};
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+
+  @keyframes loading {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+`;
+
+const LoadingSpinner = styled.div`
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e0e0e0;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
+const StyledImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.3s ease;
+  opacity: ${props => props.isLoaded ? 1 : 0};
+  position: ${props => props.isLoaded ? 'static' : 'absolute'};
+  top: 0;
+  left: 0;
+`;
 
 export default OptimizedImage;

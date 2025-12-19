@@ -136,9 +136,33 @@ function NotificationHandler() {
 
 function App() {
   const [serverReady, setServerReady] = useState(false);
+  const [skipWakeup, setSkipWakeup] = useState(false);
 
-  // Show server wakeup loader on first load
-  if (!serverReady) {
+  // Check if user has valid session and server was recently active
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const cachedUser = localStorage.getItem('cachedUser');
+    const serverStatus = localStorage.getItem('serverStatus');
+    
+    // If user has valid session and server was recently active, skip wakeup
+    if (token && cachedUser && serverStatus) {
+      try {
+        const { timestamp, isAwake } = JSON.parse(serverStatus);
+        const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+        
+        if (isAwake && timestamp > fiveMinutesAgo) {
+          setSkipWakeup(true);
+          setServerReady(true);
+          return;
+        }
+      } catch (error) {
+        // Continue with normal wakeup flow
+      }
+    }
+  }, []);
+
+  // Show server wakeup loader only for new users or after long idle
+  if (!serverReady && !skipWakeup) {
     return <ServerWakeupLoader onReady={() => setServerReady(true)} />;
   }
 

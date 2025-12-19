@@ -1,31 +1,40 @@
-# BookHive Robots.txt
-# Allow all search engines to crawl the site
-
 User-agent: *
 Allow: /
 
-# Disallow admin and private pages
-Disallow: /admin-dashboard-secure
-Disallow: /profile
-Disallow: /my-books
-Disallow: /messages
-Disallow: /friends
-Disallow: /borrow-requests
-Disallow: /calendar
-Disallow: /become-organizer
-
-# Allow public pages
-Allow: /
+# Allow all search engines to crawl the site
 Allow: /books
-Allow: /users
-Allow: /map
 Allow: /events
-Allow: /login
-Allow: /register
+Allow: /about
 Allow: /contact
 Allow: /terms
 Allow: /privacy
 Allow: /pricing
+Allow: /team
+
+# Disallow private/admin areas
+Disallow: /admin-dashboard-secure
+Disallow: /profile
+Disallow: /my-books
+Disallow: /messages
+Disallow: /borrow-requests
+Disallow: /friends
+Disallow: /blocked-users
+Disallow: /organizer/dashboard
+Disallow: /api/
+
+# Disallow authentication pages
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /verify-email
+Disallow: /auth/
+
+# Allow specific user profiles (for SEO)
+Allow: /users/
+Allow: /profile/
 
 # Sitemap location
-Sitemap: https://book-hive-frontend.onrender.com/sitemap.xml
+Sitemap: https://bookhive.vercel.app/sitemap.xml
+
+# Crawl delay (be respectful)
+Crawl-delay: 1

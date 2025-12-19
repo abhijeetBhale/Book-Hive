@@ -6,90 +6,85 @@
 
   <!-- Homepage -->
   <url>
-    <loc>https://book-hive-frontend.onrender.com/</loc>
-    <lastmod>2025-01-01</lastmod>
+    <loc>https://bookhive.vercel.app/</loc>
+    <lastmod>2024-12-19</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 
-  <!-- Books Page -->
+  <!-- About Pages -->
   <url>
-    <loc>https://book-hive-frontend.onrender.com/books</loc>
-    <lastmod>2025-01-01</lastmod>
+    <loc>https://bookhive.vercel.app/about</loc>
+    <lastmod>2024-12-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://bookhive.vercel.app/team</loc>
+    <lastmod>2024-12-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Features -->
+  <url>
+    <loc>https://bookhive.vercel.app/books</loc>
+    <lastmod>2024-12-19</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
 
-  <!-- Users/Community Page -->
   <url>
-    <loc>https://book-hive-frontend.onrender.com/users</loc>
-    <lastmod>2025-01-01</lastmod>
+    <loc>https://bookhive.vercel.app/events</loc>
+    <lastmod>2024-12-19</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
 
-  <!-- Map Page -->
+  <!-- Information Pages -->
   <url>
-    <loc>https://book-hive-frontend.onrender.com/map</loc>
-    <lastmod>2025-01-01</lastmod>
-    <changefreq>weekly</changefreq>
+    <loc>https://bookhive.vercel.app/pricing</loc>
+    <lastmod>2024-12-19</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
-  <!-- Events Page -->
   <url>
-    <loc>https://book-hive-frontend.onrender.com/events</loc>
-    <lastmod>2025-01-01</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <!-- Login Page -->
-  <url>
-    <loc>https://book-hive-frontend.onrender.com/login</loc>
-    <lastmod>2025-01-01</lastmod>
+    <loc>https://bookhive.vercel.app/contact</loc>
+    <lastmod>2024-12-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
-  <!-- Register Page -->
+  <!-- Legal Pages -->
   <url>
-    <loc>https://book-hive-frontend.onrender.com/register</loc>
-    <lastmod>2025-01-01</lastmod>
+    <loc>https://bookhive.vercel.app/terms</loc>
+    <lastmod>2024-12-19</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <url>
+    <loc>https://bookhive.vercel.app/privacy</loc>
+    <lastmod>2024-12-19</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <!-- Organizer Pages -->
+  <url>
+    <loc>https://bookhive.vercel.app/become-organizer</loc>
+    <lastmod>2024-12-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
-  <!-- Contact Page -->
   <url>
-    <loc>https://book-hive-frontend.onrender.com/contact</loc>
-    <lastmod>2025-01-01</lastmod>
+    <loc>https://bookhive.vercel.app/get-verified</loc>
+    <lastmod>2024-12-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
-  </url>
-
-  <!-- Terms of Service -->
-  <url>
-    <loc>https://book-hive-frontend.onrender.com/terms</loc>
-    <lastmod>2025-01-01</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
-  </url>
-
-  <!-- Privacy Policy -->
-  <url>
-    <loc>https://book-hive-frontend.onrender.com/privacy</loc>
-    <lastmod>2025-01-01</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
-  </url>
-
-  <!-- Pricing Page -->
-  <url>
-    <loc>https://book-hive-frontend.onrender.com/pricing</loc>
-    <lastmod>2025-01-01</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
 
 </urlset>

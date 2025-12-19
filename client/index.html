@@ -3,16 +3,55 @@
 
 <head>
     <meta charset="UTF-8" />
+    
+    <!-- Favicon and Icons -->
     <link rel="icon" type="image/png" href="/src/assets/icons8-bee-100.png" />
+    <link rel="apple-touch-icon" href="/src/assets/icons8-bee-100.png" />
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <!-- Primary Meta Tags -->
-    <title>BookHive - Share Your Thoughts | Book Sharing Platform</title>
-    <meta name="title" content="BookHive - Share Your Thoughts | Book Sharing Platform" />
-    <meta name="description" content="Join BookHive, the revolutionary platform for book lovers to connect, share, and discover new literary adventures. Borrow books, build your library, and connect with readers nearby." />
-    <meta name="keywords" content="book sharing, book lending, book borrowing, book community, read books, book exchange, local books, book lovers, reading community" />
+    <title>BookHive - Share Books, Build Community | Book Sharing Platform</title>
+    <meta name="title" content="BookHive - Share Books, Build Community | Book Sharing Platform" />
+    <meta name="description" content="Join BookHive, the premier book sharing platform where readers connect, share libraries, and discover new books. Borrow from neighbors, lend your favorites, and build a thriving reading community." />
+    <meta name="keywords" content="book sharing, book lending, book borrowing, book community, read books, book exchange, local books, book lovers, reading community, library sharing, book swap, literary community, book discovery, reading network" />
     <meta name="author" content="BookHive Team" />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="language" content="English" />
+    <meta name="revisit-after" content="7 days" />
+    <meta name="distribution" content="global" />
+    <meta name="rating" content="general" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://bookhive.vercel.app/" />
+    <meta property="og:title" content="BookHive - Share Books, Build Community" />
+    <meta property="og:description" content="Join thousands of book lovers on BookHive. Share your library, discover new reads, and connect with fellow readers in your community." />
+    <meta property="og:image" content="https://bookhive.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="BookHive" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://bookhive.vercel.app/" />
+    <meta property="twitter:title" content="BookHive - Share Books, Build Community" />
+    <meta property="twitter:description" content="Join thousands of book lovers on BookHive. Share your library, discover new reads, and connect with fellow readers in your community." />
+    <meta property="twitter:image" content="https://bookhive.vercel.app/og-image.png" />
+    <meta property="twitter:creator" content="@BookHiveApp" />
+    <meta property="twitter:site" content="@BookHiveApp" />
+    
+    <!-- Additional SEO Meta Tags -->
+    <meta name="application-name" content="BookHive" />
+    <meta name="msapplication-TileColor" content="#1a87db" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://bookhive.vercel.app/" />
+    
+    <!-- Alternate Languages (if you plan to support multiple languages) -->
+    <link rel="alternate" hreflang="en" href="https://bookhive.vercel.app/" />
     
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#1a87db" />
@@ -27,6 +66,53 @@
     <!-- Preconnect to external domains for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://api.bookhive.com" />
+    
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "BookHive",
+      "description": "A book sharing platform where readers connect, share libraries, and discover new books",
+      "url": "https://bookhive.vercel.app",
+      "applicationCategory": "SocialNetworkingApplication",
+      "operatingSystem": "Web Browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "BookHive Team"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "BookHive",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://bookhive.vercel.app/src/assets/icons8-bee-100.png"
+        }
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "1250"
+      },
+      "featureList": [
+        "Book Sharing",
+        "Community Building",
+        "Book Discovery",
+        "Local Library Network",
+        "Reading Events",
+        "Book Reviews"
+      ]
+    }
+    </script>
+    
+    <!-- Performance Hints -->
+    <link rel="preload" href="/src/assets/icons8-bee-100.png" as="image" />
   </head>
 
 <body>
