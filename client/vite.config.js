@@ -4,7 +4,14 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react({
+      // Add explicit JSX runtime configuration
+      jsxRuntime: 'automatic',
+      jsxImportSource: 'react'
+    }), 
+    tailwindcss()
+  ],
   assetsInclude: ['**/*.lottie'],
   
   // Simplified build configuration for reliable deployment
@@ -50,7 +57,16 @@ export default defineConfig({
 
   // Dependency optimization
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom']
+    include: ['react', 'react-dom', 'react-router-dom'],
+    force: true
+  },
+
+  // Explicit resolve configuration
+  resolve: {
+    alias: {
+      'react': 'react',
+      'react-dom': 'react-dom'
+    }
   },
 
   server: {
