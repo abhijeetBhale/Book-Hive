@@ -1,81 +1,97 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react({
-      // Add explicit JSX runtime configuration
-      jsxRuntime: 'automatic',
-      jsxImportSource: 'react'
+      // Use classic runtime to avoid createContext issues
+      jsxRuntime: 'classic',
+      jsxImportSource: undefined,
+      // Ensure React is properly imported
+      include: "**/*.{jsx,tsx}",
     }), 
     tailwindcss()
   ],
   assetsInclude: ['**/*.lottie'],
   
-  // Simplified build configuration for reliable deployment
+  // Enhanced build configuration for React compatibility
   build: {
-    // Disable source maps for production
-    sourcemap: false,
+    // Enable source maps for debugging
+    sourcemap: true,
     // Increase chunk size warning limit
     chunkSizeWarningLimit: 1000,
-    // Use esbuild for minification (more reliable than terser)
+    // Use esbuild for minification
     minify: 'esbuild',
     // Target modern browsers
     target: 'es2015',
     // Rollup options
     rollupOptions: {
       output: {
-        // Simple manual chunks for better caching
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react';
-            }
-            if (id.includes('lucide-react') || id.includes('styled-components')) {
-              return 'ui';
-            }
-            return 'vendor';
-          }
+        // Ensure React is in its own chunk
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'router': ['react-router-dom'],
+          'ui-vendor': ['lucide-react', 'styled-components', 'framer-motion'],
         }
       },
-      // Suppress warnings that might cause build failures
+      // External dependencies that should not be bundled
+      external: [],
+      // Suppress warnings
       onwarn(warning, warn) {
-        // Ignore eval warnings from lottie files
-        if (warning.code === 'EVAL') {
-          return;
-        }
-        // Ignore circular dependency warnings
-        if (warning.code === 'CIRCULAR_DEPENDENCY') {
-          return;
-        }
+        if (warning.code === 'EVAL') return;
+        if (warning.code === 'CIRCULAR_DEPENDENCY') return;
         warn(warning);
       }
     }
   },
 
-  // Dependency optimization
+  // Enhanced dependency optimization
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom'],
-    force: true
-  },
-
-  // Explicit resolve configuration
-  resolve: {
-    alias: {
-      'react': 'react',
-      'react-dom': 'react-dom'
+    include: [
+      'react', 
+      'react-dom', 
+      'react-router-dom',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime'
+    ],
+    exclude: [],
+    force: true,
+    // Ensure proper ESM handling
+    esbuildOptions: {
+      target: 'es2015'
     }
   },
 
+  // Enhanced resolve configuration
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      'react': path.resolve(__dirname, './node_modules/react'),
+      'react-dom': path.resolve(__dirname, './node_modules/react-dom')
+    },
+    // Ensure proper module resolution
+    dedupe: ['react', 'react-dom']
+  },
+
+  // Development server configuration
   server: {
     port: 3000,
+    host: true,
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
-        changeOrigin: true
+        changeOrigin: true,
+        secure: false
       }
     }
+  },
+
+  // Preview server configuration
+  preview: {
+    port: 3000,
+    host: true
   }
 })
