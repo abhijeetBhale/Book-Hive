@@ -1,30 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import styled, { css } from 'styled-components';
-import { booksAPI } from '../utils/api';
+import React, { useState, useEffect, useContext } from 'react';
+import styled from 'styled-components';
+import { booksAPI, usersAPI } from '../utils/api';
 import BookCard from '../components/books/BookCard';
-import { Loader, X, ChevronDown, SlidersHorizontal, Search as SearchIcon } from 'lucide-react';
-import StyledSearchInput from '../components/ui/StyledSearchInput';
+import { Loader, Heart, Clock } from 'lucide-react';
+import EnhancedSearchFilters from '../components/books/EnhancedSearchFilters';
 import toast from 'react-hot-toast';
 import { getFullImageUrl, preloadImages } from '../utils/imageHelpers';
 import SEO from '../components/SEO';
 import { PAGE_SEO } from '../utils/seo';
-
-// --- DATA FOR FILTERS ---
-
-const bookCategories = [
-    "All", "Fiction", "Non-Fiction", "Science Fiction", "Fantasy", "Mystery", 
-    "Thriller", "Horror", "Romance", "Historical Fiction", "Biography", 
-    "Autobiography", "Memoir", "Self-Help", "Business", "History", "Science",
-    "Philosophy", "Psychology", "Travel", "Cooking", "Art", "Poetry", 
-    "Graphic Novel", "Young Adult", "Children's"
-];
-
-const bookLanguages = [
-    "All", "English", "Spanish", "French", "German", "Mandarin", "Japanese",
-    "Russian", "Arabic", "Portuguese", "Hindi", "Bengali", "Italian", 
-    "Dutch", "Korean", "Turkish", "Other"
-];
-
+import { AuthContext } from '../context/AuthContext';
 
 // --- STYLED COMPONENTS ---
 const PageWrapper = styled.div`
@@ -33,9 +17,13 @@ const PageWrapper = styled.div`
 `;
 
 const HeaderSection = styled.header`
-  padding: 5rem 1rem;
+  padding: 3rem 1rem 2rem;
   text-align: center;
   background: linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%);
+  
+  @media (max-width: 768px) {
+    padding: 2rem 1rem 1.5rem;
+  }
 `;
 
 const Title = styled.h1`
@@ -43,6 +31,14 @@ const Title = styled.h1`
   font-weight: 900;
   color: #111827;
   margin-bottom: 1rem;
+  
+  @media (max-width: 768px) {
+    font-size: 2.5rem;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 2rem;
+  }
 `;
 
 const Subtitle = styled.p`
@@ -56,105 +52,6 @@ const MainContent = styled.main`
   max-width: 80rem;
   margin: 0 auto;
   padding: 2rem 1rem 3rem;
-  display: flex;
-`;
-
-const SidebarToggle = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-color: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
-  font-weight: 600;
-  color: #374151;
-  cursor: pointer;
-  position: fixed;
-  top: 100px;
-  left: 1rem;
-  z-index: 40;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  transition: all 0.2s ease;
-
-  &:hover {
-    background-color: #f9fafb;
-  }
-
-  @media (min-width: 1024px) {
-    display: none;
-  }
-`;
-
-const ControlsWrapper = styled.aside`
-  background-color: white;
-  padding: 1.5rem;
-  border-radius: 0.75rem;
-  height: calc(100vh - 120px);
-  position: sticky;
-  top: 100px;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
-  overflow-y: auto;
-  flex-shrink: 0;
-  width: 260px;
-  margin-right: 2rem;
-  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-
-  @media (max-width: 1023px) {
-    position: fixed;
-    left: 0;
-    top: 0;
-    height: 100vh;
-    border-radius: 0;
-    z-index: 50;
-    transform: translateX(-100%);
-    ${({ $isOpen }) =>
-      $isOpen &&
-      css`
-        transform: translateX(0);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-      `}
-  }
-`;
-
-const SidebarHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  margin-bottom: 1rem;
-
-  h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
-  }
-
-  @media (min-width: 1024px) {
-    display: none;
-  }
-`;
-
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.5rem;
-`;
-
-const ControlGroup = styled.div`
-  margin-bottom: 1rem;
-  &:last-child {
-    margin-bottom: 0;
-  }
-`;
-
-const Select = styled.select`
-  width: 100%;
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  border: 1px solid #d1d5db;
-  background-color: #f9fafb;
 `;
 
 const BookGridContainer = styled.div`
@@ -163,8 +60,18 @@ const BookGridContainer = styled.div`
 
 const BookGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 2rem;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  @media (max-width: 480px) {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
 `;
 
 const LoadingContainer = styled.div`
@@ -182,125 +89,130 @@ const ErrorMessage = styled.p`
   width: 100%;
 `;
 
-const CheckboxLabel = styled.label`
+const TabNavigation = styled.div`
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-  cursor: pointer;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  
+  @media (max-width: 480px) {
+    gap: 0.5rem;
+  }
 `;
 
-const Checkbox = styled.input`
-  cursor: pointer;
-`;
-
-const AccordionHeader = styled.button`
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  background: none;
+const TabButton = styled.button`
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
   border: none;
-  border-bottom: 1px solid #e5e7eb;
   cursor: pointer;
-  text-align: left;
-
-  span {
-    font-size: 1.125rem;
-    font-weight: 600;
+  font-weight: 600;
+  transition: all 0.2s;
+  background-color: ${props => props.$active ? '#3b82f6' : 'white'};
+  color: ${props => props.$active ? 'white' : '#374151'};
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  
+  @media (max-width: 480px) {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
   }
-
-  svg {
-    transition: transform 0.2s ease;
-    ${({ $isOpen }) => $isOpen && 'transform: rotate(180deg);'}
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
   }
 `;
-
-const AccordionContent = styled.div`
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease-in-out;
-  padding-top: 0.5rem;
-  ${({ $isOpen }) =>
-    $isOpen &&
-    css`
-      max-height: 300px;
-      overflow-y: auto;
-    `}
-`;
-
-// Accordion Component
-const Accordion = ({ title, children }) => {
-    const [isOpen, setIsOpen] = useState(true);
-    return (
-        <div>
-            <AccordionHeader $isOpen={isOpen} onClick={() => setIsOpen(!isOpen)}>
-                <span>{title}</span>
-                <ChevronDown size={20} />
-            </AccordionHeader>
-            <AccordionContent $isOpen={isOpen}>{children}</AccordionContent>
-        </div>
-    );
-};
 
 // --- MAIN COMPONENT ---
 const Books = () => {
+    const { user } = useContext(AuthContext);
     const [books, setBooks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [pagination, setPagination] = useState({});
+    const [activeTab, setActiveTab] = useState('all');
+    const [recommendations, setRecommendations] = useState([]);
+    const [recentlyViewed, setRecentlyViewed] = useState([]);
+    const [wishlist, setWishlist] = useState([]);
 
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [sortOrder, setSortOrder] = useState('title-asc');
-    const [selectedGenre, setSelectedGenre] = useState('All');
-    const [selectedLanguage, setSelectedLanguage] = useState('All');
-    const [filterAvailable, setFilterAvailable] = useState(false);
+    const [filters, setFilters] = useState({
+        search: '',
+        category: '',
+        author: '',
+        condition: '',
+        language: '',
+        genre: '',
+        minYear: '',
+        maxYear: '',
+        minPrice: '',
+        maxPrice: '',
+        isAvailable: '',
+        bookType: 'borrowing',
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+        useLocation: false,
+        maxDistance: 10
+    });
 
-    // Debounce search query
-    useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            fetchBooks();
-        }, 500); // Wait 500ms after user stops typing
-
-        return () => clearTimeout(timeoutId);
-    }, [searchQuery]);
-
-    // Fetch books immediately when filters change (no debounce needed)
+    // Fetch data on component mount and when filters change
     useEffect(() => {
         fetchBooks();
-    }, [selectedGenre, selectedLanguage, filterAvailable, sortOrder]);
+        if (user) {
+            fetchRecommendations();
+            fetchRecentlyViewed();
+            fetchWishlist();
+        }
+    }, [filters, activeTab, user]);
+
+    // Add book to recently viewed when user views a book
+    const addToRecentlyViewed = async (bookId) => {
+        if (user) {
+            try {
+                await usersAPI.addToRecentlyViewed(bookId);
+                fetchRecentlyViewed(); // Refresh recently viewed
+            } catch (error) {
+                console.error('Error adding to recently viewed:', error);
+            }
+        }
+    };
 
     const fetchBooks = async () => {
         try {
             setLoading(true);
-            const searchParams = {
-                search: searchQuery,
-                category: selectedGenre !== 'All' ? selectedGenre : '',
-                language: selectedLanguage !== 'All' ? selectedLanguage : '',
-                isAvailable: filterAvailable ? 'true' : '',
-                sortBy: sortOrder.split('-')[0],
-                sortOrder: sortOrder.split('-')[1],
-                limit: 20
-            };
-
-            const response = await booksAPI.getAll(searchParams);
-            const fetchedBooks = response.data.books || [];
+            let response;
             
-            // Set books immediately for faster rendering
-            setBooks(fetchedBooks);
-            setPagination(response.data.pagination || {});
+            if (activeTab === 'recommendations' && user) {
+                response = await booksAPI.getRecommendations({ limit: 20 });
+                setBooks(response.recommendations || []);
+                setPagination({ total: response.count || 0, page: 1, pages: 1 });
+            } else {
+                // Apply location if user is logged in and useLocation is enabled
+                const searchParams = { ...filters };
+                if (user && filters.useLocation && user.location?.coordinates) {
+                    searchParams.latitude = user.location.coordinates[1];
+                    searchParams.longitude = user.location.coordinates[0];
+                    searchParams.maxDistance = filters.maxDistance * 1000; // Convert km to meters
+                }
+
+                response = await booksAPI.getAll(searchParams);
+                const fetchedBooks = response.data.books || [];
+                
+                setBooks(fetchedBooks);
+                setPagination(response.data.pagination || {});
+            }
+            
             setError(null);
             setLoading(false);
             
             // Preload book cover images in the background for better performance
-            const imageUrls = fetchedBooks
+            const imageUrls = books
               .map(book => getFullImageUrl(book.coverImage))
               .filter(url => url && !url.includes('placehold.co'));
             
             if (imageUrls.length > 0) {
-              // Preload images without blocking the UI
               setTimeout(() => {
                 preloadImages(imageUrls).catch(() => {
                   // Image preload completed with some errors (non-critical)
@@ -313,12 +225,56 @@ const Books = () => {
         }
     };
 
+    const fetchRecommendations = async () => {
+        try {
+            const response = await booksAPI.getRecommendations({ limit: 10 });
+            setRecommendations(response.recommendations || []);
+        } catch (error) {
+            console.error('Error fetching recommendations:', error);
+        }
+    };
+
+    const fetchRecentlyViewed = async () => {
+        try {
+            const response = await usersAPI.getRecentlyViewed({ limit: 10 });
+            setRecentlyViewed(response.recentlyViewed || []);
+        } catch (error) {
+            console.error('Error fetching recently viewed:', error);
+        }
+    };
+
+    const fetchWishlist = async () => {
+        try {
+            const response = await usersAPI.getWishlist({ limit: 50 });
+            setWishlist(response.wishlist || []);
+        } catch (error) {
+            console.error('Error fetching wishlist:', error);
+        }
+    };
+
+    const handleFiltersChange = (newFilters) => {
+        setFilters(newFilters);
+    };
+
     const clearAllFilters = () => {
-        setSearchQuery('');
-        setSelectedGenre('All');
-        setSelectedLanguage('All');
-        setFilterAvailable(false);
-        setSortOrder('title-asc');
+        setFilters({
+            search: '',
+            category: '',
+            author: '',
+            condition: '',
+            language: '',
+            genre: '',
+            minYear: '',
+            maxYear: '',
+            minPrice: '',
+            maxPrice: '',
+            isAvailable: '',
+            bookType: 'borrowing',
+            sortBy: 'createdAt',
+            sortOrder: 'desc',
+            useLocation: false,
+            maxDistance: 10
+        });
     };
 
 
@@ -333,78 +289,50 @@ const Books = () => {
             />
             <PageWrapper>
                 <HeaderSection>
-                    <Title>Our Expansive Collection</Title>
+                    <Title>Discover Your Next Great Read</Title>
                 <Subtitle>
-                    Dive into a universe of stories. Search for your next adventure or browse through the shelves of our community's library.
+                    Explore thousands of books from our community. Find personalized recommendations, browse by category, or search for something specific.
                 </Subtitle>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', maxWidth: '600px', margin: '0 auto' }}>
-                    <StyledSearchInput
-                        placeholder="Search by title, author, or category..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
-                <p style={{ 
-                    marginTop: '1rem', 
-                    fontSize: '0.875rem', 
-                    color: '#6b7280',
-                    fontStyle: 'italic'
-                }}>
-                    💡 Use the filters on the left to narrow down your search
-                </p>
+                
+                {/* Tab Navigation */}
+                {user && (
+                    <TabNavigation>
+                        <TabButton
+                            $active={activeTab === 'all'}
+                            onClick={() => setActiveTab('all')}
+                        >
+                            All Books
+                        </TabButton>
+                        <TabButton
+                            $active={activeTab === 'recommendations'}
+                            onClick={() => setActiveTab('recommendations')}
+                        >
+                            <Heart size={16} />
+                            For You
+                        </TabButton>
+                        {recentlyViewed.length > 0 && (
+                            <TabButton
+                                $active={activeTab === 'recent'}
+                                onClick={() => setActiveTab('recent')}
+                            >
+                                <Clock size={16} />
+                                Recently Viewed
+                            </TabButton>
+                        )}
+                    </TabNavigation>
+                )}
             </HeaderSection>
             
-            <SidebarToggle onClick={() => setIsSidebarOpen(true)}>
-                <SlidersHorizontal size={18} /> Filters
-            </SidebarToggle>
-
             <MainContent>
-                <ControlsWrapper $isOpen={isSidebarOpen}>
-                    <SidebarHeader>
-                        <h3>Filters</h3>
-                        <CloseButton onClick={() => setIsSidebarOpen(false)}>
-                            <X size={24} />
-                        </CloseButton>
-                    </SidebarHeader>
-
-                    <ControlGroup>
-                        <Accordion title="Category">
-                            <Select value={selectedGenre} onChange={(e) => setSelectedGenre(e.target.value)}>
-                                {bookCategories.map(genre => <option key={genre} value={genre}>{genre}</option>)}
-                            </Select>
-                        </Accordion>
-                    </ControlGroup>
-                    
-                    <ControlGroup>
-                        <Accordion title="Language">
-                            <Select value={selectedLanguage} onChange={(e) => setSelectedLanguage(e.target.value)}>
-                                {bookLanguages.map(lang => <option key={lang} value={lang}>{lang}</option>)}
-                            </Select>
-                        </Accordion>
-                    </ControlGroup>
-                    
-                    <ControlGroup>
-                        <Accordion title="Filter">
-                            <CheckboxLabel>
-                                <Checkbox
-                                    type="checkbox"
-                                    checked={filterAvailable}
-                                    onChange={(e) => setFilterAvailable(e.target.checked)}
-                                />
-                                Available Now
-                            </CheckboxLabel>
-                        </Accordion>
-                    </ControlGroup>
-                    
-                    <ControlGroup>
-                        <Accordion title="Sort">
-                            <Select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
-                                <option value="title-asc">Title (A-Z)</option>
-                                <option value="title-desc">Title (Z-A)</option>
-                            </Select>
-                        </Accordion>
-                    </ControlGroup>
-                </ControlsWrapper>
+                {/* Enhanced Search Filters */}
+                {activeTab === 'all' && (
+                    <div style={{ marginBottom: '2rem' }}>
+                        <EnhancedSearchFilters 
+                            onFiltersChange={handleFiltersChange}
+                            initialFilters={filters}
+                        />
+                    </div>
+                )}
                 
                 <BookGridContainer>
                     {loading ? (
@@ -415,57 +343,134 @@ const Books = () => {
                         <ErrorMessage>{error}</ErrorMessage>
                     ) : (
                         <>
-                            {(searchQuery || selectedGenre !== 'All' || selectedLanguage !== 'All' || filterAvailable) && (
+                            {/* Tab Content Headers */}
+                            {activeTab === 'recommendations' && (
                                 <div style={{ 
                                     padding: '1rem', 
-                                    background: '#f0f9ff', 
+                                    background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', 
                                     borderRadius: '8px', 
                                     marginBottom: '1rem',
-                                    border: '1px solid #bae6fd'
+                                    border: '1px solid #f59e0b'
                                 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                        <span style={{ fontSize: '0.875rem', color: '#0369a1', fontWeight: '500' }}>
-                                            {books.length} {books.length === 1 ? 'book' : 'books'} found
-                                            {searchQuery && ` for "${searchQuery}"`}
-                                            {selectedGenre !== 'All' && ` in ${selectedGenre}`}
-                                        </span>
-                                        <button
-                                            onClick={clearAllFilters}
-                                            style={{
-                                                background: 'none',
-                                                border: 'none',
-                                                color: '#0369a1',
-                                                fontSize: '0.875rem',
-                                                cursor: 'pointer',
-                                                textDecoration: 'underline',
-                                                fontWeight: '500'
-                                            }}
-                                        >
-                                            Clear all filters
-                                        </button>
-                                    </div>
+                                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#92400e', marginBottom: '0.5rem' }}>
+                                        📚 Personalized Recommendations
+                                    </h3>
+                                    <p style={{ fontSize: '0.875rem', color: '#b45309' }}>
+                                        Based on your reading preferences and activity
+                                    </p>
                                 </div>
                             )}
+
+                            {activeTab === 'recent' && (
+                                <div style={{ 
+                                    padding: '1rem', 
+                                    background: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)', 
+                                    borderRadius: '8px', 
+                                    marginBottom: '1rem',
+                                    border: '1px solid #6366f1'
+                                }}>
+                                    <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#3730a3', marginBottom: '0.5rem' }}>
+                                        🕒 Recently Viewed Books
+                                    </h3>
+                                    <p style={{ fontSize: '0.875rem', color: '#4338ca' }}>
+                                        Continue exploring books you've looked at before
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Results Summary */}
+                            <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between', 
+                                marginBottom: '1rem',
+                                flexWrap: 'wrap',
+                                gap: '0.5rem'
+                            }}>
+                                <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
+                                    {books.length} {books.length === 1 ? 'book' : 'books'} 
+                                    {activeTab === 'all' && ' found'}
+                                    {activeTab === 'recommendations' && ' recommended for you'}
+                                    {activeTab === 'recent' && ' recently viewed'}
+                                </span>
+                                
+                                {activeTab === 'all' && (filters.search || filters.category || filters.condition) && (
+                                    <button
+                                        onClick={clearAllFilters}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            color: '#3b82f6',
+                                            fontSize: '0.875rem',
+                                            cursor: 'pointer',
+                                            textDecoration: 'underline',
+                                            fontWeight: '500'
+                                        }}
+                                    >
+                                        Clear all filters
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Empty States */}
                             {books.length === 0 && !loading && (
                                 <div style={{
                                     textAlign: 'center',
                                     padding: '3rem 1rem',
                                     color: '#6b7280'
                                 }}>
-                                    <p style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-                                        No books found
-                                    </p>
-                                    <p style={{ fontSize: '0.875rem' }}>
-                                        Try adjusting your search or filters
-                                    </p>
+                                    {activeTab === 'all' && (
+                                        <>
+                                            <p style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                                No books found
+                                            </p>
+                                            <p style={{ fontSize: '0.875rem' }}>
+                                                Try adjusting your search or filters
+                                            </p>
+                                        </>
+                                    )}
+                                    {activeTab === 'recommendations' && (
+                                        <>
+                                            <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                            <p style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                                No recommendations yet
+                                            </p>
+                                            <p style={{ fontSize: '0.875rem' }}>
+                                                Set your reading preferences to get personalized recommendations
+                                            </p>
+                                        </>
+                                    )}
+                                    {activeTab === 'recent' && (
+                                        <>
+                                            <Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                            <p style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                                No recently viewed books
+                                            </p>
+                                            <p style={{ fontSize: '0.875rem' }}>
+                                                Start browsing books to see them here
+                                            </p>
+                                        </>
+                                    )}
                                 </div>
                             )}
+
+                            {/* Books Grid */}
                             <BookGrid>
-                                {books.map((book) => (
-                                    <BookCard key={book._id} book={book} />
+                                {(activeTab === 'recent' ? recentlyViewed.map(item => item.book) : books)
+                                    .filter(book => book) // Filter out null books
+                                    .map((book) => (
+                                    <BookCard 
+                                        key={book._id} 
+                                        book={book} 
+                                        onView={() => addToRecentlyViewed(book._id)}
+                                        showWishlistButton={true}
+                                        isInWishlist={wishlist.some(w => w._id === book._id)}
+                                    />
                                 ))}
                             </BookGrid>
-                            {pagination && pagination.pages > 1 && (
+
+                            {/* Pagination */}
+                            {pagination && pagination.pages > 1 && activeTab === 'all' && (
                                 <div style={{ 
                                     display: 'flex', 
                                     justifyContent: 'center', 

@@ -238,11 +238,15 @@ export const booksAPI = {
   delete: (id) => api.delete(`/books/${id}`),
   getMyBooks: () => api.get("/books/my-books"),
   getUserBooks: (userId) => api.get(`/books/user/${userId}`),
-  // New advanced search endpoints
+  // Advanced search endpoints
   searchByISBN: (isbn) => api.get(`/books/search/isbn/${isbn}`).then(res => res.data),
   getSuggestions: (params) => api.get("/books/suggestions", { params }).then(res => res.data),
+  getRecommendations: (params) => api.get("/books/recommendations", { params }).then(res => res.data),
   getTrending: (params) => api.get("/books/trending", { params }).then(res => res.data),
   getFilterOptions: () => api.get("/books/filters"),
+  getEnhancedFilters: () => api.get("/books/enhanced-filters").then(res => res.data),
+  getBooksForSale: (params) => api.get("/books/for-sale", { params }).then(res => res.data),
+  validatePrice: (data) => api.post("/books/validate-price", data).then(res => res.data),
 };
 
 export const bookSearchAPI = {
@@ -258,6 +262,7 @@ export const borrowAPI = {
   getMyRequests: () => api.get("/borrow/my-requests"),
   getReceivedRequests: () => api.get("/borrow/received-requests"),
   getAllBorrowRequests: () => api.get("/borrow/all-requests"),
+  getBookHistory: () => api.get("/borrow/history"),
   updateRequest: (requestId, status) =>
     api.put(`/borrow/${requestId}`, { status }),
   deleteRequest: (requestId) => api.delete(`/borrow/${requestId}`),
@@ -273,6 +278,18 @@ export const usersAPI = {
   searchUsers: (params) => api.get("/users/search", { params }),
   updatePublicKey: (publicKeyJwk) =>
     api.put("/users/public-key", { publicKeyJwk }),
+  // Wishlist endpoints
+  addToWishlist: (bookId) => api.post(`/users/wishlist/${bookId}`).then(res => res.data),
+  removeFromWishlist: (bookId) => api.delete(`/users/wishlist/${bookId}`).then(res => res.data),
+  getWishlist: (params) => api.get("/users/wishlist", { params }).then(res => res.data),
+  // Recently viewed endpoints
+  getRecentlyViewed: (params) => api.get("/users/recently-viewed", { params }).then(res => res.data),
+  addToRecentlyViewed: (bookId) => api.post(`/users/recently-viewed/${bookId}`).then(res => res.data),
+  // Reading preferences endpoints
+  getReadingPreferences: () => api.get("/users/reading-preferences").then(res => res.data),
+  updateReadingPreferences: (preferences) => api.put("/users/reading-preferences", preferences).then(res => res.data),
+  // User statistics endpoints
+  getUserStatistics: () => api.get("/users/statistics").then(res => res.data),
   // Account deletion endpoints
   getDeletionPreview: () => api.get("/users/account/deletion-preview"),
   deleteAccount: (data) => api.delete("/users/account", { data }),

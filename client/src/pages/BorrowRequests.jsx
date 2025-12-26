@@ -1,22 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Loader, Check, X, ArrowRight, Inbox, CheckCircle, EyeOff, Eye, Trash2, BookOpen, User, MessageSquare, Shield, Wallet } from 'lucide-react';
+import { Loader, Check, X, ArrowRight, Inbox, CheckCircle, Eye, Trash2, BookOpen, User, MessageSquare, Shield, Wallet, Heart, Search, Filter, MapPin, Star } from 'lucide-react';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import toast from 'react-hot-toast';
-import { borrowAPI, reviewsAPI } from '../utils/api';
+import { borrowAPI, reviewsAPI, usersAPI } from '../utils/api';
 import { formatDate } from '../utils/dateHelpers';
 import ReviewModal from '../components/ReviewModal';
 import DepositPaymentModal from '../components/borrow/DepositPaymentModal';
 import LendingFeePaymentModal from '../components/borrow/LendingFeePaymentModal';
+import WishlistButton from '../components/books/WishlistButton';
 import { Link } from 'react-router-dom';
 
 const BorrowRequests = () => {
   const [receivedRequests, setReceivedRequests] = useState([]);
   const [myRequests, setMyRequests] = useState([]);
+  const [bookHistory, setBookHistory] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
+  const [filteredWishlist, setFilteredWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('received');
-  const [showDeniedModal, setShowDeniedModal] = useState(false);
   const [editingBook, setEditingBook] = useState(null);
+
+  // Wishlist filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterBy, setFilterBy] = useState('all');
+  const [sortBy, setSortBy] = useState('addedAt');
+  const [wishlistPagination, setWishlistPagination] = useState({
+    page: 1,
+    pages: 1,
+    total: 0
+  });
 
   const [reviewModal, setReviewModal] = useState({ open: false, borrowRequestId: null, toUserId: null, counterpartName: '' });
   const [reviewedRequests, setReviewedRequests] = useState(new Set());
@@ -27,9 +40,11 @@ const BorrowRequests = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [receivedRes, myRes] = await Promise.all([
+      const [receivedRes, myRes, historyRes, wishlistRes] = await Promise.all([
         borrowAPI.getReceivedRequests(),
         borrowAPI.getMyRequests(),
+        borrowAPI.getBookHistory(),
+        usersAPI.getWishlist({ page: 1, limit: 50 }),
       ]);
 
       // Filter out any requests with missing critical data
@@ -42,12 +57,21 @@ const BorrowRequests = () => {
 
       setReceivedRequests(validReceivedRequests);
       setMyRequests(validMyRequests);
+      setBookHistory(historyRes.data.history || []);
+      setWishlist(wishlistRes.wishlist || []);
+      setWishlistPagination({
+        page: wishlistRes.page || 1,
+        pages: wishlistRes.pages || 1,
+        total: wishlistRes.total || 0
+      });
 
     } catch (error) {
       toast.error('Failed to fetch borrow requests.');
       // Set empty arrays on error
       setReceivedRequests([]);
       setMyRequests([]);
+      setBookHistory([]);
+      setWishlist([]);
     } finally {
       setLoading(false);
     }
@@ -56,6 +80,73 @@ const BorrowRequests = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Filter and sort wishlist when dependencies change
+  useEffect(() => {
+    filterAndSortWishlist();
+  }, [wishlist, searchTerm, filterBy, sortBy]);
+
+  const filterAndSortWishlist = () => {
+    let filtered = [...wishlist];
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(book =>
+        book.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        book.author?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        book.category?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply availability filter
+    if (filterBy !== 'all') {
+      filtered = filtered.filter(book => {
+        if (filterBy === 'available') return book.isAvailable;
+        if (filterBy === 'unavailable') return !book.isAvailable;
+        return true;
+      });
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'author':
+          return a.author.localeCompare(b.author);
+        case 'category':
+          return a.category.localeCompare(b.category);
+        case 'addedAt':
+        default:
+          return new Date(b.addedAt || b.createdAt) - new Date(a.addedAt || a.createdAt);
+      }
+    });
+
+    setFilteredWishlist(filtered);
+  };
+
+  const handleWishlistChange = (bookId, isInWishlist) => {
+    if (!isInWishlist) {
+      // Remove from local state
+      setWishlist(prev => prev.filter(book => book._id !== bookId));
+      toast.success('Book removed from wishlist');
+    }
+  };
+
+  const clearWishlist = async () => {
+    if (window.confirm('Are you sure you want to clear your entire wishlist?')) {
+      try {
+        // Remove all books from wishlist
+        const promises = wishlist.map(book => usersAPI.removeFromWishlist(book._id));
+        await Promise.all(promises);
+        setWishlist([]);
+        toast.success('Wishlist cleared successfully');
+      } catch (error) {
+        console.error('Error clearing wishlist:', error);
+        toast.error('Failed to clear wishlist');
+      }
+    }
+  };
 
   const handleStatusUpdate = async (requestId, status) => {
     try {
@@ -157,6 +248,314 @@ const BorrowRequests = () => {
       <p className="empty-message">{message}</p>
     </div>
   );
+
+  const renderBookHistory = () => {
+    if (bookHistory.length === 0) {
+      return <EmptyState message="No book borrowing history yet. Your completed transactions will appear here." />;
+    }
+
+    return (
+      <div className="requests-grid">
+        {bookHistory.map(transaction => (
+          <div key={transaction._id} className={`request-card history-card ${transaction.status === 'returned' ? 'completed-transaction' : 'denied-transaction'}`}>
+            <div className="book-cover-container">
+              <img
+                src={getFullImageUrl(transaction.book?.coverImage)}
+                alt={transaction.book?.title || 'Book cover'}
+                className="book-cover"
+                onError={(e) => {
+                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA0MEg2NVY4MEgzNVY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
+                }}
+              />
+              {transaction.status === 'returned' && (
+                <div className="history-badge completed">
+                  <CheckCircle size={16} />
+                  Completed
+                </div>
+              )}
+              {transaction.status === 'denied' && (
+                <div className="history-badge denied">
+                  <X size={16} />
+                  Denied
+                </div>
+              )}
+            </div>
+            <div className="card-content">
+              <div className="card-header">
+                <h3 className="book-title">{transaction.book?.title || 'Unknown Book'}</h3>
+                {renderStatusBadge(transaction.status)}
+              </div>
+              <div className={`role-indicator ${transaction.role === 'lender' ? 'lender-role' : 'borrower-role'}`}>
+                {transaction.role === 'lender' ? <BookOpen size={16} /> : <User size={16} />}
+                <span>You were the {transaction.role.toUpperCase()}</span>
+              </div>
+              <div className="user-info">
+                <div className="user-label">
+                  {transaction.role === 'lender' ? 'BORROWER:' : 'LENDER:'}
+                </div>
+                <img
+                  src={transaction.role === 'lender' ? transaction.borrower?.avatar : transaction.owner?.avatar}
+                  alt={transaction.role === 'lender' ? transaction.borrower?.name : transaction.owner?.name}
+                  className="user-avatar"
+                  onError={(e) => {
+                    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiNGM0Y0RjYiLz4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxMSIgcj0iNCIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNNiAyMkM2IDE4LjY4NjMgOS42ODYyOSAxNSAxMyAxNUgxNUMxOC4zMTM3IDE1IDIyIDE4LjY4NjMgMjIgMjJWMjJINloiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
+                  }}
+                />
+                <p>
+                  <strong>
+                    {transaction.role === 'lender' ? transaction.borrower?.name : transaction.owner?.name}
+                  </strong>
+                </p>
+              </div>
+              <div className="transaction-timeline">
+                <p className="timeline-item">
+                  <span className="timeline-label">Requested:</span>
+                  <span className="timeline-date">{formatDate(transaction.requestedAt)}</span>
+                </p>
+                {transaction.borrowedAt && (
+                  <p className="timeline-item">
+                    <span className="timeline-label">Borrowed:</span>
+                    <span className="timeline-date">{formatDate(transaction.borrowedAt)}</span>
+                  </p>
+                )}
+                {transaction.returnedAt && (
+                  <p className="timeline-item">
+                    <span className="timeline-label">Returned:</span>
+                    <span className="timeline-date">{formatDate(transaction.returnedAt)}</span>
+                  </p>
+                )}
+                <p className="timeline-item">
+                  <span className="timeline-label">
+                    {transaction.status === 'returned' ? 'Completed:' : 'Denied:'}
+                  </span>
+                  <span className="timeline-date">{formatDate(transaction.completedAt)}</span>
+                </p>
+              </div>
+              {transaction.lendingDuration && transaction.status === 'returned' && (
+                <div className="transaction-details">
+                  <span className="detail-item">Duration: {transaction.lendingDuration} days</span>
+                  {transaction.lendingFee > 0 && (
+                    <span className="detail-item">Fee: ₹{transaction.lendingFee}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderWishlist = () => {
+    if (wishlist.length === 0) {
+      return (
+        <div className="empty-state">
+          <div className="empty-icon-wrapper">
+            <Heart size={48} />
+          </div>
+          <h3 className="empty-title">Your wishlist is empty</h3>
+          <p className="empty-message">
+            Start adding books you'd like to read to your wishlist!
+          </p>
+          <Link
+            to="/books"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mt-4"
+          >
+            <BookOpen size={20} />
+            Browse Books
+          </Link>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {/* Wishlist Header */}
+        <div className="wishlist-header">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Heart className="w-8 h-8 text-red-500" />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">My Wishlist</h2>
+                <p className="text-gray-600">
+                  {wishlistPagination.total} book{wishlistPagination.total !== 1 ? 's' : ''} in your wishlist
+                </p>
+              </div>
+            </div>
+
+            {wishlist.length > 0 && (
+              <button
+                onClick={clearWishlist}
+                className="flex items-center gap-2 px-4 py-2 text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                <Trash2 size={16} />
+                Clear All
+              </button>
+            )}
+          </div>
+
+          {/* Filters and Search */}
+          <div className="wishlist-filters">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search wishlist..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <select
+                value={filterBy}
+                onChange={(e) => setFilterBy(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Books</option>
+                <option value="available">Available</option>
+                <option value="unavailable">Not Available</option>
+              </select>
+
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="addedAt">Recently Added</option>
+                <option value="title">Title A-Z</option>
+                <option value="author">Author A-Z</option>
+                <option value="category">Category</option>
+              </select>
+
+              <div className="text-sm text-gray-600 flex items-center">
+                <Filter className="w-4 h-4 mr-2" />
+                Showing {filteredWishlist.length} of {wishlist.length} books
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Wishlist Grid */}
+        {filteredWishlist.length > 0 ? (
+          <div className="wishlist-grid">
+            {filteredWishlist.map((book) => (
+              <div key={book._id} className="wishlist-card">
+                <div className="wishlist-book-cover">
+                  <Link to={`/books/${book._id}`}>
+                    <div className="aspect-[3/4] bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                      {book.coverImage ? (
+                        <img
+                          src={getFullImageUrl(book.coverImage)}
+                          alt={book.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA0MEg2NVY4MEgzNVY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
+                          }}
+                        />
+                      ) : (
+                        <BookOpen className="w-16 h-16 text-blue-600" />
+                      )}
+                    </div>
+                  </Link>
+                  
+                  {/* Availability Badge */}
+                  <div className={`availability-badge ${book.isAvailable ? 'available' : 'unavailable'}`}>
+                    {book.isAvailable ? 'Available' : 'Not Available'}
+                  </div>
+
+                  {/* Wishlist Button */}
+                  <div className="wishlist-button-container">
+                    <WishlistButton
+                      bookId={book._id}
+                      isInWishlist={true}
+                      onWishlistChange={handleWishlistChange}
+                      size="md"
+                    />
+                  </div>
+                </div>
+
+                <div className="wishlist-card-content">
+                  <Link to={`/books/${book._id}`}>
+                    <h3 className="wishlist-book-title">
+                      {book.title}
+                    </h3>
+                  </Link>
+                  
+                  <p className="wishlist-book-author">by {book.author}</p>
+                  
+                  <div className="wishlist-book-tags">
+                    <span className="book-tag category-tag">
+                      {book.category}
+                    </span>
+                    {book.condition && (
+                      <span className="book-tag condition-tag">
+                        {book.condition}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Owner Info */}
+                  {book.owner && (
+                    <div className="wishlist-owner-info">
+                      <Link 
+                        to={`/users/${book.owner._id}`}
+                        className="owner-link"
+                      >
+                        <div className="owner-avatar">
+                          <span className="owner-initial">
+                            {book.owner.name?.charAt(0)?.toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="owner-name">{book.owner.name}</span>
+                      </Link>
+
+                      {book.owner.location && (
+                        <div className="location-indicator">
+                          <MapPin className="w-3 h-3" />
+                          <span>Nearby</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Action Button */}
+                  <div className="wishlist-action">
+                    <Link
+                      to={`/books/${book._id}`}
+                      className={`wishlist-action-btn ${book.isAvailable ? 'available' : 'unavailable'}`}
+                    >
+                      {book.isAvailable ? 'View Details' : 'Currently Unavailable'}
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <div className="empty-icon-wrapper">
+              <Search size={48} />
+            </div>
+            <h3 className="empty-title">No books found</h3>
+            <p className="empty-message">
+              Try adjusting your search or filter criteria.
+            </p>
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setFilterBy('all');
+              }}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mt-4"
+            >
+              Clear Filters
+            </button>
+          </div>
+        )}
+      </>
+    );
+  };
 
   const renderContent = () => {
     if (loading) {
@@ -570,6 +969,14 @@ const BorrowRequests = () => {
         <EmptyState message="No returned books yet. Books will appear here once borrowers return them." />
       );
     }
+
+    if (activeTab === 'history') {
+      return renderBookHistory();
+    }
+
+    if (activeTab === 'wishlist') {
+      return renderWishlist();
+    }
   };
 
   return (
@@ -590,19 +997,14 @@ const BorrowRequests = () => {
           <button onClick={() => setActiveTab('returned')} className={`tab-btn ${activeTab === 'returned' ? 'active' : ''}`}>
             Returned Books ({receivedRequests.filter(req => req.status === 'returned').length})
           </button>
+          <button onClick={() => setActiveTab('history')} className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}>
+            Book History
+          </button>
+          <button onClick={() => setActiveTab('wishlist')} className={`tab-btn ${activeTab === 'wishlist' ? 'active' : ''}`}>
+            <Heart size={16} />
+            <span>Wishlist</span>
+          </button>
         </div>
-        <button 
-          onClick={() => setShowDeniedModal(true)} 
-          className="denied-btn"
-          title="View Denied Requests"
-        >
-          <EyeOff size={18} />
-          Denied ({
-            activeTab === 'received' 
-              ? receivedRequests.filter(req => req.status === 'denied').length
-              : myRequests.filter(req => req.status === 'denied').length
-          })
-        </button>
       </div>
 
       <div className="content-area">
@@ -647,20 +1049,6 @@ const BorrowRequests = () => {
           fetchData(); // Refresh the data to show updated payment status
         }}
       />
-
-      {/* Denied Requests Modal */}
-      {showDeniedModal && (
-        <DeniedRequestsModal
-          requests={activeTab === 'received' 
-            ? receivedRequests.filter(req => req.status === 'denied')
-            : myRequests.filter(req => req.status === 'denied')
-          }
-          isReceived={activeTab === 'received'}
-          onClose={() => setShowDeniedModal(false)}
-          onDelete={handleDeleteRequest}
-          onOpenDeleteModal={setDeleteConfirmModal}
-        />
-      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmModal.open && (
@@ -709,62 +1097,6 @@ const DeleteConfirmModal = ({ isOpen, bookTitle, onClose, onConfirm }) => {
   );
 };
 
-// Denied Requests Modal Component
-const DeniedRequestsModal = ({ requests, isReceived, onClose, onDelete, onOpenDeleteModal }) => {
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Denied Requests</h2>
-          <button onClick={onClose} className="close-btn">
-            <X size={24} />
-          </button>
-        </div>
-        <div className="modal-body">
-          {requests.length === 0 ? (
-            <div className="empty-denied">
-              <EyeOff size={48} style={{ color: '#9ca3af', marginBottom: '1rem' }} />
-              <p>No denied requests</p>
-            </div>
-          ) : (
-            <div className="denied-list">
-              {requests.map(req => (
-                <div key={req._id} className="denied-item">
-                  <img
-                    src={getFullImageUrl(req.book?.coverImage)}
-                    alt={req.book?.title || 'Book cover'}
-                    className="denied-cover"
-                    onError={(e) => {
-                      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA0MEg2NVY4MEgzNVY0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPHN2Zz4K';
-                    }}
-                  />
-                  <div className="denied-info">
-                    <h4>{req.book?.title || 'Unknown Book'}</h4>
-                    <p className="denied-user">
-                      {isReceived 
-                        ? `Requested by ${req.borrower?.name || 'Unknown User'}`
-                        : `Requested from ${req.owner?.name || 'Unknown User'}`
-                      }
-                    </p>
-                    <p className="denied-date">Denied on: {formatDate(req.updatedAt || req.createdAt)}</p>
-                  </div>
-                  <button
-                    onClick={() => onOpenDeleteModal({ open: true, requestId: req._id, bookTitle: req.book?.title })}
-                    className="delete-denied-btn"
-                    title="Delete from history"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const StyledWrapper = styled.div`
   padding: 1rem;
   max-width: 1200px;
@@ -793,7 +1125,7 @@ const StyledWrapper = styled.div`
 
   .tabs-container {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     border-bottom: 1px solid #e5e7eb;
     margin-bottom: 2rem;
@@ -801,32 +1133,13 @@ const StyledWrapper = styled.div`
 
   .tabs-left {
     display: flex;
-  }
-
-  .denied-btn {
-    display: flex;
-    align-items: center;
+    flex-wrap: wrap;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: #fef2f2;
-    color: #dc2626;
-    border: 1px solid #fecaca;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-bottom: 0.5rem;
-
-    &:hover {
-      background: #fee2e2;
-      border-color: #fca5a5;
-    }
   }
   
   .tab-btn {
-    padding: 1rem 0.5rem;
-    margin: 0 1.5rem 0 0;
+    padding: 1rem 1.5rem;
+    margin: 0;
     border: none;
     background: none;
     font-size: 1rem;
@@ -835,6 +1148,10 @@ const StyledWrapper = styled.div`
     cursor: pointer;
     position: relative;
     transition: color 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
     
     &:hover {
       color: #111827;
@@ -1222,85 +1539,6 @@ const StyledWrapper = styled.div`
     overflow-y: auto;
   }
 
-  .empty-denied {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: #6b7280;
-
-    p {
-      margin-top: 0.5rem;
-      font-size: 1rem;
-    }
-  }
-
-  .denied-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .denied-item {
-    display: flex;
-    gap: 1rem;
-    padding: 1rem;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    transition: all 0.2s;
-
-    &:hover {
-      background: #f3f4f6;
-      border-color: #d1d5db;
-    }
-
-    .denied-cover {
-      width: 60px;
-      height: 80px;
-      object-fit: cover;
-      border-radius: 8px;
-      flex-shrink: 0;
-    }
-
-    .denied-info {
-      flex: 1;
-
-      h4 {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #111827;
-        margin: 0 0 0.5rem 0;
-      }
-
-      .denied-user {
-        font-size: 0.875rem;
-        color: #6b7280;
-        margin: 0 0 0.25rem 0;
-      }
-
-      .denied-date {
-        font-size: 0.75rem;
-        color: #9ca3af;
-        margin: 0;
-      }
-    }
-
-    .delete-denied-btn {
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      color: #dc2626;
-      padding: 0.5rem;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-      height: fit-content;
-
-      &:hover {
-        background: #fee2e2;
-        border-color: #fca5a5;
-      }
-    }
-  }
-
   /* Delete Confirmation Modal Styles */
   .delete-confirm-modal {
     background: white;
@@ -1451,6 +1689,274 @@ const StyledWrapper = styled.div`
     color: white;
     border: 1px solid transparent;
     &:hover { background-color: #4338ca; }
+  }
+
+  /* History Tab Styles */
+  .history-card {
+    &.completed-transaction {
+      border-color: #10b981;
+      background: linear-gradient(to right, #f0fdf4, #ffffff);
+    }
+
+    &.denied-transaction {
+      border-color: #ef4444;
+      background: linear-gradient(to right, #fef2f2, #ffffff);
+    }
+  }
+
+  .history-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    &.completed {
+      background: #10b981;
+      color: white;
+    }
+
+    &.denied {
+      background: #ef4444;
+      color: white;
+    }
+  }
+
+  .transaction-timeline {
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+
+    .timeline-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 0.25rem 0;
+      font-size: 0.875rem;
+
+      .timeline-label {
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .timeline-date {
+        color: #6b7280;
+      }
+    }
+  }
+
+  .transaction-details {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+
+    .detail-item {
+      font-size: 0.875rem;
+      color: #4b5563;
+      background: #e0e7ff;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.375rem;
+      font-weight: 600;
+    }
+  }
+
+  /* Wishlist Styles */
+  .wishlist-header {
+    margin-bottom: 2rem;
+
+    .wishlist-filters {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e5e7eb;
+    }
+  }
+
+  .wishlist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .wishlist-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  .wishlist-book-cover {
+    position: relative;
+    overflow: hidden;
+
+    .availability-badge {
+      position: absolute;
+      top: 0.5rem;
+      left: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+
+      &.available {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      &.unavailable {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+    }
+
+    .wishlist-button-container {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+    }
+  }
+
+  .wishlist-card-content {
+    padding: 1rem;
+  }
+
+  .wishlist-book-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #2563eb;
+    }
+  }
+
+  .wishlist-book-author {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 0.75rem;
+  }
+
+  .wishlist-book-tags {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+
+    .book-tag {
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 500;
+
+      &.category-tag {
+        background: #f3f4f6;
+        color: #374151;
+      }
+
+      &.condition-tag {
+        background: #dbeafe;
+        color: #1d4ed8;
+      }
+    }
+  }
+
+  .wishlist-owner-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    .owner-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      color: #6b7280;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+
+      &:hover {
+        color: #2563eb;
+      }
+    }
+
+    .owner-avatar {
+      width: 1.5rem;
+      height: 1.5rem;
+      background: #dbeafe;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .owner-initial {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #1d4ed8;
+      }
+    }
+
+    .location-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+  }
+
+  .wishlist-action {
+    .wishlist-action-btn {
+      display: block;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+
+      &.available {
+        background: #2563eb;
+        color: white;
+
+        &:hover {
+          background: #1d4ed8;
+        }
+      }
+
+      &.unavailable {
+        background: #f3f4f6;
+        color: #9ca3af;
+        cursor: not-allowed;
+      }
+    }
   }
 `;
 

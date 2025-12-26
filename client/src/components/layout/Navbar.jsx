@@ -333,7 +333,7 @@ const Navbar = () => {
               <div className="flex items-center space-x-20">
                 {user &&
                   navLinks.map((link) => (
-                    <PremiumTooltip key={link.to} text={link.tooltip} delay={300}>
+                    <PremiumTooltip key={link.to} text={link.tooltip} delay={200}>
                       <NavLink
                         to={link.to}
                         className={({ isActive }) =>
@@ -375,7 +375,7 @@ const Navbar = () => {
                 <div className="flex items-center gap-4">
                   {/* Admin Dashboard Button */}
                   {(user.role === 'admin' || user.role === 'superadmin') && (
-                    <PremiumTooltip text="Access admin dashboard and manage platform" delay={300}>
+                    <PremiumTooltip text="Access admin dashboard and manage platform" delay={200}>
                       <Link
                         to="/admin-dashboard-secure"
                         className="relative px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2"
@@ -405,7 +405,7 @@ const Navbar = () => {
 
                   {/* Notification Bell */}
                   <div className="relative" style={{ zIndex: 10000 }}>
-                    <PremiumTooltip text="View notifications and updates" delay={300}>
+                    <PremiumTooltip text="View notifications and updates" delay={200}>
                       <button
                         onClick={() => {
                           setShowNotificationDropdown(!showNotificationDropdown);
@@ -495,7 +495,7 @@ const Navbar = () => {
                     )}
                   </div>
 
-                  <PremiumTooltip text="View and edit your profile" delay={300}>
+                  <PremiumTooltip text="View and edit your profile" delay={200}>
                     <Link to="/profile" className="relative">
                       <OptimizedAvatar
                         src={user.avatar}

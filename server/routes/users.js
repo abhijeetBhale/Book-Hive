@@ -8,6 +8,14 @@ import {
   markRelevantNotificationsRead,
   updatePublicKey,
   migrateUserRatings,
+  addToWishlist,
+  removeFromWishlist,
+  getWishlist,
+  getRecentlyViewed,
+  updateReadingPreferences,
+  getReadingPreferences,
+  getUserStatistics,
+  addToRecentlyViewed
 } from "../controllers/userController.js";
 import {
   deleteAccount,
@@ -26,6 +34,22 @@ router.get("/notifications/unread-count", protect, getUnreadNotificationCount);
 router.put("/notifications/mark-read", protect, markRelevantNotificationsRead);
 router.put("/public-key", protect, updatePublicKey);
 router.post("/migrate-ratings", migrateUserRatings);
+
+// Wishlist routes
+router.post("/wishlist/:bookId", protect, addToWishlist);
+router.delete("/wishlist/:bookId", protect, removeFromWishlist);
+router.get("/wishlist", protect, getWishlist);
+
+// Recently viewed routes
+router.get("/recently-viewed", protect, getRecentlyViewed);
+router.post("/recently-viewed/:bookId", protect, addToRecentlyViewed);
+
+// Reading preferences routes
+router.get("/reading-preferences", protect, getReadingPreferences);
+router.put("/reading-preferences", protect, updateReadingPreferences);
+
+// User statistics routes
+router.get("/statistics", protect, getUserStatistics);
 
 // Account deletion routes
 router.get("/account/deletion-preview", protect, getDeletionPreview);

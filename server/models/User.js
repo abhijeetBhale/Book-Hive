@@ -305,6 +305,104 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   }],
+  // Wishlist and reading preferences
+  wishlist: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Book',
+    addedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  recentlyViewed: [{
+    book: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Book'
+    },
+    viewedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  readingPreferences: {
+    favoriteGenres: [{
+      type: String,
+      trim: true
+    }],
+    favoriteAuthors: [{
+      type: String,
+      trim: true
+    }],
+    readingGoals: {
+      booksPerMonth: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
+      currentStreak: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
+      longestStreak: {
+        type: Number,
+        default: 0,
+        min: 0
+      }
+    },
+    preferredLanguages: [{
+      type: String,
+      default: ['English']
+    }],
+    bookFormats: [{
+      type: String,
+      enum: ['physical', 'ebook', 'audiobook'],
+      default: 'physical'
+    }],
+    maxDistance: {
+      type: Number,
+      default: 10, // kilometers
+      min: 1,
+      max: 100
+    }
+  },
+  // User statistics for impact metrics
+  statistics: {
+    booksShared: {
+      type: Number,
+      default: 0
+    },
+    booksReceived: {
+      type: Number,
+      default: 0
+    },
+    totalBorrowRequests: {
+      type: Number,
+      default: 0
+    },
+    successfulBorrows: {
+      type: Number,
+      default: 0
+    },
+    communityImpact: {
+      carbonFootprintSaved: {
+        type: Number,
+        default: 0 // in kg CO2
+      },
+      moneySaved: {
+        type: Number,
+        default: 0 // estimated money saved by borrowing vs buying
+      },
+      booksKeptInCirculation: {
+        type: Number,
+        default: 0
+      }
+    },
+    joinedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
   // Wallet and Earnings
   wallet: {
     totalEarnings: {
@@ -383,6 +481,9 @@ userSchema.index({ createdAt: -1 }); // Sorting by join date
 userSchema.index({ isActive: 1 }); // Filter active users
 userSchema.index({ name: 'text', email: 'text' }); // Text search
 userSchema.index({ 'rating.overallRating': -1 }); // Rating queries
+userSchema.index({ 'wishlist': 1 }); // Wishlist queries
+userSchema.index({ 'recentlyViewed.viewedAt': -1 }); // Recently viewed sorting
+userSchema.index({ 'readingPreferences.favoriteGenres': 1 }); // Genre preferences
 
 const User = mongoose.model('User', userSchema)
 export default User

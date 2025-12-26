@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { BadgeCheck, ArrowLeft, Loader, CheckCircle, Shield, Star, Zap } from 'lucide-react';

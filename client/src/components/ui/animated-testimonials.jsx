@@ -1,6 +1,6 @@
 import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export const AnimatedTestimonials = ({ testimonials = [], autoplay = true }) => {
   const [active, setActive] = useState(0);

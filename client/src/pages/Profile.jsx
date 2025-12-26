@@ -11,6 +11,8 @@ import GamificationSection from '../components/profile/GamificationSection';
 import ReviewsModal from '../components/ReviewsModal';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
 import AccountDeletion from '../components/profile/AccountDeletion';
+import UserStatistics from '../components/user/UserStatistics';
+import ReadingPreferences from '../components/user/ReadingPreferences';
 import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
@@ -644,9 +646,16 @@ const Profile = () => {
             </div>
           </div>
         );
-      // --- JSX FOR NEW SECURITY TAB ---
+      // --- JSX FOR NEW TABS ---
+      case 'statistics':
+        return <UserStatistics userId={user._id} showTitle={true} />;
+      
+      case 'preferences':
+        return <ReadingPreferences showTitle={true} />;
+      
       case 'gamification':
         return <GamificationSection activeSubTab={activeSubTab} setActiveSubTab={setActiveSubTab} />;
+      
       case 'security':
         return (
           <div>
@@ -1310,6 +1319,12 @@ const Profile = () => {
             </div>
             <span>Notifications</span>
             {totalNotifications > 0 && <span className="notification-count">{totalNotifications}</span>}
+          </a>
+          <a href="#statistics" onClick={() => setActiveTab('statistics')} className={activeTab === 'statistics' ? 'active' : ''}>
+            <Activity size={20} /> My Statistics
+          </a>
+          <a href="#preferences" onClick={() => setActiveTab('preferences')} className={activeTab === 'preferences' ? 'active' : ''}>
+            <BookOpen size={20} /> Reading Preferences
           </a>
           <a href="#gamification" onClick={() => setActiveTab('gamification')} className={activeTab === 'gamification' ? 'active' : ''}>
             <Trophy size={20} /> Reading Journey

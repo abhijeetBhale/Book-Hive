@@ -8,6 +8,8 @@ const OptimizedImage = ({
   height, 
   className = '', 
   placeholder = '/placeholder-book.png',
+  fallbackSrc,
+  showQualityBadge,
   lazy = true,
   quality = 80,
   ...props 
@@ -17,6 +19,9 @@ const OptimizedImage = ({
   const [isInView, setIsInView] = useState(!lazy);
   const imgRef = useRef(null);
   const observerRef = useRef(null);
+
+  // Use fallbackSrc if provided, otherwise use placeholder
+  const fallbackImage = fallbackSrc || placeholder;
 
   // Intersection Observer for lazy loading
   useEffect(() => {
@@ -68,7 +73,7 @@ const OptimizedImage = ({
     setIsLoaded(false);
   };
 
-  const imageSrc = isInView ? getOptimizedSrc(src) : placeholder;
+  const imageSrc = isInView ? getOptimizedSrc(src) : fallbackImage;
 
   return (
     <ImageContainer 
@@ -88,13 +93,13 @@ const OptimizedImage = ({
       {/* Actual image */}
       {isInView && (
         <StyledImage
-          src={isError ? placeholder : imageSrc}
+          src={isError ? fallbackImage : imageSrc}
           alt={alt}
           width={width}
           height={height}
           onLoad={handleLoad}
           onError={handleError}
-          isLoaded={isLoaded}
+          $isLoaded={isLoaded}
           loading={lazy ? 'lazy' : 'eager'}
           decoding="async"
         />
@@ -151,8 +156,8 @@ const StyledImage = styled.img`
   height: 100%;
   object-fit: cover;
   transition: opacity 0.3s ease;
-  opacity: ${props => props.isLoaded ? 1 : 0};
-  position: ${props => props.isLoaded ? 'static' : 'absolute'};
+  opacity: ${props => props.$isLoaded ? 1 : 0};
+  position: ${props => props.$isLoaded ? 'static' : 'absolute'};
   top: 0;
   left: 0;
 `;

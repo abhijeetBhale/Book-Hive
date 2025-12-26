@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import Book from '../models/Book.js';
+import BorrowRequest from '../models/BorrowRequest.js';
 import Notification from '../models/Notification.js'; // Ensure Notification model is imported
 import UserStats from '../models/UserStats.js';
 import Friendship from '../models/Friendship.js';
@@ -452,3 +453,363 @@ function getTrustLevel(rating, count) {
   if (rating >= 3.5) return 'fair';
   return 'needs_improvement';
 }
+// @desc    Add book to wishlist
+// @route   POST /api/users/wishlist/:bookId
+export const addToWishlist = async (req, res) => {
+  try {
+    const { bookId } = req.params;
+    const userId = req.user._id;
+
+    // Check if book exists
+    const book = await Book.findById(bookId);
+    if (!book) {
+      return res.status(404).json({ message: 'Book not found' });
+    }
+
+    // Check if user owns the book
+    if (book.owner.toString() === userId.toString()) {
+      return res.status(400).json({ message: 'Cannot add your own book to wishlist' });
+    }
+
+    const user = await User.findById(userId);
+    
+    // Check if book is already in wishlist
+    const isAlreadyInWishlist = user.wishlist.some(item => 
+      item.toString() === bookId
+    );
+
+    if (isAlreadyInWishlist) {
+      return res.status(400).json({ message: 'Book already in wishlist' });
+    }
+
+    // Add to wishlist
+    user.wishlist.push(bookId);
+    await user.save();
+
+    res.status(200).json({ 
+      message: 'Book added to wishlist successfully',
+      wishlistCount: user.wishlist.length
+    });
+  } catch (error) {
+    console.error('Add to wishlist error:', error);
+    res.status(500).json({ message: 'Server error adding book to wishlist' });
+  }
+};
+
+// @desc    Remove book from wishlist
+// @route   DELETE /api/users/wishlist/:bookId
+export const removeFromWishlist = async (req, res) => {
+  try {
+    const { bookId } = req.params;
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+    
+    // Remove from wishlist
+    user.wishlist = user.wishlist.filter(item => 
+      item.toString() !== bookId
+    );
+    
+    await user.save();
+
+    res.status(200).json({ 
+      message: 'Book removed from wishlist successfully',
+      wishlistCount: user.wishlist.length
+    });
+  } catch (error) {
+    console.error('Remove from wishlist error:', error);
+    res.status(500).json({ message: 'Server error removing book from wishlist' });
+  }
+};
+
+// @desc    Get user's wishlist
+// @route   GET /api/users/wishlist
+export const getWishlist = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { page = 1, limit = 20 } = req.query;
+
+    const user = await User.findById(userId)
+      .populate({
+        path: 'wishlist',
+        populate: {
+          path: 'owner',
+          select: 'name avatar location rating'
+        },
+        options: {
+          skip: (parseInt(page) - 1) * parseInt(limit),
+          limit: parseInt(limit),
+          sort: { addedAt: -1 }
+        }
+      });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Filter out books that no longer exist
+    const validWishlistBooks = user.wishlist.filter(book => book !== null);
+
+    // Update user's wishlist if some books were removed
+    if (validWishlistBooks.length !== user.wishlist.length) {
+      user.wishlist = validWishlistBooks.map(book => book._id);
+      await user.save();
+    }
+
+    res.status(200).json({
+      wishlist: validWishlistBooks,
+      total: validWishlistBooks.length,
+      page: parseInt(page),
+      pages: Math.ceil(validWishlistBooks.length / parseInt(limit))
+    });
+  } catch (error) {
+    console.error('Get wishlist error:', error);
+    res.status(500).json({ message: 'Server error getting wishlist' });
+  }
+};
+
+// @desc    Add book to recently viewed
+// @route   POST /api/users/recently-viewed/:bookId
+export const addToRecentlyViewed = async (req, res) => {
+  try {
+    const { bookId } = req.params;
+    const userId = req.user._id;
+
+    // Check if book exists
+    const book = await Book.findById(bookId);
+    if (!book) {
+      return res.status(404).json({ message: 'Book not found' });
+    }
+
+    const user = await User.findById(userId);
+    
+    // Remove book if it already exists in recently viewed
+    user.recentlyViewed = user.recentlyViewed.filter(item => 
+      item.book.toString() !== bookId
+    );
+
+    // Add to beginning of recently viewed
+    user.recentlyViewed.unshift({
+      book: bookId,
+      viewedAt: new Date()
+    });
+
+    // Keep only last 50 viewed books
+    if (user.recentlyViewed.length > 50) {
+      user.recentlyViewed = user.recentlyViewed.slice(0, 50);
+    }
+
+    await user.save();
+
+    res.status(200).json({ message: 'Book added to recently viewed' });
+  } catch (error) {
+    console.error('Add to recently viewed error:', error);
+    res.status(500).json({ message: 'Server error adding book to recently viewed' });
+  }
+};
+
+// @desc    Get user's recently viewed books
+// @route   GET /api/users/recently-viewed
+export const getRecentlyViewed = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { limit = 20 } = req.query;
+
+    const user = await User.findById(userId)
+      .populate({
+        path: 'recentlyViewed.book',
+        populate: {
+          path: 'owner',
+          select: 'name avatar location'
+        }
+      });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Filter out books that no longer exist and limit results
+    const validRecentlyViewed = user.recentlyViewed
+      .filter(item => item.book !== null)
+      .slice(0, parseInt(limit));
+
+    res.status(200).json({
+      recentlyViewed: validRecentlyViewed,
+      total: validRecentlyViewed.length
+    });
+  } catch (error) {
+    console.error('Get recently viewed error:', error);
+    res.status(500).json({ message: 'Server error getting recently viewed books' });
+  }
+};
+
+// @desc    Update user reading preferences
+// @route   PUT /api/users/reading-preferences
+export const updateReadingPreferences = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const {
+      favoriteGenres,
+      favoriteAuthors,
+      readingGoals,
+      preferredLanguages,
+      bookFormats,
+      maxDistance
+    } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update reading preferences
+    if (favoriteGenres !== undefined) {
+      user.readingPreferences.favoriteGenres = favoriteGenres;
+    }
+    if (favoriteAuthors !== undefined) {
+      user.readingPreferences.favoriteAuthors = favoriteAuthors;
+    }
+    if (readingGoals !== undefined) {
+      user.readingPreferences.readingGoals = {
+        ...user.readingPreferences.readingGoals,
+        ...readingGoals
+      };
+    }
+    if (preferredLanguages !== undefined) {
+      user.readingPreferences.preferredLanguages = preferredLanguages;
+    }
+    if (bookFormats !== undefined) {
+      user.readingPreferences.bookFormats = bookFormats;
+    }
+    if (maxDistance !== undefined) {
+      user.readingPreferences.maxDistance = Math.max(1, Math.min(100, maxDistance));
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      message: 'Reading preferences updated successfully',
+      readingPreferences: user.readingPreferences
+    });
+  } catch (error) {
+    console.error('Update reading preferences error:', error);
+    res.status(500).json({ message: 'Server error updating reading preferences' });
+  }
+};
+
+// @desc    Get user reading preferences
+// @route   GET /api/users/reading-preferences
+export const getReadingPreferences = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId).select('readingPreferences');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      readingPreferences: user.readingPreferences || {
+        favoriteGenres: [],
+        favoriteAuthors: [],
+        readingGoals: {
+          booksPerMonth: 0,
+          currentStreak: 0,
+          longestStreak: 0
+        },
+        preferredLanguages: ['English'],
+        bookFormats: ['physical'],
+        maxDistance: 10
+      }
+    });
+  } catch (error) {
+    console.error('Get reading preferences error:', error);
+    res.status(500).json({ message: 'Server error getting reading preferences' });
+  }
+};
+
+// @desc    Get user statistics and impact metrics
+// @route   GET /api/users/statistics
+export const getUserStatistics = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Get user with statistics
+    const user = await User.findById(userId).select('statistics createdAt');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Calculate real-time statistics from database
+    const [
+      booksOwned,
+      booksShared,
+      borrowRequestsSent,
+      borrowRequestsReceived,
+      successfulBorrows,
+      successfulLends
+    ] = await Promise.all([
+      Book.countDocuments({ owner: userId }),
+      Book.countDocuments({ owner: userId, isAvailable: false }), // Currently borrowed books
+      BorrowRequest.countDocuments({ borrower: userId }),
+      BorrowRequest.countDocuments({ owner: userId }),
+      BorrowRequest.countDocuments({ borrower: userId, status: 'returned' }),
+      BorrowRequest.countDocuments({ owner: userId, status: 'returned' })
+    ]);
+
+    // Calculate impact metrics
+    const avgBookPrice = 15; // Average book price in dollars
+    const carbonPerBook = 2.5; // kg CO2 saved per book borrowed instead of bought
+
+    const totalBooksCirculated = successfulBorrows + successfulLends;
+    const moneySaved = successfulBorrows * avgBookPrice;
+    const carbonFootprintSaved = totalBooksCirculated * carbonPerBook;
+
+    // Calculate membership duration
+    const memberSince = user.createdAt;
+    const daysSinceMember = Math.floor((new Date() - memberSince) / (1000 * 60 * 60 * 24));
+
+    const statistics = {
+      // Book statistics
+      booksOwned,
+      booksShared,
+      booksReceived: successfulBorrows,
+      totalBorrowRequests: borrowRequestsSent,
+      successfulBorrows,
+      successfulLends,
+      
+      // Community impact
+      communityImpact: {
+        carbonFootprintSaved: Math.round(carbonFootprintSaved * 100) / 100,
+        moneySaved: Math.round(moneySaved * 100) / 100,
+        booksKeptInCirculation: totalBooksCirculated
+      },
+      
+      // Membership info
+      memberSince,
+      daysSinceMember,
+      
+      // Success rates
+      borrowSuccessRate: borrowRequestsSent > 0 ? 
+        Math.round((successfulBorrows / borrowRequestsSent) * 100) : 0,
+      lendSuccessRate: borrowRequestsReceived > 0 ? 
+        Math.round((successfulLends / borrowRequestsReceived) * 100) : 0
+    };
+
+    // Update user statistics in database
+    await User.findByIdAndUpdate(userId, {
+      'statistics.booksShared': booksShared,
+      'statistics.booksReceived': successfulBorrows,
+      'statistics.totalBorrowRequests': borrowRequestsSent,
+      'statistics.successfulBorrows': successfulBorrows,
+      'statistics.communityImpact.carbonFootprintSaved': carbonFootprintSaved,
+      'statistics.communityImpact.moneySaved': moneySaved,
+      'statistics.communityImpact.booksKeptInCirculation': totalBooksCirculated
+    });
+
+    res.status(200).json({ statistics });
+  } catch (error) {
+    console.error('Get user statistics error:', error);
+    res.status(500).json({ message: 'Server error getting user statistics' });
+  }
+};

@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import styled from 'styled-components';
 import { X, Crown, Star, Zap, Loader, TrendingUp, Users, Calendar, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';

@@ -819,3 +819,75 @@ export const deleteRequest = async (req, res) => {
     res.status(500).json({ message: 'Server error deleting request' });
   }
 };
+
+// @desc    Get complete book borrowing history
+// @route   GET /api/borrow/history
+export const getBookHistory = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    // Get all completed borrow requests (both as lender and borrower)
+    const history = await BorrowRequest.find({
+      $or: [
+        { owner: userId },
+        { borrower: userId }
+      ],
+      status: { $in: ['returned', 'denied'] } // Include completed transactions
+    })
+    .populate('book', 'title author coverImage category lendingDuration')
+    .populate('borrower', 'name avatar rating')
+    .populate('owner', 'name avatar rating')
+    .sort({ updatedAt: -1 }) // Most recent first
+    .limit(100); // Limit to last 100 transactions
+
+    // Format the history data
+    const formattedHistory = history.map(request => {
+      // Handle cases where populated fields might be null
+      const book = request.book || {};
+      const borrower = request.borrower || {};
+      const owner = request.owner || {};
+      
+      return {
+        _id: request._id,
+        book: {
+          _id: book._id,
+          title: book.title || 'Unknown Book',
+          author: book.author || 'Unknown Author',
+          coverImage: book.coverImage,
+          category: book.category,
+          lendingDuration: book.lendingDuration
+        },
+        borrower: {
+          _id: borrower._id,
+          name: borrower.name || 'Unknown User',
+          avatar: borrower.avatar,
+          rating: borrower.rating
+        },
+        owner: {
+          _id: owner._id,
+          name: owner.name || 'Unknown User',
+          avatar: owner.avatar,
+          rating: owner.rating
+        },
+        status: request.status,
+        role: request.owner && request.owner._id && request.owner._id.toString() === userId.toString() ? 'lender' : 'borrower',
+        requestedAt: request.createdAt,
+        completedAt: request.updatedAt,
+        borrowedAt: request.borrowedDate,
+        returnedAt: request.returnedDate || request.actualReturnDate,
+        lendingDuration: book.lendingDuration,
+        depositAmount: request.depositAmount || 0,
+        lendingFee: request.lendingFee || 0
+      };
+    });
+
+    res.json({
+      success: true,
+      history: formattedHistory,
+      total: formattedHistory.length
+    });
+  } catch (error) {
+    console.error('Get book history error:', error);
+    res.status(500).json({ message: 'Server error getting book history' });
+  }
+};

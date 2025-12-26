@@ -1,24 +1,73 @@
-import { memo } from 'react';
+import React, { memo, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { User, Calendar, Tag, Star, Wallet } from 'lucide-react';
 import { getFullImageUrl } from '../../utils/imageHelpers';
 import OptimizedImage from '../ui/OptimizedImage';
 import VerifiedBadge from '../ui/VerifiedBadge';
+import WishlistButton from './WishlistButton';
+import { AuthContext } from '../../context/AuthContext';
+import { usersAPI } from '../../utils/api';
 
-const BookCard = memo(({ book, onDelete }) => {
+const BookCard = memo(({ 
+  book, 
+  onDelete, 
+  onView, 
+  showWishlistButton = true, 
+  isInWishlist = false,
+  onWishlistChange 
+}) => {
+  const { user } = useContext(AuthContext);
   const coverImageUrl = getFullImageUrl(book.coverImage);
   const ownerAvatarUrl = book.owner?.avatar ? getFullImageUrl(book.owner.avatar) : null;
+
+  const handleBookClick = async () => {
+    // Add to recently viewed when user clicks on book
+    if (user && onView) {
+      try {
+        await usersAPI.addToRecentlyViewed(book._id);
+        onView();
+      } catch (error) {
+        console.error('Error adding to recently viewed:', error);
+      }
+    }
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 flex flex-col">
       {/* Book Cover Image */}
-      <Link to={`/books/${book._id}`} className="block">
+      <Link to={`/books/${book._id}`} className="block" onClick={handleBookClick}>
         <div className="relative h-72 overflow-hidden bg-gray-100">
-          {book.isBooked && (
-            <span className="absolute top-3 left-3 z-10 bg-red-600 text-white text-xs font-bold py-1 px-3 rounded-full shadow-lg">
-              Booked
-            </span>
+          {/* Status Badges */}
+          <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
+            {book.isBooked && (
+              <span className="bg-red-600 text-white text-xs font-bold py-1 px-3 rounded-full shadow-lg">
+                Booked
+              </span>
+            )}
+            {!book.isAvailable && (
+              <span className="bg-gray-600 text-white text-xs font-bold py-1 px-3 rounded-full shadow-lg">
+                Unavailable
+              </span>
+            )}
+            {book.forSelling && (
+              <span className="bg-green-600 text-white text-xs font-bold py-1 px-3 rounded-full shadow-lg">
+                For Sale
+              </span>
+            )}
+          </div>
+
+          {/* Wishlist Button */}
+          {showWishlistButton && user && book.owner?._id !== user._id && (
+            <div className="absolute top-3 right-3 z-10">
+              <WishlistButton
+                bookId={book._id}
+                isInWishlist={isInWishlist}
+                onWishlistChange={onWishlistChange}
+                size="md"
+              />
+            </div>
           )}
+
           <OptimizedImage
             src={coverImageUrl}
             alt={book.title}
@@ -107,9 +156,14 @@ const BookCard = memo(({ book, onDelete }) => {
         {/* View Details Button */}
         <Link
           to={`/books/${book._id}`}
-          className="mt-auto w-full block text-center bg-indigo-50 text-indigo-600 font-semibold py-3 px-4 rounded-xl hover:bg-indigo-100 transition-all duration-200"
+          onClick={handleBookClick}
+          className={`mt-auto w-full block text-center font-semibold py-3 px-4 rounded-xl transition-all duration-200 ${
+            book.isAvailable 
+              ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100' 
+              : 'bg-gray-50 text-gray-500 cursor-not-allowed'
+          }`}
         >
-          View Details
+          {book.isAvailable ? 'View Details' : 'Currently Unavailable'}
         </Link>
       </div>
     </div>

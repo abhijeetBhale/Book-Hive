@@ -10,6 +10,7 @@ import {
   markAsReturned,
   deleteRequest,
   getAllBorrowRequests,
+  getBookHistory,
   testReminders
 } from '../controllers/borrowController.js';
 import { protect } from '../middleware/auth.js';
@@ -20,6 +21,7 @@ router.post('/request/:bookId', protect, requestBook);
 router.get('/received-requests', protect, getReceivedRequests);
 router.get('/my-requests', protect, getMyRequests);
 router.get('/all-requests', protect, getAllBorrowRequests);
+router.get('/history', protect, getBookHistory);
 router.post('/test-reminders', protect, testReminders);
 router.put('/:requestId', protect, updateRequestStatus);
 router.put('/:requestId/borrowed', protect, markAsBorrowed);

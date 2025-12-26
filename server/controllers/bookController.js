@@ -4,6 +4,7 @@ import BorrowRequest from '../models/BorrowRequest.js';
 import { uploadToCloudinary } from '../config/cloudinary.js';
 import { awardPoints } from '../services/achievementService.js';
 import PriceValidationService from '../services/priceValidationService.js';
+import WishlistNotificationService from '../services/wishlistNotificationService.js';
 
 // @desc    Get all books with advanced search and filtering
 // @route   GET /api/books
@@ -405,6 +406,15 @@ export const createBook = async (req, res) => {
     // Award points for adding a book
     await awardPoints(req.user._id, 'book_added', 10);
     
+    // Check for wishlist notifications if book is available
+    if (createdBook.isAvailable && createdBook.forBorrowing) {
+      try {
+        await WishlistNotificationService.checkAllNotifications(createdBook._id);
+      } catch (notifError) {
+        console.error('Failed to check wishlist notifications:', notifError);
+      }
+    }
+    
     // Notify admins of new book
     try {
       const adminNotificationService = req.app.get('adminNotificationService');
@@ -520,6 +530,15 @@ export const updateBook = async (req, res) => {
       }
 
       const updatedBook = await book.save();
+      
+      // Check for wishlist notifications if book became available
+      if (updatedBook.isAvailable && updatedBook.forBorrowing && !book.isAvailable) {
+        try {
+          await WishlistNotificationService.checkAllNotifications(updatedBook._id);
+        } catch (notifError) {
+          console.error('Failed to check wishlist notifications:', notifError);
+        }
+      }
       
       // Notify admins of book update
       try {
@@ -926,5 +945,239 @@ export const getBooksForSale = async (req, res) => {
   } catch (error) {
     console.error('Get books for sale error:', error);
     res.status(500).json({ message: 'Server error getting books for sale', error: error.message });
+  }
+};
+// @desc    Get enhanced search filters with real data
+// @route   GET /api/books/enhanced-filters
+export const getEnhancedFilters = async (req, res) => {
+  try {
+    const [
+      categories,
+      authors,
+      conditions,
+      languages,
+      genres,
+      tags,
+      yearRange,
+      priceRange
+    ] = await Promise.all([
+      Book.distinct('category').then(cats => cats.filter(Boolean).sort()),
+      Book.distinct('author').then(authors => authors.filter(Boolean).sort()),
+      Book.distinct('condition').then(conds => conds.filter(Boolean)),
+      Book.distinct('language').then(langs => langs.filter(Boolean).sort()),
+      Book.aggregate([
+        { $unwind: '$genre' },
+        { $group: { _id: '$genre' } },
+        { $sort: { _id: 1 } }
+      ]).then(result => result.map(item => item._id).filter(Boolean)),
+      Book.aggregate([
+        { $unwind: '$tags' },
+        { $group: { _id: '$tags' } },
+        { $sort: { _id: 1 } }
+      ]).then(result => result.map(item => item._id).filter(Boolean)),
+      Book.aggregate([
+        {
+          $group: {
+            _id: null,
+            minYear: { $min: '$publicationYear' },
+            maxYear: { $max: '$publicationYear' }
+          }
+        }
+      ]),
+      Book.aggregate([
+        { $match: { forSelling: true, sellingPrice: { $gt: 0 } } },
+        {
+          $group: {
+            _id: null,
+            minPrice: { $min: '$sellingPrice' },
+            maxPrice: { $max: '$sellingPrice' }
+          }
+        }
+      ])
+    ]);
+
+    // Get book counts by category for better UX
+    const categoryStats = await Book.aggregate([
+      { $match: { isAvailable: true } },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+
+    const response = {
+      categories: categories.map(cat => {
+        const stat = categoryStats.find(s => s._id === cat);
+        return {
+          name: cat,
+          count: stat ? stat.count : 0
+        };
+      }),
+      authors: authors.slice(0, 100), // Limit to top 100 authors
+      conditions: conditions.length > 0 ? conditions : 
+        ['New', 'Like New', 'Very Good', 'Good', 'Fair', 'Poor'],
+      languages: languages.length > 0 ? languages : 
+        ['English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Other'],
+      genres: genres.slice(0, 50), // Limit to top 50 genres
+      tags: tags.slice(0, 100), // Limit to top 100 tags
+      yearRange: yearRange[0] || { 
+        minYear: 1800, 
+        maxYear: new Date().getFullYear() 
+      },
+      priceRange: priceRange[0] || { 
+        minPrice: 0, 
+        maxPrice: 100 
+      },
+      // Additional filter options
+      availability: [
+        { name: 'Available', value: 'true' },
+        { name: 'Not Available', value: 'false' }
+      ],
+      bookTypes: [
+        { name: 'For Borrowing', value: 'borrowing' },
+        { name: 'For Sale', value: 'selling' },
+        { name: 'Both', value: 'both' }
+      ],
+      sortOptions: [
+        { name: 'Newest First', value: 'createdAt_desc' },
+        { name: 'Oldest First', value: 'createdAt_asc' },
+        { name: 'Title A-Z', value: 'title_asc' },
+        { name: 'Title Z-A', value: 'title_desc' },
+        { name: 'Author A-Z', value: 'author_asc' },
+        { name: 'Author Z-A', value: 'author_desc' },
+        { name: 'Most Popular', value: 'viewCount_desc' },
+        { name: 'Most Borrowed', value: 'borrowCount_desc' },
+        { name: 'Price Low to High', value: 'sellingPrice_asc' },
+        { name: 'Price High to Low', value: 'sellingPrice_desc' }
+      ]
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Get enhanced filters error:', error);
+    res.status(500).json({ 
+      message: 'Server error getting enhanced filters',
+      error: error.message 
+    });
+  }
+};
+
+// @desc    Get personalized book recommendations
+// @route   GET /api/books/recommendations
+export const getPersonalizedRecommendations = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { limit = 20 } = req.query;
+    const limitNum = Math.min(50, Number(limit) || 20);
+
+    // Get user's reading preferences
+    const user = await User.findById(userId).select('readingPreferences wishlist recentlyViewed');
+    
+    let recommendations = [];
+    
+    if (user && user.readingPreferences) {
+      const { favoriteGenres, favoriteAuthors, maxDistance } = user.readingPreferences;
+      
+      // Build recommendation query
+      let query = {
+        owner: { $ne: userId },
+        isAvailable: true,
+        forBorrowing: true
+      };
+
+      // Exclude books already in wishlist
+      if (user.wishlist && user.wishlist.length > 0) {
+        query._id = { $nin: user.wishlist };
+      }
+
+      // Exclude recently viewed books (to show fresh content)
+      if (user.recentlyViewed && user.recentlyViewed.length > 0) {
+        const recentlyViewedIds = user.recentlyViewed.slice(0, 10).map(item => item.book);
+        query._id = query._id ? 
+          { ...query._id, $nin: [...(query._id.$nin || []), ...recentlyViewedIds] } :
+          { $nin: recentlyViewedIds };
+      }
+
+      // Preference-based filters
+      const preferenceFilters = [];
+      
+      if (favoriteGenres && favoriteGenres.length > 0) {
+        preferenceFilters.push({ genre: { $in: favoriteGenres } });
+      }
+      
+      if (favoriteAuthors && favoriteAuthors.length > 0) {
+        preferenceFilters.push({ author: { $in: favoriteAuthors } });
+      }
+
+      if (preferenceFilters.length > 0) {
+        query.$or = preferenceFilters;
+      }
+
+      // Get location-based recommendations if user has location
+      if (user.location && user.location.coordinates && maxDistance) {
+        const aggregationPipeline = [
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'owner',
+              foreignField: '_id',
+              as: 'ownerData'
+            }
+          },
+          {
+            $match: {
+              ...query,
+              'ownerData.location': {
+                $near: {
+                  $geometry: { 
+                    type: 'Point', 
+                    coordinates: user.location.coordinates 
+                  },
+                  $maxDistance: (maxDistance || 10) * 1000 // Convert km to meters
+                }
+              }
+            }
+          },
+          { $limit: limitNum },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'owner',
+              foreignField: '_id',
+              as: 'owner',
+              pipeline: [{ $project: { name: 1, avatar: 1, location: 1, isVerified: 1 } }]
+            }
+          },
+          { $unwind: '$owner' }
+        ];
+
+        recommendations = await Book.aggregate(aggregationPipeline);
+      } else {
+        // Fallback to regular query without location
+        recommendations = await Book.find(query)
+          .populate('owner', 'name avatar location isVerified')
+          .sort({ viewCount: -1, borrowCount: -1, createdAt: -1 })
+          .limit(limitNum);
+      }
+    }
+
+    // If no preferences or no results, show popular books
+    if (recommendations.length === 0) {
+      recommendations = await Book.find({
+        owner: { $ne: userId },
+        isAvailable: true,
+        forBorrowing: true
+      })
+      .populate('owner', 'name avatar location isVerified')
+      .sort({ borrowCount: -1, viewCount: -1 })
+      .limit(limitNum);
+    }
+
+    res.json({
+      recommendations,
+      count: recommendations.length,
+      basedOn: user?.readingPreferences ? 'preferences' : 'popularity'
+    });
+  } catch (error) {
+    console.error('Get personalized recommendations error:', error);
+    res.status(500).json({ message: 'Server error getting recommendations' });
   }
 };

@@ -12,7 +12,9 @@ import {
   getTrendingBooks,
   getFilterOptions,
   validateBookPrice,
-  getBooksForSale
+  getBooksForSale,
+  getEnhancedFilters,
+  getPersonalizedRecommendations
 } from '../controllers/bookController.js';
 import { protect } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
@@ -24,8 +26,10 @@ router.route('/').get(getAllBooks).post(protect, upload.single('coverImage'), cr
 // Search and filter routes
 router.get('/search/isbn/:isbn', searchByISBN);
 router.get('/suggestions', protect, getBookSuggestions);
+router.get('/recommendations', protect, getPersonalizedRecommendations);
 router.get('/trending', getTrendingBooks);
 router.get('/filters', getFilterOptions);
+router.get('/enhanced-filters', getEnhancedFilters);
 router.get('/for-sale', getBooksForSale);
 router.post('/validate-price', protect, validateBookPrice);
 
