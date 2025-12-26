@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { X, Calendar, MapPin, Users, Tag, Link as LinkIcon, Mail, Phone, Loader } from 'lucide-react';
 import { organizerAPI } from '../../utils/api';

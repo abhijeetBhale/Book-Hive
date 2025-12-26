@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { X, Loader, CheckCircle, AlertCircle } from 'lucide-react';
 import { eventsAPI } from '../../utils/api';

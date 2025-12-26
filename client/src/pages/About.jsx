@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { BookOpen, Users, Heart, Globe, ArrowLeft, Target, Eye, Lightbulb } from 'lucide-react';
