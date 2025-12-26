@@ -58,7 +58,9 @@ export const checkServerHealth = async () => {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // Reduced to 30 seconds
+    const timeoutId = setTimeout(() => {
+      controller.abort('Health check timeout');
+    }, 15000); // Reduced to 15 seconds
     
     const response = await fetch(HEALTH_CHECK_URL, {
       method: 'GET',
@@ -66,19 +68,32 @@ export const checkServerHealth = async () => {
       headers: {
         'Content-Type': 'application/json',
       },
+      // Add cache busting to prevent cached responses
+      cache: 'no-cache'
     });
     
     clearTimeout(timeoutId);
     
     if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Server health check passed:', data);
       isServerAwake = true;
       setCachedServerStatus(true);
       return true;
+    } else {
+      console.warn('⚠️ Server health check failed with status:', response.status);
+      setCachedServerStatus(false);
+      return false;
     }
-    setCachedServerStatus(false);
-    return false;
   } catch (error) {
-    console.error('Health check failed:', error.message);
+    // Handle different types of errors more gracefully
+    if (error.name === 'AbortError') {
+      console.warn('⚠️ Health check timed out - server may be starting up');
+    } else if (error.message.includes('Failed to fetch')) {
+      console.warn('⚠️ Network error during health check - server may not be ready');
+    } else {
+      console.error('❌ Health check failed:', error.message);
+    }
     setCachedServerStatus(false);
     return false;
   }
@@ -106,23 +121,45 @@ export const wakeupServer = async () => {
     return wakeupPromise;
   }
   
-  console.log('🔄 Waking up server...');
+  console.log('🔄 Checking server status...');
   
-  wakeupPromise = checkServerHealth()
-    .then(success => {
+  wakeupPromise = (async () => {
+    // For local development, skip health check and assume server is ready
+    if (API_BASE_URL.includes('localhost')) {
+      console.log('✅ Local development detected - skipping health check');
+      isServerAwake = true;
+      setCachedServerStatus(true);
       wakeupPromise = null;
+      return true;
+    }
+    
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      console.log(`🔄 Health check attempt ${attempts}/${maxAttempts}...`);
+      
+      const success = await checkServerHealth();
+      
       if (success) {
         console.log('✅ Server is ready!');
-      } else {
-        console.warn('⚠️ Server health check failed, but continuing anyway...');
+        wakeupPromise = null;
+        return true;
       }
-      return success;
-    })
-    .catch(error => {
-      wakeupPromise = null;
-      console.error('❌ Server wakeup failed:', error);
-      return false;
-    });
+      
+      // Wait before retrying (except on last attempt)
+      if (attempts < maxAttempts) {
+        console.log(`⏳ Waiting 2 seconds before retry...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+    
+    // If all attempts failed, still continue but log warning
+    console.warn('⚠️ Server health check failed after all attempts, but continuing anyway...');
+    wakeupPromise = null;
+    return false;
+  })();
   
   return wakeupPromise;
 };

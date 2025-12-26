@@ -4,10 +4,13 @@ import { wakeupServer } from '../utils/serverWakeup';
 
 const ServerWakeupLoader = ({ onReady }) => {
   const [status, setStatus] = useState('checking');
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
 
   useEffect(() => {
     const wakeup = async () => {
       try {
+        setStatus('checking');
         const success = await wakeupServer();
         
         if (success) {
@@ -16,17 +19,38 @@ const ServerWakeupLoader = ({ onReady }) => {
             onReady?.(true);
           }, 500);
         } else {
-          setStatus('error');
-          setTimeout(wakeup, 5000);
+          // If health check failed but we haven't exceeded max retries
+          if (retryCount < maxRetries) {
+            setStatus('retrying');
+            setRetryCount(prev => prev + 1);
+            setTimeout(wakeup, 3000); // Wait 3 seconds before retry
+          } else {
+            // Max retries exceeded, continue anyway
+            console.warn('⚠️ Max retries exceeded, continuing without server confirmation');
+            setStatus('ready');
+            setTimeout(() => {
+              onReady?.(true);
+            }, 500);
+          }
         }
       } catch (error) {
-        setStatus('error');
-        setTimeout(wakeup, 5000);
+        console.error('❌ Server wakeup error:', error);
+        if (retryCount < maxRetries) {
+          setStatus('retrying');
+          setRetryCount(prev => prev + 1);
+          setTimeout(wakeup, 3000);
+        } else {
+          // Continue anyway after max retries
+          setStatus('ready');
+          setTimeout(() => {
+            onReady?.(true);
+          }, 500);
+        }
       }
     };
 
     wakeup();
-  }, [onReady]);
+  }, [onReady, retryCount]);
 
   if (status === 'ready') {
     return null;
@@ -43,6 +67,10 @@ const ServerWakeupLoader = ({ onReady }) => {
           <div className="book__pg book__pg--4" />
           <div className="book__pg book__pg--5" />
         </div>
+        <LoaderText>
+          {status === 'checking' && 'Waking up server...'}
+          {status === 'retrying' && `Retrying... (${retryCount}/${maxRetries})`}
+        </LoaderText>
       </LoaderContainer>
     </LoaderOverlay>
   );
@@ -62,6 +90,11 @@ const LoaderOverlay = styled.div`
 `;
 
 const LoaderContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+
   .book,
   .book__pg-shadow,
   .book__pg {
@@ -386,6 +419,14 @@ const LoaderContainer = styled.div`
       transform: translate3d(0, 0, 1px) rotateY(0);
     }
   }
+`;
+
+const LoaderText = styled.div`
+  color: #4F46E5;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 1rem;
 `;
 
 export default ServerWakeupLoader;

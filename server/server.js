@@ -133,6 +133,14 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Test endpoint to debug routing issues
+app.get('/api/test', (req, res) => {
+  res.status(200).json({ 
+    message: 'Test endpoint working',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Mount routers
 app.use('/api/auth', authRoutes);
 app.use('/api/books', bookRoutes);
