@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { X, Shield, Loader, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';

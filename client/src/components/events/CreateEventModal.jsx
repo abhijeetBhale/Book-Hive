@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import { X, Calendar, MapPin, Users, Image, Tag, Link as LinkIcon, Mail, Phone, Loader } from 'lucide-react';
 import { organizerAPI } from '../../utils/api';
