@@ -112,7 +112,6 @@ const EditEventModal = ({ isOpen, onClose, onSuccess, event }) => {
         };
       }
 
-      console.log('Updating event with data:', eventData);
       await organizerAPI.updateEvent(event._id, eventData);
       toast.success('Event updated successfully!');
       onSuccess();

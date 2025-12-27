@@ -45,7 +45,6 @@ const Navbar = () => {
 
     const token = localStorage.getItem('token');
     if (!token) {
-      console.warn('No token available for WebSocket connection');
       return;
     }
 

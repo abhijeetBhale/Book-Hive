@@ -179,7 +179,6 @@ api.interceptors.response.use(
     // Handle timeout errors with retry (for cold starts)
     if (error.code === 'ECONNABORTED' && !originalRequest._retry) {
       originalRequest._retry = true;
-      console.log('Request timed out, retrying with extended timeout...');
       originalRequest.timeout = 90000; // 90 seconds for retry
       return api(originalRequest);
     }

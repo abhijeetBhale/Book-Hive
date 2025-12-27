@@ -390,7 +390,9 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
         setSearchResults(books);
         setShowResults(true);
       }
-    } catch (error) { console.error('Error searching Google Books:', error); toast.error('Failed to search books. Please try again.'); }
+    } catch (error) { 
+      toast.error('Failed to search books. Please try again.'); 
+    }
     finally { setIsSearching(false); }
   };
 
@@ -623,14 +625,12 @@ const BookForm = ({ onSubmit, isSubmitting, initialData, selectedGoogleBook, set
               toast.success('Camera ready! Position your book cover in the frame.');
             })
             .catch(err => {
-              console.error('Error playing video:', err);
               setCameraLoading(false);
               toast.error('Error starting camera preview.');
             });
         }
       }, 100);
     } catch (error) {
-      console.error('Error accessing camera:', error);
       setCameraLoading(false);
       setShowCamera(false);
 

@@ -246,7 +246,6 @@ const Home = () => {
         
         // Ensure we have a valid response and data is an array
         if (!response || !response.data) {
-          console.warn('No data received from books API');
           setPlatformBooks([]);
           setBooksLoaded(true);
           return;

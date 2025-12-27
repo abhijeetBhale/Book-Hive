@@ -25,7 +25,6 @@ export const OnlineStatusProvider = ({ children }) => {
 
         const token = localStorage.getItem('token');
         if (!token) {
-            console.warn('No token available for online status WebSocket connection');
             return;
         }
 

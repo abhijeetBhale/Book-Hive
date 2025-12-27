@@ -1508,7 +1508,6 @@ const MessagesPage = () => {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
       setSocketConnected(false);
     });
 
@@ -1558,7 +1557,7 @@ const MessagesPage = () => {
         try {
           await messagesAPI.getConversationWith(currentOther._id);
         } catch (error) {
-          console.error("Failed to mark conversation as read", error);
+          // Failed to mark conversation as read
         }
       }
 
@@ -1567,7 +1566,7 @@ const MessagesPage = () => {
         const { data } = await messagesAPI.getConversations();
         setConversations(data);
       } catch (error) {
-        console.error("Failed to refresh conversations", error);
+        // Failed to refresh conversations
       }
     });
 
@@ -1597,7 +1596,7 @@ const MessagesPage = () => {
         const { data } = await messagesAPI.getConversations();
         setConversations(data);
       } catch (error) {
-        console.error('Failed to refresh conversations after clear:', error);
+        // Failed to refresh conversations after clear
       }
     });
 
@@ -1648,7 +1647,7 @@ const MessagesPage = () => {
         const { data } = await messagesAPI.getConversations();
         setConversations(data);
       } catch (error) {
-        console.error('Failed to refresh conversations after unblock:', error);
+        // Failed to refresh conversations after unblock
       }
     });
 

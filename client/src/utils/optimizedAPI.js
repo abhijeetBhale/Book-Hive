@@ -108,7 +108,6 @@ const getCacheDuration = (methodName) => {
  */
 export const clearCachePattern = (pattern) => {
   // This would need to be implemented based on your cache structure
-  console.log(`Clearing cache for pattern: ${pattern}`);
 };
 
 /**

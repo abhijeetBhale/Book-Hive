@@ -960,16 +960,13 @@ export default function Broadcasts() {
   const handleConfirmResponder = async (broadcastId, responderId, responderName) => {
     try {
       const token = localStorage.getItem('token');
-      console.log('Confirming responder:', { broadcastId, responderId, responderName });
       
       const response = await fetch(`${API_URL}/broadcasts/${broadcastId}/confirm/${responderId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      console.log('Response status:', response.status);
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (response.ok) {
         toast.success(`Confirmed! Opening chat with ${responderName}...`);

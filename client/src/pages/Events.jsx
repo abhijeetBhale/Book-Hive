@@ -72,7 +72,6 @@ const Events = () => {
       }
 
       const response = await eventsAPI.getPublicEvents(params);
-      console.log('📡 Full API Response:', response);
       
       // The API returns { success, data, pagination }
       // So we need to access response.data for the events array
@@ -83,17 +82,10 @@ const Events = () => {
         eventsData = response;
       }
       
-      console.log('📊 Events data:', eventsData);
-      console.log('📊 Number of events:', eventsData.length);
-      
       setEvents(eventsData);
       
       if (eventsData.length === 0) {
-        console.log('⚠️ No events returned from API');
-        console.log('Query params:', params);
-      } else {
-        console.log('✅ Events loaded successfully:');
-        eventsData.forEach(e => console.log(`   - ${e.title}`));
+        // No events returned from API
       }
     } catch (error) {
       console.error('Failed to fetch events:', error);

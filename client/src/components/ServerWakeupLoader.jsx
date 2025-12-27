@@ -26,7 +26,6 @@ const ServerWakeupLoader = ({ onReady }) => {
             setTimeout(wakeup, 3000); // Wait 3 seconds before retry
           } else {
             // Max retries exceeded, continue anyway
-            console.warn('⚠️ Max retries exceeded, continuing without server confirmation');
             setStatus('ready');
             setTimeout(() => {
               onReady?.(true);

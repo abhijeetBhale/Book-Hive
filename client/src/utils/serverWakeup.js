@@ -76,7 +76,6 @@ export const checkServerHealth = async () => {
     
     if (response.ok) {
       const data = await response.json();
-      console.log('✅ Server health check passed:', data);
       isServerAwake = true;
       setCachedServerStatus(true);
       return true;
@@ -121,12 +120,9 @@ export const wakeupServer = async () => {
     return wakeupPromise;
   }
   
-  console.log('🔄 Checking server status...');
-  
   wakeupPromise = (async () => {
     // For local development, skip health check and assume server is ready
     if (API_BASE_URL.includes('localhost')) {
-      console.log('✅ Local development detected - skipping health check');
       isServerAwake = true;
       setCachedServerStatus(true);
       wakeupPromise = null;
@@ -138,19 +134,16 @@ export const wakeupServer = async () => {
     
     while (attempts < maxAttempts) {
       attempts++;
-      console.log(`🔄 Health check attempt ${attempts}/${maxAttempts}...`);
       
       const success = await checkServerHealth();
       
       if (success) {
-        console.log('✅ Server is ready!');
         wakeupPromise = null;
         return true;
       }
       
       // Wait before retrying (except on last attempt)
       if (attempts < maxAttempts) {
-        console.log(`⏳ Waiting 2 seconds before retry...`);
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }

@@ -110,7 +110,6 @@ const Profile = () => {
             rating: data.rating // Only update the rating field
           }));
         } catch (error) {
-          console.error('Failed to update rating data:', error);
           // Fallback to full profile refresh if needed
           fetchProfile();
         }
@@ -154,7 +153,6 @@ const Profile = () => {
           await notificationsAPI.markRead();
           window.dispatchEvent(new Event('notifications-read'));
         } catch (error) {
-          console.error('Profile: Error marking notifications as read:', error);
           // Don't show error to user as this is not critical functionality
         }
       } catch (error) {
@@ -258,7 +256,6 @@ const Profile = () => {
 
       setAccountActivity(processedActivity);
     } catch (error) {
-      console.error('Failed to fetch account activity:', error);
       // Don't show error toast as the API now exists
       // Just set empty array if there's an error
       setAccountActivity([]);

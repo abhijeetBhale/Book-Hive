@@ -37,7 +37,7 @@ function buildItems(pool, seg) {
   }
 
   if (pool.length > totalSlots) {
-    console.warn(`[DomeGallery] Provided image count (${pool.length}) exceeds available tiles (${totalSlots}). Some images will not be shown.`);
+    // Provided image count exceeds available tiles, some images will not be shown
   }
 
   const normalizedImages = pool.map(image => {
