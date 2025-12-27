@@ -1218,7 +1218,7 @@ const StyledWrapper = styled.div`
     align-items: stretch;
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    min-height: 160px;
+    min-height: 280px;
 
     &:hover {
       transform: translateY(-4px);
@@ -1235,12 +1235,12 @@ const StyledWrapper = styled.div`
     }
 
     @media (min-width: 768px) {
-      min-height: 180px;
+      min-height: 320px;
     }
   }
 
   .book-cover-container {
-    width: 80px;
+    width: 180px;
     height: 100%;
     flex-shrink: 0;
     overflow: hidden;
@@ -1249,7 +1249,7 @@ const StyledWrapper = styled.div`
     background-color: #f3f4f6;
     
     @media (min-width: 768px) {
-      width: 100px;
+      width: 220px;
     }
   }
 
