@@ -7,9 +7,8 @@ import path from 'path'
 export default defineConfig({
   plugins: [
     react({
-      // Use classic runtime to avoid createContext issues
-      jsxRuntime: 'classic',
-      jsxImportSource: undefined,
+      // Use automatic runtime (default for React 18)
+      jsxRuntime: 'automatic',
       // Ensure React is properly imported
       include: "**/*.{jsx,tsx}",
     }), 

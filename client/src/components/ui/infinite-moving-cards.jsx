@@ -1,5 +1,5 @@
 import { cn } from "../../lib/utils";
-import React, { useEffect, useState, Fragment } from "react";
+import React, { useEffect, useState, Fragment, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faStar, faStarHalfAlt } from "@fortawesome/free-solid-svg-icons";
 import VerifiedBadge from './VerifiedBadge';
@@ -42,10 +42,10 @@ export const InfiniteMovingCards = ({
   pauseOnHover = true,
   className
 }) => {
-  const containerRef = React.useRef(null);
-  const scrollerRef = React.useRef(null);
+  const containerRef = useRef(null);
+  const scrollerRef = useRef(null);
   const [start, setStart] = useState(false);
-  const isDuplicatedRef = React.useRef(false);
+  const isDuplicatedRef = useRef(false);
 
   useEffect(() => {
     if (!containerRef.current || !scrollerRef.current) return;
