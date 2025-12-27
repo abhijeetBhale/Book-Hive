@@ -31,7 +31,7 @@ const DepositPaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) => {
 
     try {
       // Create order on backend
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/create-deposit-order`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/payments/create-deposit-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,7 +58,7 @@ const DepositPaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) => {
         handler: async function (response) {
           try {
             // Verify payment on backend
-            const verifyResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/verify-deposit-payment`, {
+            const verifyResponse = await fetch(`${import.meta.env.VITE_API_URL}/payments/verify-deposit-payment`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

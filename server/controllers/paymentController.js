@@ -372,7 +372,13 @@ export const createLendingFeeOrder = async (req, res) => {
     const { borrowRequestId } = req.body;
     const userId = req.user._id;
 
+    console.log('🔄 Creating lending fee order for:', {
+      borrowRequestId,
+      userId: userId.toString()
+    });
+
     if (!razorpay) {
+      console.error('❌ Razorpay not initialized');
       return res.status(503).json({ 
         message: 'Payment service is not configured. Please contact support.',
         error: 'Razorpay not initialized'
@@ -384,14 +390,28 @@ export const createLendingFeeOrder = async (req, res) => {
       .populate('owner', 'name email');
     
     if (!borrowRequest) {
+      console.error('❌ Borrow request not found:', borrowRequestId);
       return res.status(404).json({ message: 'Borrow request not found' });
     }
 
+    console.log('📚 Borrow request found:', {
+      id: borrowRequest._id,
+      status: borrowRequest.status,
+      borrower: borrowRequest.borrower.toString(),
+      book: borrowRequest.book?.title,
+      lendingFee: borrowRequest.book?.lendingFee
+    });
+
     if (borrowRequest.borrower.toString() !== userId.toString()) {
+      console.error('❌ Unauthorized access:', {
+        requestBorrower: borrowRequest.borrower.toString(),
+        currentUser: userId.toString()
+      });
       return res.status(403).json({ message: 'Not authorized. Only the borrower can pay the lending fee.' });
     }
 
     if (borrowRequest.status !== 'approved') {
+      console.error('❌ Invalid status:', borrowRequest.status);
       return res.status(400).json({ 
         message: 'Borrow request must be approved before paying lending fee',
         currentStatus: borrowRequest.status
@@ -402,13 +422,22 @@ export const createLendingFeeOrder = async (req, res) => {
     const book = borrowRequest.book;
     const lendingFee = book.lendingFee || 0;
 
+    console.log('💰 Lending fee details:', {
+      bookId: book._id,
+      bookTitle: book.title,
+      lendingFee,
+      hasLendingFee: lendingFee > 0
+    });
+
     if (lendingFee <= 0) {
+      console.error('❌ No lending fee:', lendingFee);
       return res.status(400).json({ 
         message: 'This book has no lending fee. Payment not required.' 
       });
     }
 
     if (borrowRequest.lendingFeeStatus === 'paid') {
+      console.error('❌ Already paid:', borrowRequest.lendingFeeStatus);
       return res.status(400).json({ 
         message: 'Lending fee has already been paid for this request' 
       });
@@ -417,6 +446,13 @@ export const createLendingFeeOrder = async (req, res) => {
     // Calculate platform fee and owner earnings
     const platformFee = Math.round(lendingFee * PLATFORM_COMMISSION_RATE * 100) / 100; // Round to 2 decimals
     const ownerEarnings = Math.round((lendingFee - platformFee) * 100) / 100;
+
+    console.log('🧮 Fee calculation:', {
+      lendingFee,
+      platformFee,
+      ownerEarnings,
+      commissionRate: PLATFORM_COMMISSION_RATE
+    });
 
     // Update borrow request with fee information
     borrowRequest.lendingFee = lendingFee;
@@ -444,7 +480,21 @@ export const createLendingFeeOrder = async (req, res) => {
       }
     };
 
+    console.log('🎫 Creating Razorpay order with options:', {
+      amount,
+      currency: options.currency,
+      receipt: options.receipt,
+      notesCount: Object.keys(options.notes).length
+    });
+
     const order = await razorpay.orders.create(options);
+
+    console.log('✅ Razorpay order created successfully:', {
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      status: order.status
+    });
 
     res.json({
       success: true,
@@ -459,7 +509,7 @@ export const createLendingFeeOrder = async (req, res) => {
       ownerEarnings: ownerEarnings
     });
   } catch (error) {
-    console.error('Create lending fee order error:', error);
+    console.error('❌ Create lending fee order error:', error);
     res.status(500).json({ 
       message: 'Failed to create payment order',
       error: error.message 

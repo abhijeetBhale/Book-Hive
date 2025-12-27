@@ -30,8 +30,14 @@ const LendingFeePaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) =
     setIsProcessing(true);
 
     try {
+      console.log('🔄 Starting payment process...', {
+        borrowRequestId: borrowRequest._id,
+        lendingFee: borrowRequest.lendingFee,
+        bookTitle: borrowRequest.book?.title
+      });
+
       // Create order on backend
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payment/create-lending-fee-order`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/payment/create-lending-fee-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -42,11 +48,20 @@ const LendingFeePaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) =
         })
       });
 
+      console.log('📡 Backend response status:', response.status);
       const data = await response.json();
+      console.log('📡 Backend response data:', data);
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to create order');
       }
+
+      console.log('🎫 Creating Razorpay options...', {
+        orderId: data.order.id,
+        amount: data.order.amount,
+        currency: data.order.currency,
+        key: data.key
+      });
 
       const options = {
         key: data.key,
@@ -56,9 +71,14 @@ const LendingFeePaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) =
         description: `Lending Fee for "${borrowRequest.book?.title}"`,
         order_id: data.order.id,
         handler: async function (response) {
+          console.log('✅ Payment successful, verifying...', {
+            orderId: response.razorpay_order_id,
+            paymentId: response.razorpay_payment_id
+          });
+
           try {
             // Verify payment on backend
-            const verifyResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/payment/verify-lending-fee-payment`, {
+            const verifyResponse = await fetch(`${import.meta.env.VITE_API_URL}/payment/verify-lending-fee-payment`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -73,6 +93,7 @@ const LendingFeePaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) =
             });
 
             const verifyData = await verifyResponse.json();
+            console.log('🔍 Verification response:', verifyData);
 
             if (verifyResponse.ok) {
               toast.success('✅ Lending fee paid successfully! The owner has been credited.', {
@@ -88,7 +109,7 @@ const LendingFeePaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) =
               throw new Error(verifyData.message || 'Payment verification failed');
             }
           } catch (error) {
-            console.error('Payment verification error:', error);
+            console.error('❌ Payment verification error:', error);
             toast.error(error.message || 'Payment verification failed. Please contact support.');
           } finally {
             setIsProcessing(false);
@@ -96,6 +117,7 @@ const LendingFeePaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) =
         },
         modal: {
           ondismiss: function () {
+            console.log('❌ Payment modal dismissed');
             setIsProcessing(false);
             toast('Payment cancelled', { icon: 'ℹ️' });
           }
@@ -105,11 +127,12 @@ const LendingFeePaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) =
         }
       };
 
+      console.log('🚀 Opening Razorpay modal...');
       const razorpay = new window.Razorpay(options);
       razorpay.open();
 
     } catch (error) {
-      console.error('Payment error:', error);
+      console.error('❌ Payment error:', error);
       toast.error(error.message || 'Failed to initiate payment. Please try again.');
       setIsProcessing(false);
     }
