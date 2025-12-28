@@ -1,7 +1,8 @@
 import React, { memo, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { User, Calendar, Tag, Star, Wallet } from 'lucide-react';
+import { User, Calendar, Tag, Star, Wallet, Clock } from 'lucide-react';
 import { getFullImageUrl } from '../../utils/imageHelpers';
+import { formatRelativeTime } from '../../utils/dateHelpers';
 import OptimizedImage from '../ui/OptimizedImage';
 import VerifiedBadge from '../ui/VerifiedBadge';
 import WishlistButton from './WishlistButton';
@@ -149,6 +150,16 @@ const BookCard = memo(({
             <Wallet className="h-5 w-5 text-green-600 flex-shrink-0" />
             <span className="text-gray-600 text-sm font-semibold">
               Lending Fee: <span className="text-green-600">₹{book.lendingFee.toFixed(2)}</span>
+            </span>
+          </div>
+        )}
+
+        {/* Upload Time */}
+        {book.createdAt && (
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="h-5 w-5 text-blue-600 flex-shrink-0" />
+            <span className="text-gray-600 text-sm">
+              Available {formatRelativeTime(book.createdAt)}
             </span>
           </div>
         )}

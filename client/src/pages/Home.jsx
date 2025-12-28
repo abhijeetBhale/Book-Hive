@@ -1219,7 +1219,7 @@ const StyledWrapper = styled.div`
     align-items: center;
     padding: 1.25rem 2.5rem;
     font-weight: 700;
-    border-radius: 1rem;
+    border-radius: 9999px;
     transition: all 0.3s ease;
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     font-size: 1.125rem;
@@ -1656,7 +1656,7 @@ const StyledWrapper = styled.div`
       color: white;
       border: none;
       padding: 0.75rem 1.5rem;
-      border-radius: 0.5rem;
+      border-radius: 9999px;
       font-weight: 600;
       font-size: 0.95rem;
       cursor: pointer;
@@ -1731,7 +1731,7 @@ const StyledWrapper = styled.div`
       gap: 0.75rem;
       background-color: white;
       border: 1px solid #e5e7eb;
-      border-radius: 0.75rem;
+      border-radius: 9999px;
       padding: 0.875rem; /* Taller button */
       font-size: 0.95rem;
       font-weight: 600;
@@ -1772,7 +1772,7 @@ const StyledWrapper = styled.div`
     .mock-input-field {
       background-color: #f9fafb;
       border: 1px solid #e5e7eb;
-      border-radius: 0.75rem;
+      border-radius: 9999px;
       padding: 0.875rem 1rem; /* Taller input */
       display: flex;
       align-items: center;
@@ -1793,7 +1793,7 @@ const StyledWrapper = styled.div`
     .mock-input-btn {
       background-image: linear-gradient(to right, #4F46E5, #7c3aed);
       color: white;
-      border-radius: 0.75rem;
+      border-radius: 9999px;
       padding: 0.875rem; /* Taller button */
       text-align: center;
       font-size: 1rem;
@@ -1941,7 +1941,7 @@ const StyledWrapper = styled.div`
       color: white;
       border: none;
       padding: 0.25rem;
-      border-radius: 0.75rem;
+      border-radius: 9999px;
       font-size: 0.85rem;
       font-weight: 700;
       // cursor: pointer;
@@ -2697,6 +2697,7 @@ const StyledWrapper = styled.div`
         width: 100%;
         justify-content: center;
         margin-top: auto;
+        border-radius: 9999px;
 
         &:hover { background-color: #16a34a; }
 
@@ -2849,7 +2850,7 @@ const StyledWrapper = styled.div`
         color: white;
         border: none;
         padding: 1rem 2rem;
-        border-radius: 0.75rem;
+        border-radius: 9999px;
         font-size: 1.125rem;
         font-weight: 600;
         cursor: pointer;
@@ -2964,7 +2965,7 @@ const StyledWrapper = styled.div`
     justify-content: center;
     gap: 0.5rem;
     padding: 0.875rem 1.5rem;
-    border-radius: 0.75rem;
+    border-radius: 9999px;
     font-weight: 600;
     font-size: 1rem;
     text-decoration: none;

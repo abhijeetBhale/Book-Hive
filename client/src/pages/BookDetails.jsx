@@ -4,7 +4,8 @@ import styled from 'styled-components';
 import { booksAPI, borrowAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import { getFullImageUrl } from '../utils/imageHelpers';
-import { Loader, Shield, Wallet } from 'lucide-react';
+import { Loader, Shield, Wallet, Clock } from 'lucide-react';
+import { formatRelativeTime } from '../utils/dateHelpers';
 import OptimizedAvatar from '../components/OptimizedAvatar';
 import UpgradeModal from '../components/ui/UpgradeModal';
 import SEO from '../components/SEO';
@@ -14,13 +15,18 @@ import VerifiedBadge from '../components/ui/VerifiedBadge';
 
 const PageWrapper = styled.div`
   background-color: #f9fafb;
-  min-height: 100vh;
-  padding: 4rem 1rem;
+  height: 100vh;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const ContentWrapper = styled.div`
   max-width: 64rem;
-  margin: 0 auto;
+  margin-top: -80px;
+  width: 100%;
+  height: 86vh;
   background-color: white;
   border-radius: 1rem;
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -39,11 +45,15 @@ const BookCoverImage = styled.img`
 `;
 
 const DetailsContainer = styled.div`
-  padding: 2.5rem;
+  padding: 1.5rem;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 `;
 
 const Title = styled.h1`
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 900;
   color: #111827;
   line-height: 1.1;
@@ -51,37 +61,59 @@ const Title = styled.h1`
 `;
 
 const Author = styled.p`
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 500;
   color: #4b5563;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 `;
 
-const Description = styled.p`
-  font-size: 1rem;
-  line-height: 1.625;
+const Description = styled.div`
+  font-size: 0.875rem;
+  line-height: 1.5;
   color: #374151;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
+  max-height: 120px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
 `;
 
 const OwnerSection = styled.div`
-  margin-top: 2.5rem;
-  padding-top: 2.5rem;
+  margin-top: auto;
+  padding-top: 1.5rem;
   border-top: 1px solid #e5e7eb;
 `;
 
 const OwnerTitle = styled.h2`
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #111827;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 `;
 
 const OwnerCard = styled(Link)`
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1.25rem;
+  gap: 0.75rem;
+  padding: 1rem;
   border-radius: 0.75rem;
   background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
   border: 2px solid #e5e7eb;
@@ -98,7 +130,7 @@ const OwnerCard = styled(Link)`
 `;
 
 const OwnerName = styled.p`
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: #111827;
   display: flex;
@@ -108,8 +140,8 @@ const OwnerName = styled.p`
 
 const ActionButton = styled.button`
   width: 100%;
-  padding: 1rem;
-  font-size: 1rem;
+  padding: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: white;
   background-color: #4F46E5;
@@ -117,7 +149,7 @@ const ActionButton = styled.button`
   border-radius: 0.5rem;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  margin-top: 2rem;
+  margin-top: 1rem;
 
   &:hover {
     background-color: #4338ca;
@@ -127,6 +159,19 @@ const ActionButton = styled.button`
     background-color: #a5b4fc;
     cursor: not-allowed;
   }
+`;
+
+const UploadTimeInfo = styled.div`
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background-color: #f8fafc;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
 `;
 
 const LoadingContainer = styled.div`
@@ -248,91 +293,102 @@ const BookDetails = () => {
         <ContentWrapper>
           <BookCoverImage src={getFullImageUrl(book.coverImage)} alt={`Cover of ${book.title}`} />
           <DetailsContainer>
-          <Title>{book.title}</Title>
-          <Author>by {book.author}</Author>
-          <Description>{book.description || 'No description available.'}</Description>
+            <Title>{book.title}</Title>
+            <Author>by {book.author}</Author>
+            <Description>{book.description || 'No description available.'}</Description>
 
-          {book.securityDeposit > 0 && (
-            <div style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              backgroundColor: '#eff6ff',
-              borderRadius: '0.5rem',
-              border: '1px solid #bfdbfe',
-              color: '#1e40af',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <Shield size={20} />
-              <span style={{ fontWeight: 600 }}>
-                Security Deposit: ₹{book.securityDeposit}
-              </span>
-            </div>
-          )}
-
-          {book.lendingFee > 0 && (
-            <div style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              backgroundColor: '#ecfdf5',
-              borderRadius: '0.5rem',
-              border: '1px solid #a7f3d0',
-              color: '#065f46',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <Wallet size={20} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            {book.securityDeposit > 0 && (
+              <div style={{
+                marginTop: '0.75rem',
+                padding: '0.5rem',
+                backgroundColor: '#eff6ff',
+                borderRadius: '0.5rem',
+                border: '1px solid #bfdbfe',
+                color: '#1e40af',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.875rem'
+              }}>
+                <Shield size={16} />
                 <span style={{ fontWeight: 600 }}>
-                  Lending Fee: ₹{book.lendingFee.toFixed(2)}
-                </span>
-                <span style={{ fontSize: '0.875rem', color: '#047857' }}>
-                  A small fee to support the book sharing community
+                  Security Deposit: ₹{book.securityDeposit}
                 </span>
               </div>
-            </div>
-          )}
+            )}
 
-          {!isOwner && (
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-              {book.forBorrowing && (
-                <ActionButton onClick={handleBorrowRequest}>
-                  Request to Borrow
-                </ActionButton>
-              )}
-              {book.forSelling && (
-                <ActionButton
-                  onClick={() => alert('Contact seller functionality coming soon!')}
-                  style={{
-                    flex: book.forBorrowing ? 1 : 'auto',
-                    backgroundColor: '#059669',
-                  }}
-                >
-                  Buy for ₹{book.sellingPrice?.toFixed(2) || '0.00'}
-                </ActionButton>
-              )}
-            </div>
-          )}
+            {book.lendingFee > 0 && (
+              <div style={{
+                marginTop: '0.75rem',
+                padding: '0.5rem',
+                backgroundColor: '#ecfdf5',
+                borderRadius: '0.5rem',
+                border: '1px solid #a7f3d0',
+                color: '#065f46',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.875rem'
+              }}>
+                <Wallet size={16} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <span style={{ fontWeight: 600 }}>
+                    Lending Fee: ₹{book.lendingFee.toFixed(2)}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#047857' }}>
+                    A small fee to support the book sharing community
+                  </span>
+                </div>
+              </div>
+            )}
 
-          <OwnerSection>
-            <OwnerTitle>Book Owner</OwnerTitle>
-            <OwnerCard to={`/profile/${book.owner._id}`}>
-              <OptimizedAvatar
-                src={book.owner.avatar}
-                alt={book.owner.name}
-                size={50}
-              />
-              <OwnerName>
-                {book.owner.name}
-                {book.owner.isVerified && <VerifiedBadge size={16} />}
-              </OwnerName>
-            </OwnerCard>
-          </OwnerSection>
-        </DetailsContainer>
-      </ContentWrapper>
-    </PageWrapper>
+            {!isOwner && (
+              <>
+                <UploadTimeInfo>
+                  <Clock size={14} />
+                  <span>
+                    Available for {formatRelativeTime(book.createdAt)}
+                  </span>
+                </UploadTimeInfo>
+                
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                  {book.forBorrowing && (
+                    <ActionButton onClick={handleBorrowRequest}>
+                      Request to Borrow
+                    </ActionButton>
+                  )}
+                  {book.forSelling && (
+                    <ActionButton
+                      onClick={() => alert('Contact seller functionality coming soon!')}
+                      style={{
+                        flex: book.forBorrowing ? 1 : 'auto',
+                        backgroundColor: '#059669',
+                      }}
+                    >
+                      Buy for ₹{book.sellingPrice?.toFixed(2) || '0.00'}
+                    </ActionButton>
+                  )}
+                </div>
+              </>
+            )}
+
+            <OwnerSection>
+              <OwnerTitle>Book Owner</OwnerTitle>
+              <OwnerCard to={`/profile/${book.owner._id}`}>
+                <OptimizedAvatar
+                  src={book.owner.avatar}
+                  alt={book.owner.name}
+                  size={40}
+                />
+                <OwnerName>
+                  {book.owner.name}
+                  {book.owner.isVerified && <VerifiedBadge size={14} />}
+                </OwnerName>
+              </OwnerCard>
+            </OwnerSection>
+          </DetailsContainer>
+        </ContentWrapper>
+      </PageWrapper>
     </>
   );
 };
