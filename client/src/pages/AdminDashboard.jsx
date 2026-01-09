@@ -37,11 +37,13 @@ import {
   LineChart,
   ChevronRight,
   Home,
-  BadgeCheck
+  BadgeCheck,
+  Wallet
 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { adminAPIService } from '../utils/adminAPI';
 import { reviewsAPI } from '../utils/api';
+import { walletAPI } from '../utils/walletAPI';
 import { Navigate, useNavigate } from 'react-router-dom';
 import ReportActionModal from '../components/admin/ReportActionModal';
 import toast from 'react-hot-toast';
@@ -57,7 +59,9 @@ import RecentActivity from '../components/admin/RecentActivity';
 import TopBooks from '../components/admin/TopBooks';
 import OrganizerApplicationsTab from '../components/admin/OrganizerApplicationsTab';
 import EventsTab from '../components/admin/EventsTab';
+import EnhancedWalletManagement from '../components/admin/EnhancedWalletManagement';
 import VerificationApplicationsTab from '../components/admin/VerificationApplicationsTab';
+import VersionNotificationsTab from '../components/admin/VersionNotificationsTab';
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -69,6 +73,9 @@ const AdminDashboard = () => {
   const [booksForSale, setBooksForSale] = useState([]);
   const [borrowRequests, setBorrowRequests] = useState([]);
   const [lendingFees, setLendingFees] = useState([]);
+  const [walletData, setWalletData] = useState(null);
+  const [platformSummary, setPlatformSummary] = useState(null);
+  const [withdrawalRequests, setWithdrawalRequests] = useState([]);
   const [bookClubs, setBookClubs] = useState([]);
   const [reports, setReports] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -172,6 +179,13 @@ const AdminDashboard = () => {
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
     setVisitedTabs(prev => new Set([...prev, tabName]));
+    
+    // Load data for specific tabs
+    if (tabName === 'wallet-management') {
+      fetchWalletData();
+    } else if (tabName === 'lending-fees') {
+      fetchLendingFees();
+    }
   };
 
   // Check if user has admin access - let server validate
@@ -532,6 +546,43 @@ const AdminDashboard = () => {
       setTabErrors(prev => ({ ...prev, 'lending-fees': 'Failed to load lending fees' }));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWalletData = async () => {
+    try {
+      setLoading(true);
+      const [platformResponse, withdrawalResponse] = await Promise.all([
+        walletAPI.admin.getPlatformSummary(),
+        walletAPI.admin.getWithdrawalRequests({ status: 'pending' })
+      ]);
+      
+      setPlatformSummary(platformResponse.data);
+      setWithdrawalRequests(withdrawalResponse.data.requests || []);
+      setTabErrors(prev => ({ ...prev, 'wallet-management': null }));
+    } catch (error) {
+      console.error('Error fetching wallet data:', error);
+      setPlatformSummary(null);
+      setWithdrawalRequests([]);
+      setTabErrors(prev => ({ ...prev, 'wallet-management': 'Failed to load wallet data' }));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProcessWithdrawal = async (requestId, action) => {
+    try {
+      const adminNotes = prompt(`Enter notes for ${action}ing this withdrawal request:`);
+      if (adminNotes === null) return; // User cancelled
+      
+      await walletAPI.admin.processWithdrawalRequest(requestId, { action, adminNotes });
+      toast.success(`Withdrawal request ${action}d successfully`);
+      
+      // Refresh withdrawal requests
+      fetchWalletData();
+    } catch (error) {
+      console.error(`Error ${action}ing withdrawal:`, error);
+      toast.error(`Failed to ${action} withdrawal request`);
     }
   };
 
@@ -2285,6 +2336,8 @@ const AdminDashboard = () => {
     </div>
   );
 
+  const renderWalletManagement = () => <EnhancedWalletManagement />;
+
   const renderClubs = () => (
     <div className="space-y-6">
       {loading && (
@@ -3685,6 +3738,17 @@ const AdminDashboard = () => {
             </button>
 
             <button
+              onClick={() => handleTabChange('wallet-management')}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'wallet-management'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+            >
+              <Wallet className="w-4 h-4 mr-3" />
+              Wallet Management
+            </button>
+
+            <button
               onClick={() => handleTabChange('clubs')}
               className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'clubs'
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
@@ -3764,6 +3828,17 @@ const AdminDashboard = () => {
               <FileText className="w-4 h-4 mr-3" />
               Reports
               {getNotificationBadge(notificationCounts.reports, 'reports')}
+            </button>
+
+            <button
+              onClick={() => handleTabChange('version-notifications')}
+              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'version-notifications'
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+            >
+              <Bell className="w-4 h-4 mr-3" />
+              Version Notifications
             </button>
 
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 mt-6">SETTINGS</div>
@@ -3864,6 +3939,7 @@ const AdminDashboard = () => {
             {activeTab === 'books-for-sale' && renderBooksForSale()}
             {activeTab === 'borrows' && renderBorrows()}
             {activeTab === 'lending-fees' && renderLendingFees()}
+            {activeTab === 'wallet-management' && renderWalletManagement()}
             {activeTab === 'clubs' && renderClubs()}
             {activeTab === 'reviews' && renderReviews()}
             {activeTab === 'analytics' && renderAnalytics()}
@@ -3873,6 +3949,7 @@ const AdminDashboard = () => {
             {activeTab === 'organizer-applications' && <OrganizerApplicationsTab />}
             {activeTab === 'events' && <EventsTab />}
             {activeTab === 'verification' && <VerificationApplicationsTab />}
+            {activeTab === 'version-notifications' && <VersionNotificationsTab />}
           </div>
         </div>
       </div>

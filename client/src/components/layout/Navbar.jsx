@@ -13,6 +13,7 @@ import {
   Bell,
   Trash2,
   LibraryBig,
+  Wallet,
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { useNotificationBadges } from '../../context/NotificationBadgeContext';
@@ -603,6 +604,15 @@ const Navbar = () => {
                       )}
                     </span>
                     <span>Profile</span>
+                  </Link>
+
+                  <Link
+                    to="/profile#wallet"
+                    className="flex items-center gap-3 py-2 px-4 rounded-lg text-gray-700 hover:text-primary hover:bg-gray-50 transition-colors duration-300"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <Wallet className="w-5 h-5" />
+                    <span>My Wallet</span>
                   </Link>
 
                   {(user.role === 'admin' || user.role === 'superadmin') && (

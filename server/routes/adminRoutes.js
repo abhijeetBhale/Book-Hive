@@ -17,7 +17,13 @@ import {
   getReports,
   updateReport,
   getBookSharingActivity,
-  getTopCategoriesData
+  getTopCategoriesData,
+  getLendingFeesWithWallet,
+  getUserWalletDetails,
+  processLenderPayout,
+  getPlatformFinancialOverview,
+  getUsersWithWallets,
+  checkExistingPayments
 } from '../controllers/adminController.js';
 import { superAdminAuth, auditLogger } from '../middleware/adminAuth.js';
 
@@ -64,3 +70,10 @@ router.get('/reports', auditLogger('VIEW_REPORTS'), getReports);
 router.put('/reports/:id', auditLogger('UPDATE_REPORT'), updateReport);
 
 export default router;
+// Wallet management routes
+router.get('/lending-fees-wallet', auditLogger('VIEW_LENDING_FEES_WALLET'), getLendingFeesWithWallet);
+router.get('/users/:id/wallet', auditLogger('VIEW_USER_WALLET'), getUserWalletDetails);
+router.post('/wallet/payout', auditLogger('PROCESS_PAYOUT'), processLenderPayout);
+router.get('/wallet/platform-overview', auditLogger('VIEW_PLATFORM_FINANCES'), getPlatformFinancialOverview);
+router.get('/users-with-wallets', auditLogger('VIEW_USERS_WITH_WALLETS'), getUsersWithWallets);
+router.get('/check-payments', auditLogger('CHECK_PAYMENTS'), checkExistingPayments);

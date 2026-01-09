@@ -6,13 +6,17 @@ import toast from 'react-hot-toast';
 import { getFullImageUrl } from '../utils/imageHelpers';
 
 // Import new icons for the password fields
-import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy, Shield, Activity, RefreshCw, Search, CheckCircle, ChevronRight, Star, BadgeCheck } from 'lucide-react';
+import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy, Shield, Activity, RefreshCw, Search, CheckCircle, ChevronRight, Star, BadgeCheck, Wallet } from 'lucide-react';
 import GamificationSection from '../components/profile/GamificationSection';
 import ReviewsModal from '../components/ReviewsModal';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
 import AccountDeletion from '../components/profile/AccountDeletion';
 import UserStatistics from '../components/user/UserStatistics';
 import ReadingPreferences from '../components/user/ReadingPreferences';
+import WalletBalance from '../components/wallet/WalletBalance';
+import TransactionHistory from '../components/wallet/TransactionHistory';
+import WithdrawalModal from '../components/wallet/WithdrawalModal';
+import { walletAPI } from '../utils/walletAPI';
 import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
@@ -76,11 +80,19 @@ const Profile = () => {
     approvedList: []
   });
 
+  // Wallet state
+  const [walletData, setWalletData] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
+
   // Handle URL hash to set active tab
   useEffect(() => {
     const hash = window.location.hash.substring(1); // Remove the # symbol
     if (hash === 'notifications') {
       setActiveTab('notifications');
+    } else if (hash === 'wallet') {
+      setActiveTab('wallet');
     }
   }, []);
 
@@ -90,6 +102,8 @@ const Profile = () => {
       const hash = window.location.hash.substring(1);
       if (hash === 'notifications') {
         setActiveTab('notifications');
+      } else if (hash === 'wallet') {
+        setActiveTab('wallet');
       }
     };
 
@@ -264,6 +278,48 @@ const Profile = () => {
     }
   };
 
+  // Fetch wallet data
+  const fetchWalletData = async () => {
+    setWalletLoading(true);
+    try {
+      const [walletResponse, transactionsResponse] = await Promise.all([
+        walletAPI.getWalletDetails(),
+        walletAPI.getTransactionHistory({ limit: 20 })
+      ]);
+
+      if (walletResponse.success) {
+        setWalletData(walletResponse.data);
+      }
+
+      if (transactionsResponse.success) {
+        setTransactions(transactionsResponse.data.transactions);
+      }
+    } catch (error) {
+      console.error('Failed to load wallet data:', error);
+      toast.error('Failed to load wallet data');
+      setWalletData(null);
+      setTransactions([]);
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+
+  const handleWithdrawalRequest = async (withdrawalData) => {
+    try {
+      const response = await walletAPI.requestWithdrawal(withdrawalData);
+      
+      if (response.success) {
+        // Refresh wallet data to show updated balance
+        await fetchWalletData();
+        return response;
+      } else {
+        throw new Error(response.message || 'Failed to submit withdrawal request');
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
+
   // Load security settings from user profile
   useEffect(() => {
     if (user && user.securitySettings) {
@@ -281,6 +337,13 @@ const Profile = () => {
   useEffect(() => {
     if (activeTab === 'security') {
       fetchAccountActivity();
+    }
+  }, [activeTab]);
+
+  // Load wallet data on wallet tab access
+  useEffect(() => {
+    if (activeTab === 'wallet') {
+      fetchWalletData();
     }
   }, [activeTab]);
 
@@ -649,6 +712,56 @@ const Profile = () => {
       
       case 'preferences':
         return <ReadingPreferences showTitle={true} />;
+      
+      case 'wallet':
+        return (
+          <div>
+            <div className="section-header">
+              <h3>My Wallet</h3>
+              <p>Manage your earnings from lending books and track your transaction history.</p>
+            </div>
+            <div className="wallet-content">
+              <WalletBalance walletData={walletData} loading={walletLoading} />
+              <div style={{ marginTop: '2rem' }}>
+                <TransactionHistory transactions={transactions} loading={walletLoading} />
+              </div>
+              {walletData && walletData.pendingEarnings >= 100 && (
+                <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                  <button 
+                    className="withdrawal-btn"
+                    onClick={() => setShowWithdrawalModal(true)}
+                    style={{
+                      backgroundColor: '#10B981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '0.75rem 1.5rem',
+                      fontSize: '1rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      margin: '0 auto',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.target.style.backgroundColor = '#059669';
+                      e.target.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.target.style.backgroundColor = '#10B981';
+                      e.target.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <Wallet size={20} />
+                    Request Withdrawal
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
       
       case 'gamification':
         return <GamificationSection activeSubTab={activeSubTab} setActiveSubTab={setActiveSubTab} />;
@@ -1320,6 +1433,9 @@ const Profile = () => {
           <a href="#statistics" onClick={() => setActiveTab('statistics')} className={activeTab === 'statistics' ? 'active' : ''}>
             <Activity size={20} /> My Statistics
           </a>
+          <a href="#wallet" onClick={() => setActiveTab('wallet')} className={activeTab === 'wallet' ? 'active' : ''}>
+            <Wallet size={20} /> My Wallet
+          </a>
           <a href="#preferences" onClick={() => setActiveTab('preferences')} className={activeTab === 'preferences' ? 'active' : ''}>
             <BookOpen size={20} /> Reading Preferences
           </a>
@@ -1343,6 +1459,13 @@ const Profile = () => {
         onClose={() => setShowReviewsModal(false)}
         userId={user._id}
         userName={user.name}
+      />
+      
+      <WithdrawalModal
+        isOpen={showWithdrawalModal}
+        onClose={() => setShowWithdrawalModal(false)}
+        walletBalance={walletData?.pendingEarnings || 0}
+        onWithdrawalRequest={handleWithdrawalRequest}
       />
     </StyledWrapper>
   );

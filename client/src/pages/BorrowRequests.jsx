@@ -828,6 +828,30 @@ const BorrowRequests = () => {
                           </button>
                         </div>
                       )}
+                      
+                      {req.lendingFee > 0 && req.lendingFeeStatus === 'paid' && (
+                        <div style={{
+                          backgroundColor: '#f0fdf4',
+                          border: '1px solid #22c55e',
+                          borderRadius: '8px',
+                          padding: '1rem',
+                          marginTop: '0.75rem',
+                          marginBottom: '0.75rem'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <CheckCircle size={18} color="#16a34a" />
+                            <strong style={{ color: '#15803d' }}>Lending Fee Paid</strong>
+                          </div>
+                          <p style={{ fontSize: '0.875rem', color: '#166534', margin: '0' }}>
+                            You have successfully paid the lending fee of ₹{req.lendingFee}. The book owner has been credited.
+                          </p>
+                          {req.lendingFeePaymentId && (
+                            <p style={{ fontSize: '0.75rem', color: '#166534', margin: '0.5rem 0 0 0' }}>
+                              Payment ID: {req.lendingFeePaymentId}
+                            </p>
+                          )}
+                        </div>
+                      )}
                       <div className="card-actions">
                         <Link to={`/messages?userId=${req.owner._id}`} className="btn message-btn">
                           <MessageSquare size={16} /> Message {req.owner?.name}

@@ -1,33 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { X, Wallet, Loader, AlertCircle, TrendingUp } from 'lucide-react';
+import { X, Wallet, AlertCircle, TrendingUp, CreditCard, Smartphone, Building, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import DotWaveLoader from '../ui/DotWaveLoader';
 
 const LendingFeePaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
+
+  // Check if payment is already completed
+  const isPaymentCompleted = borrowRequest?.lendingFeeStatus === 'paid';
 
   useEffect(() => {
+    // Don't load Razorpay script if payment is already completed
+    if (isPaymentCompleted) {
+      return;
+    }
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.async = true;
-    script.onload = () => setScriptLoaded(true);
+    script.onload = () => {
+      console.log('✅ Razorpay script loaded successfully');
+      setScriptLoaded(true);
+    };
+    script.onerror = () => {
+      console.error('❌ Failed to load Razorpay script');
+      toast.error('Failed to load payment system. Please refresh and try again.');
+    };
     document.body.appendChild(script);
+
+    // Suppress Razorpay SVG console errors
+    const originalConsoleError = console.error;
+    console.error = (...args) => {
+      const message = args[0];
+      if (typeof message === 'string' && 
+          (message.includes('SVG') && message.includes('height') && message.includes('auto')) ||
+          message.includes('x-rtb-fingerprint-id')) {
+        // Suppress these specific Razorpay-related errors
+        return;
+      }
+      originalConsoleError.apply(console, args);
+    };
 
     return () => {
       if (document.body.contains(script)) {
         document.body.removeChild(script);
       }
+      // Restore original console.error
+      console.error = originalConsoleError;
     };
   }, []);
 
   const handlePayment = async () => {
     if (!scriptLoaded) {
-      toast.error('Payment system is loading. Please try again.');
+      toast.error('Payment system is loading. Please try again in a moment.');
       return;
     }
 
     setIsProcessing(true);
+    setPaymentError(null);
 
     try {
       console.log('🔄 Starting payment process...', {
@@ -53,7 +85,11 @@ const LendingFeePaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) =
       console.log('📡 Backend response data:', data);
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to create order');
+        throw new Error(data.message || `Server error: ${response.status}`);
+      }
+
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to create payment order');
       }
 
       console.log('🎫 Creating Razorpay options...', {
@@ -95,7 +131,7 @@ const LendingFeePaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) =
             const verifyData = await verifyResponse.json();
             console.log('🔍 Verification response:', verifyData);
 
-            if (verifyResponse.ok) {
+            if (verifyResponse.ok && verifyData.success) {
               toast.success('✅ Lending fee paid successfully! The owner has been credited.', {
                 duration: 5000
               });
@@ -115,24 +151,78 @@ const LendingFeePaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) =
             setIsProcessing(false);
           }
         },
+        prefill: {
+          name: borrowRequest.borrower?.name || '',
+          email: borrowRequest.borrower?.email || '',
+          contact: borrowRequest.borrower?.phone || ''
+        },
+        notes: {
+          borrowRequestId: borrowRequest._id,
+          bookTitle: borrowRequest.book?.title
+        },
+        theme: {
+          color: '#10B981'
+        },
         modal: {
           ondismiss: function () {
             console.log('❌ Payment modal dismissed');
             setIsProcessing(false);
             toast('Payment cancelled', { icon: 'ℹ️' });
-          }
+          },
+          confirm_close: true,
+          escape: true,
+          animation: true,
+          backdropclose: false
         },
-        theme: {
-          color: '#10B981'
-        }
+        retry: {
+          enabled: true,
+          max_count: 3
+        },
+        timeout: 300, // 5 minutes timeout
+        remember_customer: false
       };
 
       console.log('🚀 Opening Razorpay modal...');
+      
+      if (!window.Razorpay) {
+        throw new Error('Razorpay is not loaded. Please refresh the page and try again.');
+      }
+
       const razorpay = new window.Razorpay(options);
+      
+      // Add error handler for Razorpay
+      razorpay.on('payment.failed', function (response) {
+        console.error('❌ Payment failed:', response.error);
+        setPaymentError(response.error);
+        setIsProcessing(false);
+        
+        let errorMessage = 'Payment failed. ';
+        
+        // Handle specific error codes
+        if (response.error.code === 'BAD_REQUEST_ERROR') {
+          if (response.error.description?.includes('international')) {
+            errorMessage += 'International cards are not supported. Please use an Indian debit/credit card, UPI, or net banking.';
+          } else {
+            errorMessage += 'Please check your card details and try again.';
+          }
+        } else if (response.error.code === 'GATEWAY_ERROR') {
+          errorMessage += 'Payment gateway error. Please try again.';
+        } else if (response.error.code === 'NETWORK_ERROR') {
+          errorMessage += 'Network error. Please check your connection.';
+        } else if (response.error.code === 'SERVER_ERROR') {
+          errorMessage += 'Server error. Please try again later.';
+        } else {
+          errorMessage += response.error.description || 'Please try again.';
+        }
+        
+        toast.error(errorMessage, { duration: 8000 });
+      });
+
       razorpay.open();
 
     } catch (error) {
       console.error('❌ Payment error:', error);
+      setPaymentError(error);
       toast.error(error.message || 'Failed to initiate payment. Please try again.');
       setIsProcessing(false);
     }
@@ -141,6 +231,61 @@ const LendingFeePaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) =
   if (!isOpen || !borrowRequest) return null;
 
   const lendingFee = borrowRequest.lendingFee || 0;
+
+  // If payment is completed, show completion message
+  if (isPaymentCompleted) {
+    return (
+      <Overlay onClick={onClose}>
+        <Modal onClick={(e) => e.stopPropagation()}>
+          <CloseButton onClick={onClose}>
+            <X size={24} />
+          </CloseButton>
+
+          <Header>
+            <IconWrapper>
+              <Wallet size={40} color="#10B981" />
+            </IconWrapper>
+            <Title>Payment Completed</Title>
+          </Header>
+
+          <Content>
+            <CompletedMessage>
+              <CheckCircle size={48} color="#10B981" />
+              <CompletedTitle>Lending Fee Paid Successfully!</CompletedTitle>
+              <CompletedDescription>
+                You have successfully paid the lending fee of ₹{lendingFee.toFixed(2)} for "{borrowRequest.book?.title}". 
+                The book owner has been credited with their earnings.
+              </CompletedDescription>
+              
+              {borrowRequest.lendingFeePaymentId && (
+                <PaymentDetails>
+                  <DetailRow>
+                    <DetailLabel>Payment ID:</DetailLabel>
+                    <DetailValue>{borrowRequest.lendingFeePaymentId}</DetailValue>
+                  </DetailRow>
+                  {borrowRequest.paymentCompletedAt && (
+                    <DetailRow>
+                      <DetailLabel>Completed At:</DetailLabel>
+                      <DetailValue>
+                        {new Date(borrowRequest.paymentCompletedAt).toLocaleString()}
+                      </DetailValue>
+                    </DetailRow>
+                  )}
+                </PaymentDetails>
+              )}
+            </CompletedMessage>
+          </Content>
+
+          <Actions>
+            <PayButton onClick={onClose}>
+              <Wallet size={20} />
+              Close
+            </PayButton>
+          </Actions>
+        </Modal>
+      </Overlay>
+    );
+  }
 
   return (
     <Overlay onClick={onClose}>
@@ -191,6 +336,37 @@ const LendingFeePaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) =
             </div>
           </FeeBreakdown>
 
+          {/* Payment Methods Info */}
+          <PaymentMethods>
+            <PaymentMethodsTitle>Accepted Payment Methods (Indian Cards Only)</PaymentMethodsTitle>
+            <PaymentMethodsList>
+              <PaymentMethod>
+                <CreditCard size={16} />
+                <span>Indian Debit/Credit Cards</span>
+              </PaymentMethod>
+              <PaymentMethod>
+                <Building size={16} />
+                <span>Net Banking</span>
+              </PaymentMethod>
+              <PaymentMethod>
+                <Smartphone size={16} />
+                <span>UPI & Wallets</span>
+              </PaymentMethod>
+            </PaymentMethodsList>
+            <PaymentNote>
+              Note: International cards are not supported. Please use Indian payment methods only.
+            </PaymentNote>
+          </PaymentMethods>
+
+          {paymentError && (
+            <ErrorBox>
+              <AlertCircle size={16} color="#dc2626" />
+              <ErrorText>
+                Payment Error: {paymentError.description || paymentError.message || 'Unknown error occurred'}
+              </ErrorText>
+            </ErrorBox>
+          )}
+
           <Note>
             <TrendingUp size={16} />
             <span>By paying this fee, you're supporting the book owner and the BookHive community!</span>
@@ -198,12 +374,19 @@ const LendingFeePaymentModal = ({ isOpen, onClose, borrowRequest, onSuccess }) =
         </Content>
 
         <Actions>
-          <CancelButton onClick={onClose}>Cancel</CancelButton>
-          <PayButton onClick={handlePayment} disabled={isProcessing}>
+          <CancelButton onClick={onClose} disabled={isProcessing}>
+            Cancel
+          </CancelButton>
+          <PayButton onClick={handlePayment} disabled={isProcessing || !scriptLoaded}>
             {isProcessing ? (
               <>
-                <Loader className="spin" size={20} />
+                <DotWaveLoader size={20} color="#ffffff" speed={0.8} />
                 Processing...
+              </>
+            ) : !scriptLoaded ? (
+              <>
+                <DotWaveLoader size={20} color="#ffffff" speed={0.8} />
+                Loading...
               </>
             ) : (
               <>
@@ -374,7 +557,111 @@ const Amount = styled.span`
   color: #10B981;
 `;
 
+const PaymentMethods = styled.div`
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+`;
 
+const PaymentMethodsTitle = styled.h4`
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 0.75rem 0;
+`;
+
+const PaymentMethodsList = styled.div`
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+`;
+
+const PaymentMethod = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  
+  svg {
+    color: #10B981;
+  }
+`;
+
+const PaymentNote = styled.p`
+  font-size: 0.75rem;
+  color: #dc2626;
+  margin: 0.75rem 0 0 0;
+  font-weight: 500;
+  text-align: center;
+`;
+
+const CompletedMessage = styled.div`
+  text-align: center;
+  padding: 2rem 0;
+`;
+
+const CompletedTitle = styled.h3`
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #10B981;
+  margin: 1rem 0 0.5rem 0;
+`;
+
+const CompletedDescription = styled.p`
+  color: #64748b;
+  margin: 0 0 2rem 0;
+  line-height: 1.6;
+`;
+
+const PaymentDetails = styled.div`
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: left;
+`;
+
+const DetailRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const DetailLabel = styled.span`
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+`;
+
+const DetailValue = styled.span`
+  font-size: 0.875rem;
+  color: #1e293b;
+  font-weight: 600;
+`;
+
+const ErrorBox = styled.div`
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #fef2f2;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  margin: 1rem 0;
+`;
+
+const ErrorText = styled.p`
+  font-size: 0.875rem;
+  color: #dc2626;
+  margin: 0;
+  line-height: 1.5;
+`;
 
 const Note = styled.div`
   display: flex;
@@ -409,9 +696,14 @@ const CancelButton = styled.button`
   cursor: pointer;
   transition: all 0.2s;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: #f9fafb;
     border-color: #d1d5db;
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
   }
 `;
 
@@ -439,20 +731,6 @@ const PayButton = styled.button`
     opacity: 0.7;
     cursor: not-allowed;
   }
-
-  .spin {
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
 `;
 
 export default LendingFeePaymentModal;
-

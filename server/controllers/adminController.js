@@ -6,6 +6,9 @@ import Achievement from '../models/Achievement.js';
 import UserStats from '../models/UserStats.js';
 import Report from '../models/Report.js';
 import Notification from '../models/Notification.js';
+import Lending from '../models/Lending.js';
+import WalletTransaction from '../models/WalletTransaction.js';
+import WalletService from '../services/walletService.js';
 import mongoose from 'mongoose';
 import { catchAsync } from '../utils/catchAsync.js';
 import AppError from '../utils/appError.js';
@@ -1479,3 +1482,412 @@ async function getBookSharingActivityData() {
     return { monthly: [], quarterly: [], yearly: [] };
   }
 }
+
+// @desc    Get lending fees with wallet integration
+// @route   GET /api/admin/lending-fees
+// @access  Private (Admin only)
+export const getLendingFeesWithWallet = catchAsync(async (req, res, next) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const search = req.query.search || '';
+  const status = req.query.status || 'all';
+  const sortBy = req.query.sortBy || 'createdAt';
+  const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+
+  // Build query
+  let query = {};
+  
+  if (status !== 'all') {
+    if (status === 'paid') {
+      query.isPaid = true;
+    } else if (status === 'pending') {
+      query.isPaid = false;
+    }
+  }
+
+  // Search functionality
+  let searchQuery = {};
+  if (search) {
+    const searchRegex = new RegExp(search, 'i');
+    searchQuery = {
+      $or: [
+        { 'book.title': searchRegex },
+        { 'borrower.name': searchRegex },
+        { 'lender.name': searchRegex }
+      ]
+    };
+  }
+
+  const skip = (page - 1) * limit;
+
+  // Aggregation pipeline for lending fees with wallet data
+  const pipeline = [
+    {
+      $lookup: {
+        from: 'books',
+        localField: 'bookId',
+        foreignField: '_id',
+        as: 'book'
+      }
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'borrowerId',
+        foreignField: '_id',
+        as: 'borrower'
+      }
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'lenderId',
+        foreignField: '_id',
+        as: 'lender'
+      }
+    },
+    {
+      $lookup: {
+        from: 'wallettransactions',
+        let: { lendingId: '$_id', lenderId: '$lenderId' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$referenceId', '$$lendingId'] },
+                  { $eq: ['$userId', '$$lenderId'] },
+                  { $eq: ['$source', 'lending_fee'] }
+                ]
+              }
+            }
+          }
+        ],
+        as: 'walletTransaction'
+      }
+    },
+    {
+      $unwind: '$book'
+    },
+    {
+      $unwind: '$borrower'
+    },
+    {
+      $unwind: '$lender'
+    },
+    {
+      $match: query
+    }
+  ];
+
+  // Add search to pipeline if provided
+  if (search) {
+    pipeline.push({ $match: searchQuery });
+  }
+
+  // Add sorting
+  const sortStage = {};
+  sortStage[sortBy] = sortOrder;
+  pipeline.push({ $sort: sortStage });
+
+  // Get total count
+  const totalPipeline = [...pipeline, { $count: 'total' }];
+  const totalResult = await Lending.aggregate(totalPipeline);
+  const total = totalResult[0]?.total || 0;
+
+  // Add pagination
+  pipeline.push({ $skip: skip }, { $limit: limit });
+
+  const lendings = await Lending.aggregate(pipeline);
+
+  // Get platform wallet summary
+  const platformSummary = await WalletService.getPlatformWalletSummary();
+
+  res.json({
+    success: true,
+    data: {
+      lendings,
+      platformSummary,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    }
+  });
+});
+
+// @desc    Get user wallet details (admin view)
+// @route   GET /api/admin/users/:id/wallet
+// @access  Private (Admin only)
+export const getUserWalletDetails = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+
+  const user = await User.findById(id).select('name email wallet');
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
+
+  const walletDetails = await WalletService.getWalletDetails(id, page, limit);
+
+  res.json({
+    success: true,
+    data: {
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email
+      },
+      wallet: walletDetails
+    }
+  });
+});
+
+// @desc    Process payout to lender (admin action)
+// @route   POST /api/admin/wallet/payout
+// @access  Private (Admin only)
+export const processLenderPayout = catchAsync(async (req, res, next) => {
+  const { lenderId, amount, description, bankDetails } = req.body;
+
+  if (!lenderId || !amount || amount <= 0) {
+    return next(new AppError('Invalid payout details', 400));
+  }
+
+  // Verify lender exists and has sufficient balance
+  const lender = await User.findById(lenderId).select('name email wallet');
+  if (!lender) {
+    return next(new AppError('Lender not found', 404));
+  }
+
+  if (!lender.wallet || lender.wallet.pendingEarnings < amount) {
+    return next(new AppError('Insufficient balance for payout', 400));
+  }
+
+  // Process the payout through wallet service
+  const payoutResult = await WalletService.debitWallet(
+    lenderId,
+    amount,
+    'withdrawal',
+    req.user._id, // Admin user ID as reference
+    'User',
+    description || `Admin payout: ₹${amount}`,
+    {
+      processedBy: req.user._id,
+      processedAt: new Date(),
+      bankDetails,
+      payoutType: 'admin_processed'
+    }
+  );
+
+  res.json({
+    success: true,
+    message: 'Payout processed successfully',
+    data: {
+      lenderId,
+      amount,
+      newBalance: payoutResult.newBalance,
+      transactionId: payoutResult.transaction._id
+    }
+  });
+});
+
+// @desc    Get platform financial overview
+// @route   GET /api/admin/wallet/platform-overview
+// @access  Private (Admin only)
+export const getPlatformFinancialOverview = catchAsync(async (req, res, next) => {
+  const platformSummary = await WalletService.getPlatformWalletSummary();
+
+  // Get recent transactions
+  const recentTransactions = await WalletTransaction.find({
+    source: { $in: ['platform_commission', 'withdrawal'] }
+  })
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .populate('userId', 'name email')
+    .lean();
+
+  // Get top earners
+  const topEarners = await WalletTransaction.aggregate([
+    {
+      $match: {
+        source: 'lending_fee',
+        type: 'credit'
+      }
+    },
+    {
+      $group: {
+        _id: '$userId',
+        totalEarnings: { $sum: '$amount' },
+        transactionCount: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { totalEarnings: -1 }
+    },
+    {
+      $limit: 10
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'user'
+      }
+    },
+    {
+      $unwind: '$user'
+    },
+    {
+      $project: {
+        userId: '$_id',
+        name: '$user.name',
+        email: '$user.email',
+        totalEarnings: 1,
+        transactionCount: 1
+      }
+    }
+  ]);
+
+  // Get monthly revenue trend
+  const monthlyRevenue = await WalletTransaction.aggregate([
+    {
+      $match: {
+        source: 'platform_commission',
+        type: 'credit',
+        createdAt: {
+          $gte: new Date(new Date().getFullYear(), new Date().getMonth() - 11, 1)
+        }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: '$createdAt' },
+          month: { $month: '$createdAt' }
+        },
+        revenue: { $sum: '$amount' },
+        transactionCount: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { '_id.year': 1, '_id.month': 1 }
+    }
+  ]);
+
+  res.json({
+    success: true,
+    data: {
+      platformSummary,
+      recentTransactions,
+      topEarners,
+      monthlyRevenue
+    }
+  });
+});
+
+// @desc    Get all users with wallet balances
+// @route   GET /api/admin/users-with-wallets
+// @access  Private (Admin only)
+export const getUsersWithWallets = catchAsync(async (req, res, next) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const search = req.query.search || '';
+  const minBalance = parseFloat(req.query.minBalance) || 0;
+
+  let query = {
+    'wallet.balance': { $gte: minBalance }
+  };
+
+  if (search) {
+    const searchRegex = new RegExp(search, 'i');
+    query.$or = [
+      { name: searchRegex },
+      { email: searchRegex }
+    ];
+  }
+
+  const skip = (page - 1) * limit;
+
+  const users = await User.find(query)
+    .select('name email wallet createdAt')
+    .sort({ 'wallet.balance': -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  const total = await User.countDocuments(query);
+
+  res.json({
+    success: true,
+    data: {
+      users,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    }
+  });
+});
+
+// @desc    Check for existing payments (debug endpoint)
+// @route   GET /api/admin/check-payments
+// @access  Private (Admin only)
+export const checkExistingPayments = catchAsync(async (req, res, next) => {
+  // Find user Shreyan Bhale
+  const user = await User.findOne({ name: /Shreyan.*Bhale/i });
+  if (!user) {
+    return res.json({
+      success: false,
+      message: 'User Shreyan Bhale not found'
+    });
+  }
+
+  // Find borrow requests for this user
+  const borrowRequests = await BorrowRequest.find({ borrower: user._id })
+    .populate('book', 'title')
+    .populate('owner', 'name')
+    .lean();
+
+  // Find all paid lending fees
+  const allPaidFees = await BorrowRequest.find({ 
+    lendingFeeStatus: 'paid',
+    lendingFee: { $gt: 0 }
+  })
+    .populate('book', 'title')
+    .populate('borrower', 'name email')
+    .populate('owner', 'name email')
+    .lean();
+
+  res.json({
+    success: true,
+    data: {
+      shreyansRequests: {
+        user: {
+          name: user.name,
+          email: user.email,
+          id: user._id,
+          wallet: user.wallet
+        },
+        borrowRequests
+      },
+      allPaidFees: allPaidFees.map(req => ({
+        id: req._id,
+        book: req.book?.title,
+        borrower: req.borrower?.name,
+        borrowerEmail: req.borrower?.email,
+        owner: req.owner?.name,
+        lendingFee: req.lendingFee,
+        platformFee: req.platformFee,
+        ownerEarnings: req.ownerEarnings,
+        paymentId: req.lendingFeePaymentId,
+        paymentCompletedAt: req.paymentCompletedAt
+      }))
+    }
+  });
+});

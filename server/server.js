@@ -35,7 +35,9 @@ import paymentRoutes from './routes/payment.js';
 import eventRoutes from './routes/eventRoutes.js';
 import organizerRoutes from './routes/organizerRoutes.js';
 import verificationRoutes from './routes/verificationRoutes.js';
+import walletRoutes from './routes/wallet.js';
 import broadcastRoutes from './routes/broadcasts.js';
+import versionNotificationRoutes from './routes/versionNotifications.js';
 import { initializeDefaultAchievements } from './services/achievementService.js';
 import { initializeAllUserStats } from './services/userStatsService.js';
 import NotificationService from './services/notificationService.js';
@@ -85,7 +87,15 @@ app.use(
       'http://localhost:3001',
       'http://localhost:5173',
     ],
-    credentials: true
+    credentials: true,
+    exposedHeaders: [
+      'x-rtb-fingerprint-id',
+      'Authorization',
+      'Content-Type',
+      'Accept',
+      'Origin',
+      'X-Requested-With'
+    ]
   })
 );
 
@@ -142,6 +152,13 @@ app.get('/api/test', (req, res) => {
   });
 });
 
+// Add specific headers for Razorpay integration
+app.use('/api/payment', (req, res, next) => {
+  res.header('Access-Control-Expose-Headers', 'x-rtb-fingerprint-id, Authorization, Content-Type');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-rtb-fingerprint-id');
+  next();
+});
+
 // Mount routers
 app.use('/api/auth', authRoutes);
 app.use('/api/books', bookRoutes);
@@ -163,7 +180,9 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/organizer', organizerRoutes);
 app.use('/api/verification', verificationRoutes);
+app.use('/api/wallet', walletRoutes);
 app.use('/api/broadcasts', broadcastRoutes);
+app.use('/api/version-notifications', versionNotificationRoutes);
 
 // Error handler middleware
 app.use(errorHandler);
@@ -198,7 +217,15 @@ const io = new SocketIOServer(server, {
       'http://localhost:5174', // Add Vite dev server port
     ],
     credentials: true,
-    methods: ['GET', 'POST']
+    methods: ['GET', 'POST'],
+    exposedHeaders: [
+      'x-rtb-fingerprint-id',
+      'Authorization',
+      'Content-Type',
+      'Accept',
+      'Origin',
+      'X-Requested-With'
+    ]
   },
   transports: ['websocket', 'polling'],
   // Performance optimizations

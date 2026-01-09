@@ -39,6 +39,7 @@ import Books from './pages/Books';
 import BookDetails from './pages/BookDetails';
 import ModerationNotificationModal from './components/notifications/ModerationNotificationModal';
 import LocationWarningModal from './components/ui/LocationWarningModal';
+import VersionNotificationManager from './components/notifications/VersionNotificationManager';
 import { notificationsAPI } from './utils/api';
 import Broadcasts from './pages/Broadcasts';
 
@@ -221,6 +222,9 @@ function App() {
 
             {/* Global Notification Handler */}
             <NotificationHandler />
+
+            {/* Version Notification Manager */}
+            <VersionNotificationManager />
 
             {/* Toast Notifications */}
             <Toaster
