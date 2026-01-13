@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🐝 BookHive  
+#  BookHive  
 ### The Community-Driven Platform for Modern Readers
 
 [**Live Application**](https://book-hive-frontend.onrender.com/) •
