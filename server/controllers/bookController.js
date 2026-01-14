@@ -5,6 +5,7 @@ import { uploadToCloudinary } from '../config/cloudinary.js';
 import { awardPoints } from '../services/achievementService.js';
 import PriceValidationService from '../services/priceValidationService.js';
 import WishlistNotificationService from '../services/wishlistNotificationService.js';
+import { isProfileComplete } from '../utils/profileCompletionChecker.js';
 
 // @desc    Get all books with advanced search and filtering
 // @route   GET /api/books
@@ -397,11 +398,21 @@ export const createBook = async (req, res) => {
     const createdBook = await book.save();
     
     // Add the book to user's booksOwned array
-    await User.findByIdAndUpdate(
+    const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       { $push: { booksOwned: createdBook._id } },
       { new: true }
-    );
+    ).populate('booksOwned', '_id');
+    
+    // Check if profile is now complete (user added their first book!)
+    const profileStatus = isProfileComplete(updatedUser);
+    if (profileStatus.isComplete) {
+      if (!updatedUser.verificationPrompt) {
+        updatedUser.verificationPrompt = {};
+      }
+      updatedUser.verificationPrompt.hasCompletedProfileSetup = true;
+      await updatedUser.save();
+    }
     
     // Award points for adding a book
     await awardPoints(req.user._id, 'book_added', 10);

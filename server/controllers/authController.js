@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import { validateEmail, validatePassword, validateUsername } from '../utils/validation.js';
 import { uploadFileToCloudinary } from '../config/cloudinary.js';
 import { getConsistentPrivacyOffset } from '../utils/locationPrivacy.js';
+import { isProfileComplete } from '../utils/profileCompletionChecker.js';
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
@@ -332,6 +333,17 @@ export const updateProfile = async (req, res) => {
 
     // Save the updated user
     const updatedUser = await user.save();
+    
+    // Check if profile is now complete using comprehensive checker
+    const profileStatus = isProfileComplete(updatedUser);
+    if (profileStatus.isComplete) {
+      if (!updatedUser.verificationPrompt) {
+        updatedUser.verificationPrompt = {};
+      }
+      updatedUser.verificationPrompt.hasCompletedProfileSetup = true;
+      await updatedUser.save();
+    }
+    
     // User profile updated successfully
 
     // Return the updated user data
@@ -344,7 +356,8 @@ export const updateProfile = async (req, res) => {
         email: updatedUser.email,
         avatar: updatedUser.avatar,
         location: updatedUser.location
-      }
+      },
+      profileCompletion: profileStatus
     });
   } catch (error) {
     console.error('Error updating profile:', error);
@@ -453,8 +466,24 @@ export const updateLocation = async (req, res) => {
         displayCoordinates: [offsetCoords.longitude, offsetCoords.latitude], // Offset coordinates for map display (privacy)
         lastUpdated: new Date()
       };
+      
       await user.save();
-      res.json({ message: 'Location updated successfully', user: { location: user.location } });
+      
+      // Check if profile is now complete using comprehensive checker
+      const profileStatus = isProfileComplete(user);
+      if (profileStatus.isComplete) {
+        if (!user.verificationPrompt) {
+          user.verificationPrompt = {};
+        }
+        user.verificationPrompt.hasCompletedProfileSetup = true;
+        await user.save();
+      }
+      
+      res.json({ 
+        message: 'Location updated successfully', 
+        user: { location: user.location },
+        profileCompletion: profileStatus
+      });
     } else {
       res.status(404).json({ message: 'User not found' });
     }

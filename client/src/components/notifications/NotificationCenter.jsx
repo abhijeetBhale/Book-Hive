@@ -33,6 +33,7 @@ import { notificationsAPI } from '../../utils/api';
 import { AuthContext } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
+import VerificationNotification from './VerificationNotification';
 
 const NotificationCenterWrapper = styled.div`
   position: fixed;
@@ -505,68 +506,75 @@ const NotificationCenter = ({ isOpen, onClose }) => {
           <LoadingState>
             <div>Loading notifications...</div>
           </LoadingState>
-        ) : filteredNotifications.length === 0 ? (
-          <EmptyState>
-            <Bell size={48} />
-            <h3>No notifications</h3>
-            <p>You're all caught up! New notifications will appear here.</p>
-          </EmptyState>
         ) : (
-          filteredNotifications.map(notification => (
-            <NotificationItem
-              key={notification._id}
-              read={notification.isRead}
-              onClick={() => handleNotificationClick(notification)}
-            >
-              <NotificationHeader>
-                <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                  <NotificationIcon type={notification.type}>
-                    {getNotificationIcon(notification.type)}
-                  </NotificationIcon>
-                  <NotificationContent>
-                    {notification.title && (
-                      <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.25rem', color: '#374151' }}>
-                        {notification.title}
-                      </div>
-                    )}
-                    <NotificationMessage>
-                      {notification.message}
-                    </NotificationMessage>
-                    <NotificationMeta>
-                      <NotificationTime>
-                        {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-                      </NotificationTime>
-                      {notification.metadata?.priority === 'urgent' && (
-                        <span style={{ color: '#dc2626', fontWeight: 600 }}>URGENT</span>
+          <>
+            {/* Verification Notification - Always at the top for unverified users */}
+            <VerificationNotification />
+            
+            {filteredNotifications.length === 0 ? (
+              <EmptyState>
+                <Bell size={48} />
+                <h3>No notifications</h3>
+                <p>You're all caught up! New notifications will appear here.</p>
+              </EmptyState>
+            ) : (
+              filteredNotifications.map(notification => (
+                <NotificationItem
+                  key={notification._id}
+                  read={notification.isRead}
+                  onClick={() => handleNotificationClick(notification)}
+                >
+                  <NotificationHeader>
+                    <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                      <NotificationIcon type={notification.type}>
+                        {getNotificationIcon(notification.type)}
+                      </NotificationIcon>
+                      <NotificationContent>
+                        {notification.title && (
+                          <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '0.25rem', color: '#374151' }}>
+                            {notification.title}
+                          </div>
+                        )}
+                        <NotificationMessage>
+                          {notification.message}
+                        </NotificationMessage>
+                        <NotificationMeta>
+                          <NotificationTime>
+                            {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                          </NotificationTime>
+                          {notification.metadata?.priority === 'urgent' && (
+                            <span style={{ color: '#dc2626', fontWeight: 600 }}>URGENT</span>
+                          )}
+                        </NotificationMeta>
+                      </NotificationContent>
+                    </div>
+                    <NotificationActions>
+                      {!notification.isRead && (
+                        <ActionButton
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkAsRead(notification._id);
+                          }}
+                          title="Mark as read"
+                        >
+                          <Check size={14} />
+                        </ActionButton>
                       )}
-                    </NotificationMeta>
-                  </NotificationContent>
-                </div>
-                <NotificationActions>
-                  {!notification.isRead && (
-                    <ActionButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMarkAsRead(notification._id);
-                      }}
-                      title="Mark as read"
-                    >
-                      <Check size={14} />
-                    </ActionButton>
-                  )}
-                  <ActionButton
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(notification._id);
-                    }}
-                    title="Delete"
-                  >
-                    <Trash2 size={14} />
-                  </ActionButton>
-                </NotificationActions>
-              </NotificationHeader>
-            </NotificationItem>
-          ))
+                      <ActionButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(notification._id);
+                        }}
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </ActionButton>
+                    </NotificationActions>
+                  </NotificationHeader>
+                </NotificationItem>
+              ))
+            )}
+          </>
         )}
       </NotificationsList>
 

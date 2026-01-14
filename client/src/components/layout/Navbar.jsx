@@ -27,6 +27,7 @@ import { notificationsAPI } from '../../utils/api';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import NotificationCenter from '../notifications/NotificationCenter';
+import VerificationNotification from '../notifications/VerificationNotification';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -441,6 +442,11 @@ const Navbar = () => {
                           </div>
                         </div>
                         <div className="max-h-96 overflow-y-auto relative custom-scrollbar">
+                          {/* Verification Notification - Always at the top for unverified users */}
+                          <div style={{ padding: '0.75rem' }}>
+                            <VerificationNotification />
+                          </div>
+                          
                           {realtimeNotifications.length > 0 ? (
                             realtimeNotifications.map((notification) => (
                               <div

@@ -178,6 +178,31 @@ const userSchema = new mongoose.Schema({
   verificationPaymentId: {
     type: String
   },
+  // Verification Prompt Tracking
+  verificationPrompt: {
+    hasSeenFloatingPopup: {
+      type: Boolean,
+      default: false
+    },
+    hasCompletedProfileSetup: {
+      type: Boolean,
+      default: false
+    },
+    permanentlyDismissed: {
+      type: Boolean,
+      default: false
+    },
+    dismissedAt: {
+      type: Date
+    },
+    lastShownAt: {
+      type: Date
+    },
+    showCount: {
+      type: Number,
+      default: 0
+    }
+  },
   // Premium Features
   premiumFeatures: {
     searchBoost: {

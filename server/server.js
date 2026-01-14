@@ -38,6 +38,7 @@ import verificationRoutes from './routes/verificationRoutes.js';
 import walletRoutes from './routes/wallet.js';
 import broadcastRoutes from './routes/broadcasts.js';
 import versionNotificationRoutes from './routes/versionNotifications.js';
+import verificationPromptRoutes from './routes/verificationPrompt.js';
 import { initializeDefaultAchievements } from './services/achievementService.js';
 import { initializeAllUserStats } from './services/userStatsService.js';
 import NotificationService from './services/notificationService.js';
@@ -183,6 +184,7 @@ app.use('/api/verification', verificationRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/broadcasts', broadcastRoutes);
 app.use('/api/version-notifications', versionNotificationRoutes);
+app.use('/api/users/verification-prompt', verificationPromptRoutes);
 
 // Error handler middleware
 app.use(errorHandler);

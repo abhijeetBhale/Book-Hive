@@ -4,35 +4,87 @@ import styled, { keyframes } from 'styled-components';
 import { BadgeCheck, X } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import VerificationPaymentModal from '../profile/VerificationPaymentModal';
+import { 
+  getVerificationPromptStatus, 
+  markFloatingPopupSeen, 
+  dismissPermanently,
+  resetFloatingPopupFlag
+} from '../../utils/verificationPromptAPI';
+import toast from 'react-hot-toast';
 
 const FloatingVerificationButton = () => {
   const { user, fetchProfile } = useContext(AuthContext);
   const navigate = useNavigate();
   const [showButton, setShowButton] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(false);
+  const [showDontShowAgain, setShowDontShowAgain] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in, not verified, and hasn't dismissed the button
-    const dismissed = localStorage.getItem('verificationButtonDismissed');
-
-    if (user && !user.isVerified && !dismissed) {
-      // Show button after 3 seconds
-      const timer = setTimeout(() => {
-        setShowButton(true);
-      }, 3000);
-
-      return () => clearTimeout(timer);
-    } else {
-      setShowButton(false);
-    }
+    checkShouldShowPopup();
   }, [user]);
 
-  const handleDismiss = () => {
-    setShowButton(false);
-    setIsDismissed(true);
-    // Remember dismissal for this session only
-    localStorage.setItem('verificationButtonDismissed', 'true');
+  const checkShouldShowPopup = async () => {
+    if (!user) {
+      setShowButton(false);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await getVerificationPromptStatus();
+      const { shouldShowFloatingPopup, isVerified } = response.data;
+
+      // Don't show for verified users
+      if (isVerified) {
+        setShowButton(false);
+        setIsLoading(false);
+        return;
+      }
+
+      // Show popup if conditions are met
+      if (shouldShowFloatingPopup) {
+        // Show after 3 seconds delay
+        setTimeout(() => {
+          setShowButton(true);
+          setIsLoading(false);
+        }, 3000);
+      } else {
+        setShowButton(false);
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Error checking verification prompt status:', error);
+      setShowButton(false);
+      setIsLoading(false);
+    }
+  };
+
+  const handleTemporaryDismiss = async () => {
+    try {
+      // Mark as seen (will show again on next login)
+      await markFloatingPopupSeen();
+      
+      // Reset the flag so it shows on next login
+      await resetFloatingPopupFlag();
+      
+      setShowButton(false);
+      toast.success('Reminder will appear on your next login', { icon: '👋' });
+    } catch (error) {
+      console.error('Error dismissing popup:', error);
+      setShowButton(false);
+    }
+  };
+
+  const handlePermanentDismiss = async () => {
+    try {
+      await dismissPermanently();
+      setShowButton(false);
+      toast.success('You won\'t see this reminder again', { icon: '✅' });
+    } catch (error) {
+      console.error('Error permanently dismissing popup:', error);
+      toast.error('Failed to save preference');
+    }
   };
 
   const handleOpenModal = () => {
@@ -47,16 +99,18 @@ const FloatingVerificationButton = () => {
     setShowModal(false);
     setShowButton(false);
     fetchProfile();
-    // Clear dismissal flag
-    localStorage.removeItem('verificationButtonDismissed');
   };
 
-  if (!showButton || user?.isVerified) return null;
+  if (isLoading || !showButton || user?.isVerified) return null;
 
   return (
     <>
       <FloatingContainer>
-        <DismissButton onClick={handleDismiss} title="Dismiss">
+        <DismissButton 
+          onClick={handleTemporaryDismiss} 
+          title="Remind me later"
+          onMouseEnter={() => setShowDontShowAgain(true)}
+        >
           <X size={16} />
         </DismissButton>
 
@@ -77,6 +131,15 @@ const FloatingVerificationButton = () => {
             Get Verified for ₹99
             <ArrowIcon>→</ArrowIcon>
           </ActionButton>
+
+          {/* Don't Show Again Option */}
+          {showDontShowAgain && (
+            <DontShowAgainContainer>
+              <DontShowAgainButton onClick={handlePermanentDismiss}>
+                Don't show me again
+              </DontShowAgainButton>
+            </DontShowAgainContainer>
+          )}
         </CardContent>
       </FloatingContainer>
 
@@ -229,6 +292,31 @@ const ArrowIcon = styled.span`
   
   ${ActionButton}:hover & {
     transform: translateX(4px);
+  }
+`;
+
+const DontShowAgainContainer = styled.div`
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  width: 100%;
+`;
+
+const DontShowAgainButton = styled.button`
+  width: 100%;
+  background: transparent;
+  color: white;
+  padding: 0.625rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
   }
 `;
 
