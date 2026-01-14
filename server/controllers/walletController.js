@@ -1,6 +1,7 @@
 import WalletService from '../services/walletService.js';
 import WalletTransaction from '../models/WalletTransaction.js';
 import User from '../models/User.js';
+import AdminNotificationService from '../services/adminNotificationService.js';
 
 // @desc    Get user wallet details
 // @route   GET /api/wallet
@@ -127,6 +128,20 @@ export const requestWithdrawal = async (req, res) => {
     });
 
     await withdrawalRequest.save();
+
+    // Notify admins of new withdrawal request
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        const adminNotificationService = new AdminNotificationService(io);
+        const populatedRequest = await WalletTransaction.findById(withdrawalRequest._id)
+          .populate('userId', 'name email');
+        adminNotificationService.notifyNewWithdrawalRequest(populatedRequest);
+      }
+    } catch (notificationError) {
+      console.error('Failed to send admin notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
 
     res.json({
       success: true,
@@ -318,6 +333,20 @@ export const processWithdrawalRequest = async (req, res) => {
     }
 
     await withdrawalRequest.save();
+
+    // Notify admins of withdrawal request status change
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        const adminNotificationService = new AdminNotificationService(io);
+        const populatedRequest = await WalletTransaction.findById(withdrawalRequest._id)
+          .populate('userId', 'name email');
+        adminNotificationService.notifyWithdrawalRequestUpdate(populatedRequest);
+      }
+    } catch (notificationError) {
+      console.error('Failed to send admin notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
 
     console.log(`✅ Withdrawal request ${action}d successfully: ${id}`);
 

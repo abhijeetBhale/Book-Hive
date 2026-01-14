@@ -65,11 +65,17 @@ export const registerUser = async (req, res) => {
     // Notify admins of new user registration
     try {
       const adminNotificationService = req.app.get('adminNotificationService');
+      console.log('🔔 AdminNotificationService available:', !!adminNotificationService);
+      
       if (adminNotificationService) {
+        console.log('📢 Sending admin notification for new user:', user.name, user.email);
         adminNotificationService.notifyNewUser(user);
+        console.log('✅ Admin notification sent successfully');
+      } else {
+        console.warn('⚠️ AdminNotificationService not available');
       }
     } catch (adminNotifError) {
-      console.error('Failed to send admin notification for new user:', adminNotifError);
+      console.error('❌ Failed to send admin notification for new user:', adminNotifError);
     }
     
     // Send verification email

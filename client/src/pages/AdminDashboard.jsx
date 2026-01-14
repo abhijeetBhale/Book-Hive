@@ -150,35 +150,110 @@ const AdminDashboard = () => {
     events: 0,
     verification: 0,
     reviews: 0,
-    reports: 0
+    reports: 0,
+    walletManagement: 0,
+    lendingFees: 0,
+    versionNotifications: 0
   });
 
   // Track which tabs have been visited to clear badges
   const [visitedTabs, setVisitedTabs] = useState(new Set());
 
-  // Helper function to get notification badge
+  // Enhanced notification badge with better styling and animation
   const getNotificationBadge = (count, tabName) => {
-    // Don't show badge if tab has been visited
-    if (visitedTabs.has(tabName)) return null;
-    if (!count || count === 0) return null;
+    // Don't show badge if tab has been visited or count is 0
+    if (visitedTabs.has(tabName) || !count || count === 0) return null;
+    
     return (
       <span 
-        className="ml-auto bg-red-500 rounded-full shadow-lg"
+        className="ml-auto flex items-center justify-center min-w-[20px] h-5 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full shadow-lg transform transition-all duration-300 hover:scale-110"
         style={{
-          width: '8px',
-          height: '8px',
-          border: '2px solid white',
-          animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+          animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          fontSize: '10px',
+          lineHeight: '1',
+          padding: count > 99 ? '2px 4px' : '2px 6px'
         }}
         title={`${count} new ${count === 1 ? 'item' : 'items'}`}
-      />
+      >
+        {count > 99 ? '99+' : count}
+      </span>
     );
   };
 
-  // Handle tab change and mark as visited
+  // Function to manually refresh notification counts
+  const refreshNotificationCounts = async () => {
+    try {
+      const response = await adminAPIService.getDashboard();
+      const data = response.data.data;
+      
+      setNotificationCounts({
+        users: data.overview?.newUsersToday || 0,
+        books: data.overview?.pendingBooks || 0,
+        booksForSale: data.overview?.newBooksForSaleToday || 0,
+        borrows: data.overview?.pendingBorrowRequests || 0,
+        clubs: data.overview?.newBookClubsToday || 0,
+        organizerApplications: data.overview?.pendingOrganizerApplications || 0,
+        events: data.overview?.upcomingEvents || 0,
+        verification: data.overview?.pendingVerificationApplications || 0,
+        reviews: data.overview?.pendingReviews || 0,
+        reports: data.overview?.unresolvedReports || 0,
+        walletManagement: data.overview?.pendingWithdrawals || 0,
+        lendingFees: data.overview?.newLendingFeesToday || 0,
+        versionNotifications: data.overview?.activeVersionNotifications || 0
+      });
+      
+      toast.success('Notification counts refreshed!');
+    } catch (error) {
+      console.error('Error refreshing notification counts:', error);
+      toast.error('Failed to refresh notification counts');
+    }
+  };
+
+  // Function to clear all notification badges
+  const clearAllBadges = () => {
+    setNotificationCounts({
+      users: 0,
+      books: 0,
+      booksForSale: 0,
+      borrows: 0,
+      clubs: 0,
+      organizerApplications: 0,
+      events: 0,
+      verification: 0,
+      reviews: 0,
+      reports: 0,
+      walletManagement: 0,
+      lendingFees: 0,
+      versionNotifications: 0
+    });
+    setVisitedTabs(new Set(['overview', 'users', 'books', 'books-for-sale', 'borrows', 'clubs', 'organizer-applications', 'events', 'verification', 'reviews', 'reports', 'wallet-management', 'lending-fees', 'version-notifications']));
+    toast.success('All notification badges cleared!');
+  };
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
     setVisitedTabs(prev => new Set([...prev, tabName]));
+    
+    // Clear notification count for the visited tab
+    const tabKeyMap = {
+      'users': 'users',
+      'books': 'books',
+      'books-for-sale': 'booksForSale',
+      'borrows': 'borrows',
+      'clubs': 'clubs',
+      'organizer-applications': 'organizerApplications',
+      'events': 'events',
+      'verification': 'verification',
+      'reviews': 'reviews',
+      'reports': 'reports',
+      'wallet-management': 'walletManagement',
+      'lending-fees': 'lendingFees',
+      'version-notifications': 'versionNotifications'
+    };
+    
+    const countKey = tabKeyMap[tabName];
+    if (countKey) {
+      setNotificationCounts(prev => ({ ...prev, [countKey]: 0 }));
+    }
     
     // Load data for specific tabs
     if (tabName === 'wallet-management') {
@@ -220,14 +295,28 @@ const AdminDashboard = () => {
     const socket = io(base, { auth: { token }, transports: ['websocket', 'polling'] });
 
     socket.on('connect', () => {
-      // Admin socket connected
+      console.log('🔌 Admin socket connected');
+      // Check if we're in admin room
+      socket.emit('check-admin-room');
+    });
+
+    socket.on('admin-room-status', (data) => {
+      console.log('🏠 Admin room status:', data);
+      if (!data.isInAdminRoom) {
+        console.warn('⚠️ Admin not in admin-room! This may cause notification issues.');
+      }
+    });
+
+    socket.on('admin-connected', (data) => {
+      console.log('👑 Admin connected to notification system:', data);
+      toast.success('Connected to admin notifications!', { icon: '🔔' });
     });
 
     socket.on('connect_error', (error) => {
       console.error('❌ Admin socket connection error:', error);
     });
 
-    // Listen for various admin events
+    // Listen for various admin events with enhanced notifications
     socket.on('borrow_request:new', (data) => {
       setNotificationCounts(prev => ({ ...prev, borrows: prev.borrows + 1 }));
       setVisitedTabs(prev => {
@@ -238,7 +327,18 @@ const AdminDashboard = () => {
       toast.success('New borrow request received!', { icon: '📖' });
     });
 
+    socket.on('borrow_request:updated', (data) => {
+      setNotificationCounts(prev => ({ ...prev, borrows: prev.borrows + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('borrows');
+        return newSet;
+      });
+      toast.info('Borrow request updated!', { icon: '📝' });
+    });
+
     socket.on('user:new', (data) => {
+      console.log('🔔 Received user:new event:', data);
       setNotificationCounts(prev => ({ ...prev, users: prev.users + 1 }));
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
@@ -246,6 +346,16 @@ const AdminDashboard = () => {
         return newSet;
       });
       toast.success('New user registered!', { icon: '👥' });
+    });
+
+    socket.on('user:updated', (data) => {
+      setNotificationCounts(prev => ({ ...prev, users: prev.users + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('users');
+        return newSet;
+      });
+      toast.info('User profile updated!', { icon: '✏️' });
     });
 
     socket.on('book:new', (data) => {
@@ -285,6 +395,7 @@ const AdminDashboard = () => {
         newSet.delete('organizer-applications');
         return newSet;
       });
+      toast.success('New organizer application!', { icon: '📋' });
     });
 
     socket.on('event:new', (data) => {
@@ -325,6 +436,48 @@ const AdminDashboard = () => {
         return newSet;
       });
       toast.success('New report filed!', { icon: '📝' });
+    });
+
+    // Wallet-related events
+    socket.on('withdrawal_request:new', (data) => {
+      setNotificationCounts(prev => ({ ...prev, walletManagement: prev.walletManagement + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('wallet-management');
+        return newSet;
+      });
+      toast.success('New withdrawal request!', { icon: '💰' });
+    });
+
+    socket.on('wallet_transaction:new', (data) => {
+      setNotificationCounts(prev => ({ ...prev, walletManagement: prev.walletManagement + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('wallet-management');
+        return newSet;
+      });
+      toast.info('New wallet transaction!', { icon: '💳' });
+    });
+
+    socket.on('lending_fee:new', (data) => {
+      setNotificationCounts(prev => ({ ...prev, lendingFees: prev.lendingFees + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('lending-fees');
+        return newSet;
+      });
+      toast.success('New lending fee recorded!', { icon: '💵' });
+    });
+
+    // Version notification events
+    socket.on('version_notification:new', (data) => {
+      setNotificationCounts(prev => ({ ...prev, versionNotifications: prev.versionNotifications + 1 }));
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('version-notifications');
+        return newSet;
+      });
+      toast.success('New version notification created!', { icon: '🔔' });
     });
 
     // Listen for book deletion/update events
@@ -415,8 +568,12 @@ const AdminDashboard = () => {
         clubs: data.overview?.newBookClubsToday || 0,
         organizerApplications: data.overview?.pendingOrganizerApplications || 0,
         events: data.overview?.upcomingEvents || 0,
+        verification: data.overview?.pendingVerificationApplications || 0,
         reviews: data.overview?.pendingReviews || 0,
-        reports: data.overview?.unresolvedReports || 0
+        reports: data.overview?.unresolvedReports || 0,
+        walletManagement: data.overview?.pendingWithdrawals || 0,
+        lendingFees: data.overview?.newLendingFeesToday || 0,
+        versionNotifications: data.overview?.activeVersionNotifications || 0
       });
       
       setError(null);
@@ -3663,6 +3820,32 @@ const AdminDashboard = () => {
 
         {/* Navigation */}
         <div className="flex-1 px-4 py-6">
+          {/* Notification Summary */}
+          <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-blue-900">Activity Summary</span>
+              <button
+                onClick={clearAllBadges}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                title="Clear all badges"
+              >
+                Clear All
+              </button>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-blue-700">
+                Total Notifications: {Object.values(notificationCounts).reduce((sum, count) => sum + count, 0)}
+              </span>
+              <button
+                onClick={refreshNotificationCounts}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                title="Refresh counts"
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-1">
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">MAIN</div>
 
@@ -3746,6 +3929,7 @@ const AdminDashboard = () => {
             >
               <Wallet className="w-4 h-4 mr-3" />
               Wallet Management
+              {getNotificationBadge(notificationCounts.walletManagement, 'wallet-management')}
             </button>
 
             <button
@@ -3839,6 +4023,7 @@ const AdminDashboard = () => {
             >
               <Bell className="w-4 h-4 mr-3" />
               Version Notifications
+              {getNotificationBadge(notificationCounts.versionNotifications, 'version-notifications')}
             </button>
 
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 mt-6">SETTINGS</div>

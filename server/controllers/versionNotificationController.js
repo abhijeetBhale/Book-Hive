@@ -1,6 +1,7 @@
 import VersionNotification from '../models/VersionNotification.js';
 import UserNotificationView from '../models/UserNotificationView.js';
 import User from '../models/User.js';
+import AdminNotificationService from '../services/adminNotificationService.js';
 
 // @desc    Get unviewed notifications for current user
 // @route   GET /api/notifications/unviewed
@@ -161,6 +162,18 @@ export const createVersionNotification = async (req, res) => {
 
     await notification.save();
 
+    // Notify admins of new version notification
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        const adminNotificationService = new AdminNotificationService(io);
+        adminNotificationService.notifyNewVersionNotification(notification);
+      }
+    } catch (notificationError) {
+      console.error('Failed to send admin notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
+
     res.status(201).json({
       success: true,
       message: 'Version notification created successfully',
@@ -230,6 +243,18 @@ export const updateNotification = async (req, res) => {
         success: false,
         message: 'Notification not found'
       });
+    }
+
+    // Notify admins of version notification update
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        const adminNotificationService = new AdminNotificationService(io);
+        adminNotificationService.notifyVersionNotificationUpdate(notification);
+      }
+    } catch (notificationError) {
+      console.error('Failed to send admin notification:', notificationError);
+      // Don't fail the request if notification fails
     }
 
     res.json({

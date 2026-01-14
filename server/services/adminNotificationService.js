@@ -15,17 +15,23 @@ class AdminNotificationService {
    */
   emitToAdmins(event, data = {}) {
     if (!this.io) {
-      console.warn('Socket.io not initialized for admin notifications');
+      console.warn('⚠️ Socket.io not initialized for admin notifications');
       return;
     }
 
     // Emit to admin room
-    this.io.to('admin-room').emit(event, {
+    const eventData = {
       ...data,
       timestamp: new Date().toISOString()
-    });
-
-    console.log(`📢 Admin notification emitted: ${event}`, data);
+    };
+    
+    console.log(`📢 Emitting admin notification: ${event}`, eventData);
+    this.io.to('admin-room').emit(event, eventData);
+    
+    // Also log how many admins are in the room
+    const adminRoom = this.io.sockets.adapter.rooms.get('admin-room');
+    const adminCount = adminRoom ? adminRoom.size : 0;
+    console.log(`👥 Admin room has ${adminCount} connected admin(s)`);
   }
 
   /**
@@ -180,6 +186,100 @@ class AdminNotificationService {
       bookTitle: book.title,
       bookAuthor: book.author,
       ownerName: book.owner?.name
+    });
+  }
+
+  /**
+   * Notify admins of new withdrawal request
+   */
+  notifyNewWithdrawalRequest(withdrawalRequest) {
+    this.emitToAdmins('withdrawal_request:new', {
+      requestId: withdrawalRequest._id,
+      userId: withdrawalRequest.userId,
+      userName: withdrawalRequest.user?.name,
+      amount: withdrawalRequest.amount,
+      status: withdrawalRequest.status
+    });
+  }
+
+  /**
+   * Notify admins of withdrawal request status change
+   */
+  notifyWithdrawalRequestUpdate(withdrawalRequest) {
+    this.emitToAdmins('withdrawal_request:update', {
+      requestId: withdrawalRequest._id,
+      userId: withdrawalRequest.userId,
+      userName: withdrawalRequest.user?.name,
+      amount: withdrawalRequest.amount,
+      status: withdrawalRequest.status
+    });
+  }
+
+  /**
+   * Notify admins of new wallet transaction
+   */
+  notifyNewWalletTransaction(transaction) {
+    this.emitToAdmins('wallet_transaction:new', {
+      transactionId: transaction._id,
+      userId: transaction.userId,
+      userName: transaction.user?.name,
+      amount: transaction.amount,
+      type: transaction.type,
+      description: transaction.description
+    });
+  }
+
+  /**
+   * Notify admins of new lending fee
+   */
+  notifyNewLendingFee(lendingFee) {
+    this.emitToAdmins('lending_fee:new', {
+      feeId: lendingFee._id,
+      borrowRequestId: lendingFee.borrowRequest,
+      amount: lendingFee.amount,
+      borrowerName: lendingFee.borrower?.name,
+      lenderName: lendingFee.lender?.name,
+      bookTitle: lendingFee.book?.title
+    });
+  }
+
+  /**
+   * Notify admins of new version notification
+   */
+  notifyNewVersionNotification(notification) {
+    this.emitToAdmins('version_notification:new', {
+      notificationId: notification._id,
+      version: notification.version,
+      title: notification.title,
+      type: notification.type,
+      priority: notification.priority,
+      isActive: notification.isActive
+    });
+  }
+
+  /**
+   * Notify admins of version notification update
+   */
+  notifyVersionNotificationUpdate(notification) {
+    this.emitToAdmins('version_notification:update', {
+      notificationId: notification._id,
+      version: notification.version,
+      title: notification.title,
+      type: notification.type,
+      priority: notification.priority,
+      isActive: notification.isActive
+    });
+  }
+
+  /**
+   * Notify admins of verification application status change
+   */
+  notifyVerificationApplicationUpdate(application) {
+    this.emitToAdmins('verification_application:update', {
+      applicationId: application._id,
+      applicantName: application.user?.name,
+      applicantEmail: application.user?.email,
+      status: application.status
     });
   }
 }

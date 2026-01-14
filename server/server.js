@@ -296,11 +296,29 @@ io.on('connection', async (socket) => {
       const user = await User.findById(userId).select('role');
       if (user && (user.role === 'admin' || user.role === 'superadmin')) {
         socket.join('admin-room');
-        console.log(`Admin user ${userId} joined admin-room`);
+        socket.userRole = user.role; // Store role for debugging
+        console.log(`👑 Admin user ${userId} (${user.role}) joined admin-room`);
+        
+        // Send initial notification counts when admin connects
+        try {
+          const adminNotificationService = app.get('adminNotificationService');
+          if (adminNotificationService) {
+            // You can add logic here to send current pending counts
+            socket.emit('admin-connected', { 
+              message: 'Connected to admin notifications',
+              timestamp: new Date().toISOString()
+            });
+          }
+        } catch (notifError) {
+          console.error('Error sending admin connection notification:', notifError);
+        }
+      } else {
+        socket.userRole = user?.role || 'user';
+        console.log(`👤 Regular user ${userId} (${socket.userRole}) connected`);
       }
     }
   } catch (error) {
-    console.error('Error checking user role for admin room:', error);
+    console.error('❌ Error checking user role for admin room:', error);
   }
   
   io.emit('presence:update', Array.from(onlineUsers.keys()));
@@ -315,6 +333,18 @@ io.on('connection', async (socket) => {
     if (recipientId) {
       io.to(`user:${recipientId}`).emit('typing:stop', { from: userId });
     }
+  });
+
+  // Handle admin room check
+  socket.on('check-admin-room', () => {
+    const rooms = Array.from(socket.rooms);
+    const isInAdminRoom = rooms.includes('admin-room');
+    console.log(`🔍 Admin room check for user ${userId}:`, {
+      rooms,
+      isInAdminRoom,
+      userRole: socket.userRole
+    });
+    socket.emit('admin-room-status', { isInAdminRoom, rooms });
   });
 
   // The 'message:send' listener is now removed to prevent duplicate events.
