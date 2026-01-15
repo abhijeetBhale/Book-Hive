@@ -383,6 +383,11 @@ export const eventsAPI = {
   registerForEvent: (id, data) => api.post(`/events/${id}/register`, data).then(res => res.data),
   cancelRegistration: (id) => api.delete(`/events/${id}/register`).then(res => res.data),
   getMyRegistrations: () => api.get('/events/my-registrations').then(res => res.data),
+  
+  // Admin endpoints
+  getAllEventsAdmin: (params) => api.get('/events/admin/all', { params }).then(res => res.data),
+  cancelEvent: (id, reason) => api.put(`/events/${id}/cancel`, { reason }).then(res => res.data),
+  deleteEvent: (id) => api.delete(`/events/${id}`).then(res => res.data),
 };
 
 // Organizer API

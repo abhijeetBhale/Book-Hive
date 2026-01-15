@@ -20,10 +20,12 @@ export const getPublicEvents = async (req, res) => {
       tags,
       search,
       page = 1,
-      limit = 20
+      limit = 20,
+      includePast = false // New parameter to include past events (for admin)
     } = req.query;
 
     const skip = (page - 1) * limit;
+    const currentDate = new Date();
 
     // If location parameters are provided, use aggregation pipeline with $geoNear
     if (lat && lng) {
@@ -34,6 +36,11 @@ export const getPublicEvents = async (req, res) => {
         status: { $in: ['published', 'completed'] }, // Include completed events
         isPublic: true
       };
+
+      // Filter out past events unless explicitly requested (for admin)
+      if (includePast !== 'true') {
+        matchConditions.endAt = { $gte: currentDate };
+      }
 
       // Date filters
       if (startDate) {
@@ -148,6 +155,11 @@ export const getPublicEvents = async (req, res) => {
         status: { $in: ['published', 'completed'] }, // Include completed events
         isPublic: true
       };
+      
+      // Filter out past events unless explicitly requested (for admin)
+      if (includePast !== 'true') {
+        baseQuery.endAt = { $gte: currentDate };
+      }
       
       const query = buildEventQuery(req.user, baseQuery);
 
@@ -458,10 +470,160 @@ export const getMyRegistrations = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Cancel an event (Admin only)
+ * @route   PUT /api/events/:id/cancel
+ * @access  Private (Admin)
+ */
+export const cancelEvent = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const event = await Event.findById(req.params.id);
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Check if already cancelled
+    if (event.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Event is already cancelled'
+      });
+    }
+
+    event.status = 'cancelled';
+    event.cancellationReason = reason || 'Cancelled by admin';
+    event.cancelledAt = new Date();
+    event.cancelledBy = req.user._id;
+
+    await event.save();
+
+    res.json({
+      success: true,
+      message: 'Event cancelled successfully',
+      data: event
+    });
+  } catch (error) {
+    console.error('Cancel event error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cancel event',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Delete an event (Admin only)
+ * @route   DELETE /api/events/:id
+ * @access  Private (Admin)
+ */
+export const deleteEvent = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Delete all registrations for this event
+    await EventRegistration.deleteMany({ event: req.params.id });
+
+    // Delete the event
+    await Event.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Event deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete event error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete event',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Get all events for admin (includes all statuses and past events)
+ * @route   GET /api/events/admin/all
+ * @access  Private (Admin)
+ */
+export const getAllEventsAdmin = async (req, res) => {
+  try {
+    const { 
+      search,
+      eventType,
+      status,
+      page = 1,
+      limit = 20
+    } = req.query;
+
+    const skip = (page - 1) * limit;
+    const query = {};
+
+    // Search filter
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Event type filter
+    if (eventType) {
+      query.eventType = eventType;
+    }
+
+    // Status filter
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    const events = await Event.find(query)
+      .populate('organizer', 'name avatar email organizerProfile isVerified')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Event.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: events,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Get all events admin error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch events',
+      error: error.message
+    });
+  }
+};
+
 export default {
   getPublicEvents,
   getEventById,
   registerForEvent,
   cancelRegistration,
-  getMyRegistrations
+  getMyRegistrations,
+  cancelEvent,
+  deleteEvent,
+  getAllEventsAdmin
 };

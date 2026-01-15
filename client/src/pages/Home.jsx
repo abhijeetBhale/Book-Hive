@@ -10,7 +10,6 @@ import CountUp from 'react-countup';
 import { testimonialAPI, usersAPI, booksAPI } from '../utils/api';
 
 // Lazy load heavy components
-const Player = lazy(() => import('@lottiefiles/react-lottie-player').then(module => ({ default: module.Player })));
 const LocationPermission = lazy(() => import('../components/LocationPermission'));
 const TestimonialModal = lazy(() => import('../components/TestimonialModal'));
 import {
@@ -42,16 +41,6 @@ import { PAGE_SEO, generateStructuredData } from '../utils/seo';
 import { InfiniteMovingCards } from '../components/ui/infinite-moving-cards';
 import DomeGallery from '../components/ui/DomeGallery';
 import { Globe as GlobeComponent } from '../components/ui/Globe';
-
-// Lazy load animation data
-let animationData = null;
-const loadAnimationData = async () => {
-  if (!animationData) {
-    const module = await import('../assets/honeybee.json');
-    animationData = module.default;
-  }
-  return animationData;
-};
 
 // Authentication Modal Component
 const AuthModal = ({ isOpen, onClose }) => {
@@ -89,7 +78,6 @@ const AuthModal = ({ isOpen, onClose }) => {
 const Home = () => {
   const { user } = useContext(AuthContext);
   const [quoteIndex, setQuoteIndex] = useState(0);
-  const [lottieData, setLottieData] = useState(null);
 
   // Get current month name
   const getCurrentMonth = () => {
@@ -121,9 +109,6 @@ const Home = () => {
     const interval = setInterval(() => {
       setQuoteIndex((prevIndex) => (prevIndex + 1) % quotes.length);
     }, 4000);
-
-    // Load animation data lazily
-    loadAnimationData().then(data => setLottieData(data));
 
     return () => clearInterval(interval);
   }, [quotes.length]);
@@ -382,13 +367,6 @@ const Home = () => {
       <StyledWrapper>
         {/* Hero Section */}
         <section className="hero-section">
-          <div className="lottie-background">
-            {lottieData && (
-              <Suspense fallback={<div style={{ height: '100%', width: '100%', background: 'transparent' }} />}>
-                <Player autoplay loop speed={0.49} src={lottieData} style={{ height: '100%', width: '100%' }} />
-              </Suspense>
-            )}
-          </div>
           <div className="background-gradient"></div>
           <div className="content-container">
             <div className="badge-container">
@@ -1142,14 +1120,8 @@ const StyledWrapper = styled.div`
     width: 100%;
     overflow: hidden;
     text-align: center;
-    .lottie-background {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      z-index: 0;
-      overflow: hidden;
-      > div { height: 100%; width: 100%; object-fit: cover; }
-    }
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+    
     .background-gradient {
       position: absolute;
       inset: 0;

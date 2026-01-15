@@ -141,6 +141,18 @@ const eventSchema = new mongoose.Schema({
   rejectionReason: {
     type: String,
     default: ''
+  },
+  // Cancellation tracking
+  cancellationReason: {
+    type: String,
+    default: ''
+  },
+  cancelledAt: {
+    type: Date
+  },
+  cancelledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 }, {
   timestamps: true

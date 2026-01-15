@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { eventsAPI } from '../../utils/api';
-import { Calendar, MapPin, Users, Eye, Loader, Search, Filter, Clock } from 'lucide-react';
+import { Calendar, MapPin, Users, Eye, Loader, Search, Filter, Clock, Trash2, XCircle, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import VerifiedBadge from '../ui/VerifiedBadge';
@@ -15,6 +15,10 @@ const EventsTab = () => {
     });
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [cancelReason, setCancelReason] = useState('');
+    const [actionLoading, setActionLoading] = useState(false);
 
     useEffect(() => {
         fetchEvents();
@@ -23,7 +27,8 @@ const EventsTab = () => {
     const fetchEvents = async () => {
         try {
             setLoading(true);
-            const response = await eventsAPI.getPublicEvents(filters);
+            // Use admin endpoint to get all events including past ones
+            const response = await eventsAPI.getAllEventsAdmin(filters);
             setEvents(response.data || []);
         } catch (error) {
             console.error('Error fetching events:', error);
@@ -36,6 +41,56 @@ const EventsTab = () => {
     const viewDetails = (event) => {
         setSelectedEvent(event);
         setShowDetailsModal(true);
+    };
+
+    const handleCancelEvent = async () => {
+        if (!selectedEvent || !cancelReason.trim()) {
+            toast.error('Please provide a cancellation reason');
+            return;
+        }
+
+        try {
+            setActionLoading(true);
+            await eventsAPI.cancelEvent(selectedEvent._id, cancelReason);
+            toast.success('Event cancelled successfully');
+            setShowCancelModal(false);
+            setCancelReason('');
+            setSelectedEvent(null);
+            fetchEvents(); // Refresh the list
+        } catch (error) {
+            console.error('Error cancelling event:', error);
+            toast.error(error.response?.data?.message || 'Failed to cancel event');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleDeleteEvent = async () => {
+        if (!selectedEvent) return;
+
+        try {
+            setActionLoading(true);
+            await eventsAPI.deleteEvent(selectedEvent._id);
+            toast.success('Event deleted successfully');
+            setShowDeleteModal(false);
+            setSelectedEvent(null);
+            fetchEvents(); // Refresh the list
+        } catch (error) {
+            console.error('Error deleting event:', error);
+            toast.error(error.response?.data?.message || 'Failed to delete event');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const openCancelModal = (event) => {
+        setSelectedEvent(event);
+        setShowCancelModal(true);
+    };
+
+    const openDeleteModal = (event) => {
+        setSelectedEvent(event);
+        setShowDeleteModal(true);
     };
 
     const getEventTypeColor = (type) => {
@@ -217,13 +272,31 @@ const EventsTab = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <button
-                                                onClick={() => viewDetails(event)}
-                                                className="text-blue-600 hover:text-blue-900"
-                                                title="View Details"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => viewDetails(event)}
+                                                    className="text-blue-600 hover:text-blue-900"
+                                                    title="View Details"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                                {event.status !== 'cancelled' && (
+                                                    <button
+                                                        onClick={() => openCancelModal(event)}
+                                                        className="text-orange-600 hover:text-orange-900"
+                                                        title="Cancel Event"
+                                                    >
+                                                        <XCircle className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => openDeleteModal(event)}
+                                                    className="text-red-600 hover:text-red-900"
+                                                    title="Delete Event"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -391,6 +464,106 @@ const EventsTab = () => {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Cancel Event Modal */}
+            {showCancelModal && selectedEvent && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-md w-full p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+                                <AlertTriangle className="w-6 h-6 text-orange-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900">Cancel Event</h3>
+                                <p className="text-sm text-gray-500">This action cannot be undone</p>
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <p className="text-sm text-gray-700 mb-2">
+                                Are you sure you want to cancel "<strong>{selectedEvent.title}</strong>"?
+                            </p>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Cancellation Reason *
+                            </label>
+                            <textarea
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value)}
+                                placeholder="Please provide a reason for cancellation..."
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                rows="3"
+                            />
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowCancelModal(false);
+                                    setCancelReason('');
+                                    setSelectedEvent(null);
+                                }}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                                disabled={actionLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCancelEvent}
+                                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+                                disabled={actionLoading || !cancelReason.trim()}
+                            >
+                                {actionLoading ? 'Cancelling...' : 'Cancel Event'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Event Modal */}
+            {showDeleteModal && selectedEvent && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-md w-full p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                                <Trash2 className="w-6 h-6 text-red-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900">Delete Event</h3>
+                                <p className="text-sm text-gray-500">This action cannot be undone</p>
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <p className="text-sm text-gray-700">
+                                Are you sure you want to permanently delete "<strong>{selectedEvent.title}</strong>"?
+                            </p>
+                            <p className="text-sm text-red-600 mt-2">
+                                This will also delete all registrations for this event.
+                            </p>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowDeleteModal(false);
+                                    setSelectedEvent(null);
+                                }}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                                disabled={actionLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteEvent}
+                                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                                disabled={actionLoading}
+                            >
+                                {actionLoading ? 'Deleting...' : 'Delete Event'}
+                            </button>
                         </div>
                     </div>
                 </div>
