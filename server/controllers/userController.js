@@ -5,6 +5,7 @@ import Notification from '../models/Notification.js'; // Ensure Notification mod
 import UserStats from '../models/UserStats.js';
 import Friendship from '../models/Friendship.js';
 import { validateUsername } from '../utils/validation.js';
+import { formatLastSeen, isRecentlyActive } from '../utils/timeHelpers.js';
 
 // @desc    Get user profile
 // @route   GET /api/users/profile
@@ -245,7 +246,9 @@ export const getUsersWithBooks = async (req, res) => {
             isVerified: 1,
             booksOwned: 1,
             friendsCount: 1,
-            contributions: 1
+            contributions: 1,
+            lastSeen: 1,
+            lastActive: 1
           }
         }
       ]);
@@ -268,11 +271,28 @@ export const getUsersWithBooks = async (req, res) => {
       }));
     }
     
-    // Apply location privacy
+    // Apply location privacy and add lastSeen formatting
     usersWithBooks.forEach(user => {
       if (user.location && user.location.displayCoordinates && user.location.displayCoordinates.length === 2) {
         user.location.coordinates = user.location.displayCoordinates;
         delete user.location.displayCoordinates;
+      }
+      
+      // Add formatted lastSeen information
+      // Use lastActive if it's more recent than lastSeen (for better accuracy)
+      let effectiveLastSeen = user.lastSeen;
+      if (user.lastActive && user.lastActive > user.lastSeen) {
+        effectiveLastSeen = user.lastActive;
+      }
+      
+      if (effectiveLastSeen) {
+        user.lastSeenFormatted = formatLastSeen(effectiveLastSeen);
+        user.isRecentlyActive = isRecentlyActive(effectiveLastSeen);
+        // Store the effective lastSeen for client-side use
+        user.lastSeen = effectiveLastSeen;
+      } else {
+        user.lastSeenFormatted = 'Last seen unknown';
+        user.isRecentlyActive = false;
       }
     });
     
@@ -301,7 +321,7 @@ export const getUserProfile = async (req, res) => {
     const { userId } = req.params;
     
     const user = await User.findById(userId)
-      .select('name email avatar location booksOwned publicKeyJwk rating isOrganizer isVerified')
+      .select('name email avatar location booksOwned publicKeyJwk rating isOrganizer isVerified lastSeen lastActive')
       .populate({
         path: 'booksOwned',
         select: '_id title author coverImage isAvailable forBorrowing'
@@ -321,6 +341,23 @@ export const getUserProfile = async (req, res) => {
     if (userObj.location && userObj.location.displayCoordinates && userObj.location.displayCoordinates.length === 2) {
       userObj.location.coordinates = userObj.location.displayCoordinates;
       delete userObj.location.displayCoordinates; // Don't expose both sets of coordinates
+    }
+    
+    // Add formatted lastSeen information
+    // Use lastActive if it's more recent than lastSeen (for better accuracy)
+    let effectiveLastSeen = userObj.lastSeen;
+    if (userObj.lastActive && userObj.lastActive > userObj.lastSeen) {
+      effectiveLastSeen = userObj.lastActive;
+    }
+    
+    if (effectiveLastSeen) {
+      userObj.lastSeenFormatted = formatLastSeen(effectiveLastSeen);
+      userObj.isRecentlyActive = isRecentlyActive(effectiveLastSeen);
+      // Store the effective lastSeen for client-side use
+      userObj.lastSeen = effectiveLastSeen;
+    } else {
+      userObj.lastSeenFormatted = 'Last seen unknown';
+      userObj.isRecentlyActive = false;
     }
     
     res.json({ user: userObj });

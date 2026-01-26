@@ -289,6 +289,10 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  lastSeen: {
+    type: Date,
+    default: Date.now
+  },
   // Ban and moderation fields
   banStatus: {
     isBanned: {

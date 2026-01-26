@@ -7,6 +7,7 @@ import styled from 'styled-components';
 import { BookOpen, Star, X } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { eventsAPI } from '../../utils/api';
+import { formatLastSeen } from '../../utils/timeHelpers';
 import toast from 'react-hot-toast';
 import 'leaflet/dist/leaflet.css';
 import VerifiedBadge from '../ui/VerifiedBadge';
@@ -255,6 +256,14 @@ const PopupCard = styled.div`
         }
       }
     }
+  }
+
+  .last-seen-text-popup {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    text-align: center;
+    margin-top: 0.5rem;
+    font-weight: 500;
   }
 
   .stats {
@@ -846,8 +855,15 @@ const MapView = ({ userGroups, userToShowPopup }) => {
                                                 <span>Community Member</span>
                                                 <div className={`status-indicator ${selectedPin.isOnline ? 'online' : 'offline'}`}>
                                                     <div className="status-dot"></div>
-                                                    <span>{selectedPin.isOnline ? 'Online' : 'Offline'}</span>
+                                                    <span>
+                                                      {selectedPin.isOnline ? 'Online' : 'Offline'}
+                                                    </span>
                                                 </div>
+                                                {!selectedPin.isOnline && (selectedPin.lastSeenFormatted || formatLastSeen(selectedPin.lastSeen)) && (
+                                                  <div className="last-seen-text-popup">
+                                                    {selectedPin.lastSeenFormatted || formatLastSeen(selectedPin.lastSeen)}
+                                                  </div>
+                                                )}
                                             </div>
 
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 1.5rem 0', padding: '0 0', gap: '0.2rem', fontSize: '0.8rem', color: '#6b7280' }}>

@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { usersAPI, borrowAPI, eventsAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import { useOnlineStatus } from '../context/OnlineStatusContext';
+import { formatLastSeen } from '../utils/timeHelpers';
 import toast from 'react-hot-toast';
 import MapView from '../components/map/MapView';
 import { Loader, MapPin, Search, Calendar, UserCheck, Sliders, ChevronLeft, ChevronRight, Star, PartyPopper } from 'lucide-react';
@@ -302,6 +303,11 @@ const Map = () => {
                             {user.isVerified && <VerifiedBadge size={14} />}
                             {user.isOnline && <span className="online-badge">Online</span>}
                           </span>
+                          {!user.isOnline && user.lastSeenFormatted && (
+                            <div className="last-seen-text-map">
+                              {formatLastSeen(user.lastSeen)}
+                            </div>
+                          )}
                           <div className="user-stats">
                             <span className="book-count">{(user.booksOwned || []).length} Books</span>
                             {user.rating?.value && (
@@ -737,6 +743,14 @@ const StyledWrapper = styled.div`
             inset 0 1px 0 rgba(255, 255, 255, 0.2);
           border: 1px solid rgba(255, 255, 255, 0.2);
         }
+      }
+
+      .last-seen-text-map {
+        font-size: 0.7rem;
+        color: #9ca3af;
+        margin-top: 0.25rem;
+        font-weight: 500;
+      }
 
         .event-badge {
           font-size: 0.65rem;

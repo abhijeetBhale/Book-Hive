@@ -356,7 +356,25 @@ io.on('connection', async (socket) => {
     const set = onlineUsers.get(userId);
     if (set) {
       set.delete(socket.id);
-      if (set.size === 0) onlineUsers.delete(userId);
+      if (set.size === 0) {
+        onlineUsers.delete(userId);
+        // Update lastSeen timestamp to the user's lastActive time (not current time)
+        // This ensures we show realistic "last seen" based on actual activity
+        User.findById(userId).then(user => {
+          if (user) {
+            // Use the user's lastActive time as lastSeen, or current time if lastActive is newer
+            const lastSeenTime = user.lastActive && user.lastActive > new Date(Date.now() - 5 * 60 * 1000) 
+              ? user.lastActive 
+              : new Date();
+            
+            User.findByIdAndUpdate(userId, { lastSeen: lastSeenTime }).catch(err => {
+              console.error('Failed to update lastSeen:', err);
+            });
+          }
+        }).catch(err => {
+          console.error('Failed to find user for lastSeen update:', err);
+        });
+      }
     }
     io.emit('presence:update', Array.from(onlineUsers.keys()));
   });

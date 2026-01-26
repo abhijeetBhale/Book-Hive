@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { usersAPI, booksAPI, borrowAPI, notificationsAPI, friendsAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
+import { formatLastSeen } from '../utils/timeHelpers';
 import toast from 'react-hot-toast';
 import { Loader, MapPin, BookOpen, Send, X, User as UserIcon, Star } from 'lucide-react';
 import { getFullImageUrl } from '../utils/imageHelpers';
@@ -988,6 +989,11 @@ const UserProfile = () => {
             {user.name}
             {user.isVerified && <VerifiedBadge size={24} />}
           </h1>
+          
+          {/* Last Seen Status */}
+          <div className="last-seen-status">
+            {user.lastSeenFormatted || formatLastSeen(user.lastSeen) || 'Last seen unknown'}
+          </div>
           <div className="stats">
             <div className="stat-item">
               <BookOpen size={16} />
@@ -1257,6 +1263,28 @@ const StyledWrapper = styled.div`
     
     @media (max-width: 480px) {
       font-size: 1.75rem;
+    }
+  }
+  
+  .last-seen-status {
+    font-size: 1rem;
+    color: #6b7280;
+    font-weight: 500;
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #f3f4f6;
+    border-radius: 0.75rem;
+    display: inline-block;
+    
+    @media (max-width: 768px) {
+      text-align: center;
+      width: 100%;
+      font-size: 0.9375rem;
+    }
+    
+    @media (max-width: 480px) {
+      font-size: 0.875rem;
+      padding: 0.375rem 0.75rem;
     }
   }
   .stats { 

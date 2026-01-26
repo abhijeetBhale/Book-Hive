@@ -360,6 +360,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { usersAPI } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import { useOnlineStatus } from '../context/OnlineStatusContext';
+import { formatLastSeen } from '../utils/timeHelpers';
 import { Loader, MapPin, User, Search, BookOpen, LayoutGrid, Star, Award, Library, List } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
@@ -412,6 +413,11 @@ const UserCard = ({ user, distance, priority, isOnline }) => {
           {user.isVerified && <VerifiedBadge size={16} />}
           {isOnline && <span className="online-badge">Online</span>}
         </h3>
+        {!isOnline && (user.lastSeenFormatted || formatLastSeen(user.lastSeen)) && (
+          <div className="last-seen-text">
+            {user.lastSeenFormatted || formatLastSeen(user.lastSeen)}
+          </div>
+        )}
         <p className="user-tagline">
           Community Member
           {user.isOrganizer && (
@@ -479,6 +485,11 @@ const UserListItem = ({ user, distance, priority, isOnline }) => {
               {user.isVerified && <VerifiedBadge size={16} />}
               {isOnline && <span className="online-badge-list">Online</span>}
             </h3>
+            {!isOnline && (user.lastSeenFormatted || formatLastSeen(user.lastSeen)) && (
+              <div className="last-seen-text-list">
+                {user.lastSeenFormatted || formatLastSeen(user.lastSeen)}
+              </div>
+            )}
             <p className="user-tagline-list">
               Community Member
               {user.isOrganizer && (
@@ -1089,6 +1100,29 @@ const StyledWrapper = styled.div`
     }
   }
   
+  .last-seen-text {
+    width: 160px;
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-align: center;
+    margin: 0.25rem 0;
+    margin-left: 50px;
+    font-weight: 500;
+    background-color: #f3f4f6;
+    padding: 0.1rem;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e5e7eb;
+    
+    @media (max-width: 480px) {
+      font-size: 0.7rem;
+      padding: 0.3rem 0.6rem;
+    }
+  }
+  }
+  
   .user-tagline { 
     font-size: 0.9rem; 
     color: #6b7280; 
@@ -1338,6 +1372,24 @@ const StyledWrapper = styled.div`
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
+  }
+  
+  .last-seen-text-list {
+    font-size: 0.7rem;
+    color: #6b7280;
+    margin: 0.125rem 0;
+    font-weight: 500;
+    background-color: #f3f4f6;
+    padding: 0.25rem 0.6rem;
+    border-radius: 50px;
+    display: inline-block;
+    border: 1px solid #e5e7eb;
+    
+    @media (max-width: 768px) {
+      font-size: 0.65rem;
+      padding: 0.2rem 0.5rem;
+    }
+  }
   }
   
   .user-tagline-list {
