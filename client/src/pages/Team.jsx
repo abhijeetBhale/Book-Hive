@@ -73,7 +73,7 @@ const Team = () => {
                 </p>
               </div>
 
-              <div className="stats-grid">
+              {/* <div className="stats-grid">
                 <div className="stat-card">
                   <span className="stat-number">2025</span>
                   <span className="stat-label">Founded</span>
@@ -86,7 +86,7 @@ const Team = () => {
                   <span className="stat-number">50+</span>
                   <span className="stat-label">Active Users</span>
                 </div>
-              </div>
+              </div> */}
 
               <div className="social-links">
                 <a href="mailto:abhijeetbhale7@gmail.com" className="social-link" aria-label="Email">
@@ -225,6 +225,7 @@ const StyledWrapper = styled.div`
 
         p {
           font-size: 1.125rem;
+          text-align: justify;
           line-height: 1.8;
           color: #4b5563;
           margin-bottom: 1.5rem;
@@ -328,6 +329,7 @@ const StyledWrapper = styled.div`
       }
 
       .mission-text {
+        text-align: justify;
         font-size: 1.125rem;
         line-height: 1.8;
         color: #4b5563;

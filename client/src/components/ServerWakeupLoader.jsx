@@ -61,7 +61,7 @@ const ServerWakeupLoader = ({ onReady }) => {
       <LoaderContainer>
         <DotWaveLoader size={60} color="#C44BEF" speed={0.8} />
         <LoaderText>
-          {status === 'checking' && 'Waking up server...'}
+          {status === 'checking' && 'Loading Books...'}
           {status === 'retrying' && `Retrying... (${retryCount}/${maxRetries})`}
         </LoaderText>
       </LoaderContainer>

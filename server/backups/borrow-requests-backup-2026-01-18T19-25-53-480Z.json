@@ -1,0 +1,714 @@
+[
+  {
+    "_id": "690c861acc817578ef0f7a2a",
+    "book": "690c8602cc817578ef0f79d0",
+    "borrower": "690a061350f4b9339e16884c",
+    "owner": "690c810538549994120c5174",
+    "status": "returned",
+    "remindersSent": 0,
+    "communicationStarted": true,
+    "isRatedByLender": false,
+    "isRatedByBorrower": false,
+    "penalties": [],
+    "createdAt": "2025-11-06T11:27:22.461Z",
+    "updatedAt": "2025-11-06T11:30:22.055Z",
+    "__v": 1,
+    "conversationId": "690c856fcc817578ef0f7745",
+    "dueDate": "2025-11-16T11:28:42.121Z",
+    "metadata": {
+      "handoverDate": "2025-11-06T11:28:42.121Z"
+    },
+    "depositAmount": 0,
+    "depositStatus": "not_required",
+    "reminderHistory": []
+  },
+  {
+    "_id": "690cd1dff3c5d30fae1c4229",
+    "book": "690ccbfdf3c5d30fae1c2b63",
+    "borrower": "690ccc09f3c5d30fae1c2b79",
+    "owner": "690a061350f4b9339e16884c",
+    "status": "borrowed",
+    "remindersSent": 7,
+    "communicationStarted": true,
+    "isRatedByLender": false,
+    "isRatedByBorrower": false,
+    "penalties": [],
+    "createdAt": "2025-11-06T16:50:39.200Z",
+    "updatedAt": "2026-01-09T09:02:01.543Z",
+    "__v": 8,
+    "conversationId": "690ccd24f3c5d30fae1c2dc9",
+    "borrowedDate": "2025-11-25T06:35:06.691Z",
+    "depositAmount": 0,
+    "depositStatus": "not_required",
+    "dueDate": "2025-11-29T06:35:06.742Z",
+    "metadata": {
+      "handoverDate": "2025-11-25T06:35:06.742Z"
+    },
+    "reminderHistory": [
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-09T16:16:57.760Z",
+        "daysDiff": 10,
+        "_id": "69384b79ca5a2afb370207e7"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-10T03:30:07.800Z",
+        "daysDiff": 10,
+        "_id": "6938e93f19a262a8e5afcd91"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-16T18:02:01.157Z",
+        "daysDiff": -17,
+        "_id": "69419e99307bad1214f611d2"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-27T03:30:04.178Z",
+        "daysDiff": -27,
+        "_id": "694f52bc6d2d1616b0fd62d0"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-30T09:02:01.424Z",
+        "daysDiff": -31,
+        "_id": "69539509562ea4828a1bdd8d"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-06T09:02:01.521Z",
+        "daysDiff": -38,
+        "_id": "695ccf8981e5dd389d82eb51"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-09T09:02:01.539Z",
+        "daysDiff": -41,
+        "_id": "6960c40997eee0ac94af12a0"
+      }
+    ],
+    "lastReminderDate": "2026-01-09T09:02:01.539Z",
+    "lendingFee": 0,
+    "lendingFeeStatus": "not_required",
+    "ownerEarnings": 0,
+    "platformFee": 0
+  },
+  {
+    "_id": "690cd42df3c5d30fae1c4762",
+    "book": "690ccbfdf3c5d30fae1c2b63",
+    "borrower": "690cd3d4f3c5d30fae1c44f7",
+    "owner": "690a061350f4b9339e16884c",
+    "status": "borrowed",
+    "remindersSent": 6,
+    "communicationStarted": true,
+    "isRatedByLender": false,
+    "isRatedByBorrower": false,
+    "penalties": [],
+    "createdAt": "2025-11-06T17:00:29.713Z",
+    "updatedAt": "2026-01-09T09:04:02.237Z",
+    "__v": 7,
+    "conversationId": "690cd452f3c5d30fae1c4866",
+    "borrowedDate": "2025-11-25T06:34:54.218Z",
+    "depositAmount": 0,
+    "depositStatus": "not_required",
+    "dueDate": "2025-11-29T06:34:54.264Z",
+    "metadata": {
+      "handoverDate": "2025-11-25T06:34:54.264Z"
+    },
+    "reminderHistory": [
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-09T16:17:05.310Z",
+        "daysDiff": 10,
+        "_id": "69384b81ca5a2afb370207ec"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-10T03:30:30.366Z",
+        "daysDiff": 10,
+        "_id": "6938e95619a262a8e5afcd9f"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-16T18:04:01.837Z",
+        "daysDiff": -17,
+        "_id": "69419f11307bad1214f611d9"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-27T03:30:07.849Z",
+        "daysDiff": -27,
+        "_id": "694f52bf6d2d1616b0fd62d8"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-06T09:04:02.219Z",
+        "daysDiff": -38,
+        "_id": "695cd00281e5dd389d82eb5a"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-09T09:04:02.235Z",
+        "daysDiff": -41,
+        "_id": "6960c48297eee0ac94af12aa"
+      }
+    ],
+    "lastReminderDate": "2026-01-09T09:04:02.235Z",
+    "lendingFee": 0,
+    "lendingFeeStatus": "not_required",
+    "ownerEarnings": 0,
+    "platformFee": 0
+  },
+  {
+    "_id": "690cd433f3c5d30fae1c476e",
+    "book": "690c85d3cc817578ef0f7957",
+    "borrower": "690cd3d4f3c5d30fae1c44f7",
+    "owner": "690a061350f4b9339e16884c",
+    "status": "borrowed",
+    "remindersSent": 6,
+    "communicationStarted": true,
+    "isRatedByLender": false,
+    "isRatedByBorrower": false,
+    "penalties": [],
+    "createdAt": "2025-11-06T17:00:35.170Z",
+    "updatedAt": "2026-01-09T09:04:02.690Z",
+    "__v": 7,
+    "conversationId": "690cd452f3c5d30fae1c4866",
+    "borrowedDate": "2025-11-25T06:34:43.172Z",
+    "depositAmount": 0,
+    "depositStatus": "not_required",
+    "dueDate": "2025-12-02T06:34:43.214Z",
+    "metadata": {
+      "handoverDate": "2025-11-25T06:34:43.215Z"
+    },
+    "reminderHistory": [
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-09T16:17:12.863Z",
+        "daysDiff": 7,
+        "_id": "69384b88ca5a2afb370207f1"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-10T03:30:37.847Z",
+        "daysDiff": 7,
+        "_id": "6938e95d19a262a8e5afcda7"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-16T18:04:02.283Z",
+        "daysDiff": -14,
+        "_id": "69419f12307bad1214f611de"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-27T03:30:07.895Z",
+        "daysDiff": -24,
+        "_id": "694f52bf6d2d1616b0fd62de"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-06T09:04:02.669Z",
+        "daysDiff": -35,
+        "_id": "695cd00281e5dd389d82eb61"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-09T09:04:02.689Z",
+        "daysDiff": -38,
+        "_id": "6960c48297eee0ac94af12b2"
+      }
+    ],
+    "lastReminderDate": "2026-01-09T09:04:02.689Z",
+    "lendingFee": 0,
+    "lendingFeeStatus": "not_required",
+    "ownerEarnings": 0,
+    "platformFee": 0
+  },
+  {
+    "_id": "690e2205e157ba3f9d0b433b",
+    "book": "690ccbfdf3c5d30fae1c2b63",
+    "borrower": "690cd3d4f3c5d30fae1c44f7",
+    "owner": "690a061350f4b9339e16884c",
+    "status": "borrowed",
+    "remindersSent": 5,
+    "communicationStarted": true,
+    "isRatedByLender": false,
+    "isRatedByBorrower": false,
+    "penalties": [],
+    "createdAt": "2025-11-07T16:44:53.154Z",
+    "updatedAt": "2026-01-09T09:04:03.147Z",
+    "__v": 6,
+    "conversationId": "690cd452f3c5d30fae1c4866",
+    "borrowedDate": "2025-11-25T06:34:55.801Z",
+    "depositAmount": 0,
+    "depositStatus": "not_required",
+    "dueDate": "2025-11-29T06:34:55.844Z",
+    "metadata": {
+      "handoverDate": "2025-11-25T06:34:55.844Z"
+    },
+    "reminderHistory": [
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-09T16:18:00.016Z",
+        "daysDiff": 10,
+        "_id": "69384bb823cd104a679f7c29"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-16T18:04:02.726Z",
+        "daysDiff": -17,
+        "_id": "69419f12307bad1214f611e2"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-27T03:30:07.936Z",
+        "daysDiff": -27,
+        "_id": "694f52bf6d2d1616b0fd62e3"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-06T09:04:03.120Z",
+        "daysDiff": -38,
+        "_id": "695cd00381e5dd389d82eb67"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-09T09:04:03.141Z",
+        "daysDiff": -41,
+        "_id": "6960c48397eee0ac94af12b9"
+      }
+    ],
+    "lastReminderDate": "2026-01-09T09:04:03.141Z",
+    "lendingFee": 0,
+    "lendingFeeStatus": "not_required",
+    "ownerEarnings": 0,
+    "platformFee": 0
+  },
+  {
+    "_id": "6922a4a176151c01e10b2aa4",
+    "book": "690c85d3cc817578ef0f7957",
+    "borrower": "69229f4b76151c01e10b1b3a",
+    "owner": "690a061350f4b9339e16884c",
+    "status": "borrowed",
+    "remindersSent": 5,
+    "communicationStarted": true,
+    "isRatedByLender": false,
+    "isRatedByBorrower": false,
+    "penalties": [],
+    "createdAt": "2025-11-23T06:07:29.560Z",
+    "updatedAt": "2026-01-09T09:06:03.836Z",
+    "__v": 6,
+    "depositAmount": 0,
+    "depositStatus": "not_required",
+    "conversationId": "69229f9d76151c01e10b1cda",
+    "borrowedDate": "2025-11-25T06:34:51.935Z",
+    "dueDate": "2025-12-02T06:34:51.983Z",
+    "metadata": {
+      "handoverDate": "2025-11-25T06:34:51.984Z"
+    },
+    "reminderHistory": [
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-09T16:18:07.630Z",
+        "daysDiff": 7,
+        "_id": "69384bbf23cd104a679f7c30"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-16T18:06:03.402Z",
+        "daysDiff": -14,
+        "_id": "69419f8b307bad1214f611e8"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-27T03:30:11.559Z",
+        "daysDiff": -24,
+        "_id": "694f52c36d2d1616b0fd62ea"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-06T09:06:03.806Z",
+        "daysDiff": -35,
+        "_id": "695cd07b81e5dd389d82eb6f"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-09T09:06:03.835Z",
+        "daysDiff": -38,
+        "_id": "6960c4fb97eee0ac94af12c2"
+      }
+    ],
+    "lastReminderDate": "2026-01-09T09:06:03.835Z",
+    "lendingFee": 0,
+    "lendingFeeStatus": "not_required",
+    "ownerEarnings": 0,
+    "platformFee": 0
+  },
+  {
+    "_id": "6926ba0be22ed943e4fd9d10",
+    "book": "6921ed18db0f2dc512a0236b",
+    "borrower": "6926b7e0e22ed943e4fd9642",
+    "owner": "690b6b1b40b5be2201d2a454",
+    "status": "borrowed",
+    "depositStatus": "not_required",
+    "depositAmount": 0,
+    "communicationStarted": false,
+    "penalties": [],
+    "createdAt": "2025-11-26T08:27:55.246Z",
+    "updatedAt": "2026-01-09T09:08:04.526Z",
+    "__v": 6,
+    "borrowedDate": "2025-11-28T13:54:18.555Z",
+    "dueDate": "2025-12-03T13:54:18.595Z",
+    "metadata": {
+      "handoverDate": "2025-11-28T13:54:18.595Z"
+    },
+    "reminderHistory": [
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-09T16:18:15.288Z",
+        "daysDiff": 6,
+        "_id": "69384bc723cd104a679f7c37"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-16T18:08:04.082Z",
+        "daysDiff": -13,
+        "_id": "6941a004307bad1214f611ee"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-27T03:30:15.265Z",
+        "daysDiff": -23,
+        "_id": "694f52c76d2d1616b0fd62f1"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-06T09:08:04.494Z",
+        "daysDiff": -33,
+        "_id": "695cd0f481e5dd389d82eb77"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-09T09:08:04.526Z",
+        "daysDiff": -36,
+        "_id": "6960c57497eee0ac94af12cb"
+      }
+    ],
+    "remindersSent": 5,
+    "lastReminderDate": "2026-01-09T09:08:04.525Z",
+    "lendingFee": 0,
+    "lendingFeeStatus": "not_required",
+    "ownerEarnings": 0,
+    "platformFee": 0
+  },
+  {
+    "_id": "6929a06a7e03b2da64fec093",
+    "book": "690ccbfdf3c5d30fae1c2b63",
+    "borrower": "69299e467e03b2da64feb960",
+    "owner": "690a061350f4b9339e16884c",
+    "status": "borrowed",
+    "depositStatus": "not_required",
+    "depositAmount": 0,
+    "communicationStarted": true,
+    "penalties": [],
+    "createdAt": "2025-11-28T13:15:22.872Z",
+    "updatedAt": "2026-01-09T09:10:05.279Z",
+    "__v": 5,
+    "conversationId": "6929a0297e03b2da64febea1",
+    "borrowedDate": "2025-11-30T06:45:08.021Z",
+    "dueDate": "2025-12-04T06:45:08.465Z",
+    "metadata": {
+      "handoverDate": "2025-11-30T06:45:08.465Z"
+    },
+    "reminderHistory": [
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-09T16:18:22.908Z",
+        "daysDiff": 5,
+        "_id": "69384bce23cd104a679f7c3e"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-16T18:10:04.758Z",
+        "daysDiff": -12,
+        "_id": "6941a07c307bad1214f611f4"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-27T03:30:19.701Z",
+        "daysDiff": -22,
+        "_id": "694f52cb6d2d1616b0fd630e"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-09T09:10:05.278Z",
+        "daysDiff": -36,
+        "_id": "6960c5ed97eee0ac94af12d3"
+      }
+    ],
+    "remindersSent": 4,
+    "lastReminderDate": "2026-01-09T09:10:05.278Z",
+    "lendingFee": 0,
+    "lendingFeeStatus": "not_required",
+    "ownerEarnings": 0,
+    "platformFee": 0
+  },
+  {
+    "_id": "6929a08e7e03b2da64fec0d8",
+    "book": "690eff88e3ae3d0802972acf",
+    "borrower": "69299e467e03b2da64feb960",
+    "owner": "690a061350f4b9339e16884c",
+    "status": "borrowed",
+    "depositStatus": "not_required",
+    "depositAmount": 0,
+    "communicationStarted": true,
+    "penalties": [],
+    "createdAt": "2025-11-28T13:15:58.692Z",
+    "updatedAt": "2026-01-09T09:10:05.796Z",
+    "__v": 6,
+    "conversationId": "6929a0297e03b2da64febea1",
+    "borrowedDate": "2025-11-30T06:45:00.145Z",
+    "dueDate": "2025-12-10T06:45:00.589Z",
+    "metadata": {
+      "handoverDate": "2025-11-30T06:45:00.590Z"
+    },
+    "reminderHistory": [
+      {
+        "type": "two_days_before",
+        "sentAt": "2025-12-09T16:16:42.013Z",
+        "daysDiff": 1,
+        "_id": "69384b6aca5a2afb370207dc"
+      },
+      {
+        "type": "due_date",
+        "sentAt": "2025-12-09T16:16:50.354Z",
+        "daysDiff": 1,
+        "_id": "69384b72ca5a2afb370207e2"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-16T18:10:05.202Z",
+        "daysDiff": -6,
+        "_id": "6941a07d307bad1214f611f9"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-27T03:30:19.742Z",
+        "daysDiff": -16,
+        "_id": "694f52cb6d2d1616b0fd6314"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-09T09:10:05.795Z",
+        "daysDiff": -30,
+        "_id": "6960c5ed97eee0ac94af12da"
+      }
+    ],
+    "remindersSent": 5,
+    "lastReminderDate": "2026-01-09T09:10:05.795Z",
+    "lendingFee": 0,
+    "lendingFeeStatus": "not_required",
+    "ownerEarnings": 0,
+    "platformFee": 0
+  },
+  {
+    "_id": "692ef96915ee2bfea08350c5",
+    "book": "69259be29afe38f326c4d486",
+    "borrower": "692ef87715ee2bfea0835042",
+    "owner": "690b6b1b40b5be2201d2a454",
+    "status": "borrowed",
+    "depositStatus": "not_required",
+    "depositAmount": 0,
+    "communicationStarted": true,
+    "penalties": [],
+    "createdAt": "2025-12-02T14:36:25.068Z",
+    "updatedAt": "2026-01-09T09:12:06.580Z",
+    "__v": 3,
+    "conversationId": "69319f3e07bf673a0198983d",
+    "reminderHistory": [
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-27T03:30:28.036Z",
+        "daysDiff": -4,
+        "_id": "694f52d46d2d1616b0fd631e"
+      },
+      {
+        "type": "overdue",
+        "sentAt": "2026-01-09T09:12:06.579Z",
+        "daysDiff": -17,
+        "_id": "6960c66697eee0ac94af12e0"
+      }
+    ],
+    "remindersSent": 2,
+    "borrowedDate": "2025-12-18T13:06:34.880Z",
+    "dueDate": "2025-12-22T13:06:34.919Z",
+    "lendingFee": 0,
+    "lendingFeeStatus": "not_required",
+    "metadata": {
+      "handoverDate": "2025-12-18T13:06:34.919Z"
+    },
+    "ownerEarnings": 0,
+    "platformFee": 0,
+    "lastReminderDate": "2026-01-09T09:12:06.579Z"
+  },
+  {
+    "_id": "6931aff0e3f1dc60c0e2ce31",
+    "book": "692c4a5b524f292146c7d13c",
+    "borrower": "6931aa99e3f1dc60c0e2cb21",
+    "owner": "690a061350f4b9339e16884c",
+    "status": "borrowed",
+    "depositStatus": "not_required",
+    "depositAmount": 0,
+    "communicationStarted": true,
+    "penalties": [],
+    "createdAt": "2025-12-04T15:59:44.271Z",
+    "updatedAt": "2025-12-27T03:30:31.662Z",
+    "__v": 2,
+    "conversationId": "6931c5f2553a68078c593a14",
+    "borrowedDate": "2025-12-04T17:44:22.391Z",
+    "dueDate": "2025-12-16T17:44:22.871Z",
+    "metadata": {
+      "handoverDate": "2025-12-04T17:44:22.871Z"
+    },
+    "reminderHistory": [
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-27T03:30:31.662Z",
+        "daysDiff": -10,
+        "_id": "694f52d76d2d1616b0fd6323"
+      }
+    ],
+    "remindersSent": 1,
+    "lastReminderDate": "2025-12-27T03:30:31.662Z",
+    "lendingFee": 0,
+    "lendingFeeStatus": "not_required",
+    "ownerEarnings": 0,
+    "platformFee": 0
+  },
+  {
+    "_id": "69332b53aee6f4df88b097ae",
+    "book": "690ccbfdf3c5d30fae1c2b63",
+    "borrower": "69332b31aee6f4df88b09780",
+    "owner": "690a061350f4b9339e16884c",
+    "status": "borrowed",
+    "depositStatus": "not_required",
+    "depositAmount": 0,
+    "communicationStarted": true,
+    "penalties": [],
+    "createdAt": "2025-12-05T18:58:27.453Z",
+    "updatedAt": "2025-12-27T03:30:35.312Z",
+    "__v": 2,
+    "conversationId": "6933d179a51779481e2b531e",
+    "borrowedDate": "2025-12-09T15:40:20.224Z",
+    "dueDate": "2025-12-13T15:40:20.270Z",
+    "metadata": {
+      "handoverDate": "2025-12-09T15:40:20.270Z"
+    },
+    "reminderHistory": [
+      {
+        "type": "overdue",
+        "sentAt": "2025-12-27T03:30:35.312Z",
+        "daysDiff": -13,
+        "_id": "694f52db6d2d1616b0fd6328"
+      }
+    ],
+    "remindersSent": 1,
+    "lastReminderDate": "2025-12-27T03:30:35.312Z",
+    "lendingFee": 0,
+    "lendingFeeStatus": "not_required",
+    "ownerEarnings": 0,
+    "platformFee": 0
+  },
+  {
+    "_id": "69423e0d96b7fbce64c2db7c",
+    "book": "690eff68e3ae3d0802972a73",
+    "borrower": "690b6b1b40b5be2201d2a454",
+    "owner": "690a061350f4b9339e16884c",
+    "status": "denied",
+    "depositStatus": "not_required",
+    "depositAmount": 0,
+    "lendingFee": 0,
+    "lendingFeeStatus": "not_required",
+    "platformFee": 0,
+    "ownerEarnings": 0,
+    "communicationStarted": false,
+    "remindersSent": 0,
+    "penalties": [],
+    "reminderHistory": [],
+    "createdAt": "2025-12-17T05:22:21.662Z",
+    "updatedAt": "2025-12-17T05:22:37.275Z",
+    "__v": 0
+  },
+  {
+    "_id": "69423fd36bf72962eb5c3beb",
+    "book": "69423fa26bf72962eb5c3b62",
+    "borrower": "690a061350f4b9339e16884c",
+    "owner": "690b6b1b40b5be2201d2a454",
+    "status": "denied",
+    "depositStatus": "not_required",
+    "depositAmount": 0,
+    "lendingFee": 10,
+    "lendingFeeStatus": "pending",
+    "platformFee": 2,
+    "ownerEarnings": 8,
+    "communicationStarted": false,
+    "remindersSent": 0,
+    "penalties": [],
+    "reminderHistory": [],
+    "createdAt": "2025-12-17T05:29:55.719Z",
+    "updatedAt": "2025-12-17T05:30:05.603Z",
+    "__v": 0
+  },
+  {
+    "_id": "6953d6f6e8effbfdfb712d6c",
+    "book": "69513e830dc73a68921693a5",
+    "borrower": "690b6b1b40b5be2201d2a454",
+    "owner": "690a061350f4b9339e16884c",
+    "status": "returned",
+    "depositStatus": "not_required",
+    "depositAmount": 0,
+    "lendingFee": 69.98,
+    "lendingFeeStatus": "paid",
+    "platformFee": 14,
+    "ownerEarnings": 55.98,
+    "communicationStarted": true,
+    "remindersSent": 0,
+    "penalties": [],
+    "reminderHistory": [],
+    "createdAt": "2025-12-30T13:43:18.125Z",
+    "updatedAt": "2026-01-14T05:06:59.604Z",
+    "__v": 0,
+    "conversationId": "690c5c46f0f3a8c5b79564a6",
+    "lendingFeePaymentId": "pay_RxqMx3rBc3qmBI",
+    "paymentCompletedAt": "2025-12-30T13:44:04.820Z",
+    "borrowedDate": "2025-12-30T13:44:09.532Z",
+    "dueDate": "2026-01-14T13:44:09.573Z",
+    "metadata": {
+      "handoverDate": "2025-12-30T13:44:09.573Z"
+    },
+    "returnedDate": "2026-01-14T05:06:59.604Z"
+  },
+  {
+    "_id": "695ebd2a54848988d63c92d7",
+    "book": "695241b3979566150bffb988",
+    "borrower": "695ebcfc54848988d63c920b",
+    "owner": "690b6b1b40b5be2201d2a454",
+    "status": "approved",
+    "depositStatus": "not_required",
+    "depositAmount": 0,
+    "lendingFee": 68.97,
+    "lendingFeeStatus": "pending",
+    "platformFee": 13.79,
+    "ownerEarnings": 55.18,
+    "communicationStarted": true,
+    "remindersSent": 0,
+    "penalties": [],
+    "reminderHistory": [],
+    "createdAt": "2026-01-07T20:08:10.163Z",
+    "updatedAt": "2026-01-09T08:47:50.663Z",
+    "__v": 0,
+    "conversationId": "6960c0b6c944d2cb692bf61f"
+  }
+]

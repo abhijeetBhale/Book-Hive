@@ -297,29 +297,54 @@ const BookLendingCalendar = () => {
                 const isLender = request.owner?._id === currentUser._id;
                 const otherUser = isLender ? request.borrower : request.owner;
 
-                // Determine the correct start date based on status
-                let startDate;
-                if (request.status === 'borrowed' && request.metadata?.handoverDate) {
-                    // Use handover date when book was actually borrowed
-                    startDate = new Date(request.metadata.handoverDate);
+                // Determine the correct start and end dates based on status
+                let startDate, endDate;
+                
+                if (request.status === 'borrowed') {
+                    // For borrowed books, prioritize handoverDate, then borrowedDate, then updatedAt
+                    if (request.metadata?.handoverDate) {
+                        startDate = new Date(request.metadata.handoverDate);
+                    } else if (request.borrowedDate) {
+                        startDate = new Date(request.borrowedDate);
+                    } else {
+                        // Fallback for old records - use updatedAt when status changed to borrowed
+                        startDate = new Date(request.updatedAt || request.createdAt);
+                    }
+                    
+                    // Calculate lending duration for display
+                    const lendingDuration = request.book?.lendingDuration || 14;
+                    endDate = request.dueDate ? new Date(request.dueDate) : new Date(startDate.getTime() + lendingDuration * 24 * 60 * 60 * 1000);
+                    
                 } else if (request.status === 'approved') {
-                    // Use approval date for approved requests
+                    // For approved requests, show only a single day event on approval date
                     startDate = new Date(request.updatedAt || request.createdAt);
+                    endDate = new Date(startDate);
+                    // Make it a single day event by setting end time to same day
+                    endDate.setHours(23, 59, 59, 999);
+                    
                 } else {
-                    // Use creation date for other statuses
+                    // For other statuses, use creation date as single day event
                     startDate = new Date(request.createdAt);
+                    endDate = new Date(startDate);
+                    endDate.setHours(23, 59, 59, 999);
                 }
 
-                // Calculate lending duration for display
-                const lendingDuration = request.book?.lendingDuration || 14;
-                const endDate = request.dueDate ? new Date(request.dueDate) : new Date(startDate.getTime() + lendingDuration * 24 * 60 * 60 * 1000);
-
-                // Create a more informative title
+                // Create a more informative title based on status
                 let eventTitle;
+                const lendingDuration = request.book?.lendingDuration || 14;
+                
                 if (request.status === 'borrowed') {
+                    const dateSource = request.metadata?.handoverDate ? 'handover' : request.borrowedDate ? 'borrowed' : 'estimated';
                     eventTitle = `${request.book.title} (${lendingDuration}d) - ${isLender ? 'Lent to' : 'Borrowed from'} ${otherUser.name}`;
+                    // Add indicator if date was estimated for migration
+                    if (dateSource === 'estimated') {
+                        eventTitle += ' *';
+                    }
+                } else if (request.status === 'approved') {
+                    // For approved requests, show as single day approval event
+                    eventTitle = `📋 ${request.book.title} - Approved ${isLender ? 'for' : 'by'} ${otherUser.name}`;
                 } else {
-                    eventTitle = `${request.book.title} (${lendingDuration}d) - ${request.status} - ${isLender ? 'To' : 'From'} ${otherUser.name}`;
+                    eventTitle = `${request.book.title} - ${request.status} - ${isLender ? 'To' : 'From'} ${otherUser.name}`;
                 }
 
                 return {
@@ -432,11 +457,11 @@ const BookLendingCalendar = () => {
                 <CalendarLegend>
                     <div className="legend-item">
                         <div className="legend-color borrowed"></div>
-                        <span>Borrowed Books</span>
+                        <span>Borrowed Books (Full Duration)</span>
                     </div>
                     <div className="legend-item">
                         <div className="legend-color approved"></div>
-                        <span>Approved Requests</span>
+                        <span>Approved Requests (Single Day)</span>
                     </div>
                     <div className="legend-item">
                         <div className="legend-color due-soon"></div>
@@ -456,7 +481,7 @@ const BookLendingCalendar = () => {
                         <h3 className="text-lg font-semibold mb-2">No Book Activities</h3>
                         <p>You don't have any active borrowing or lending activities yet.</p>
                         <p className="text-sm mt-2">Start by browsing books in the community or adding your own books to lend!</p>
-                        <p className="text-xs mt-2 text-gray-400">💡 Tip: When you lend books, you can set custom lending durations (e.g., 3 days, 7 days, 14 days)</p>
+                        <p className="text-xs mt-2 text-gray-400">💡 Approved requests show as single-day events, borrowed books show full lending duration</p>
                     </div>
                 </div>
             ) : (
