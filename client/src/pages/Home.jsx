@@ -4,43 +4,53 @@ import { Link } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import { getFullImageUrl } from '../utils/imageHelpers';
 import { hasValidLocation } from '../utils/locationHelpers';
-import atomicHabitsCover from '../assets/atomic_habits.png';
 import { useInView } from 'react-intersection-observer';
-import CountUp from 'react-countup';
 import { testimonialAPI, usersAPI, booksAPI } from '../utils/api';
 
-// Lazy load heavy components
-const LocationPermission = lazy(() => import('../components/LocationPermission'));
-const TestimonialModal = lazy(() => import('../components/TestimonialModal'));
+// Critical imports for hero section (loaded immediately)
 import {
   BookOpen,
   Users,
-  MapPin,
-  Heart,
-  Shield,
   ArrowRight,
   Eye,
   Globe,
   Star,
   X,
-  MessageCircle,
-  Calendar,
-  UserPlus,
-  Facebook,
-  Instagram,
-  Linkedin,
-  Youtube,
-  Mail,
-  Send
+  UserPlus
 } from 'lucide-react';
-import { AvatarCircles } from '../components/ui/avatar-circles';
 import { AuroraText } from '../components/ui/aurora-text';
-import TiltedCard from '../components/ui/TiltedCard';
 import SEO from '../components/SEO';
 import { PAGE_SEO, generateStructuredData } from '../utils/seo';
-import { InfiniteMovingCards } from '../components/ui/infinite-moving-cards';
-import DomeGallery from '../components/ui/DomeGallery';
-import { Globe as GlobeComponent } from '../components/ui/Globe';
+
+// Lazy load ALL non-critical components to reduce initial bundle
+const LocationPermission = lazy(() => import('../components/LocationPermission'));
+const TestimonialModal = lazy(() => import('../components/TestimonialModal'));
+const AvatarCircles = lazy(() => import('../components/ui/avatar-circles').then(module => ({ default: module.AvatarCircles })));
+const TiltedCard = lazy(() => import('../components/ui/TiltedCard'));
+const InfiniteMovingCards = lazy(() => import('../components/ui/infinite-moving-cards').then(module => ({ default: module.InfiniteMovingCards })));
+const DomeGallery = lazy(() => import('../components/ui/DomeGallery'));
+const GlobeComponent = lazy(() => import('../components/ui/Globe').then(module => ({ default: module.Globe })));
+const CountUp = lazy(() => import('react-countup'));
+
+// Lazy load remaining icons to reduce initial bundle
+const MapPin = lazy(() => import('lucide-react').then(module => ({ default: module.MapPin })));
+const Heart = lazy(() => import('lucide-react').then(module => ({ default: module.Heart })));
+const Shield = lazy(() => import('lucide-react').then(module => ({ default: module.Shield })));
+const MessageCircle = lazy(() => import('lucide-react').then(module => ({ default: module.MessageCircle })));
+const Calendar = lazy(() => import('lucide-react').then(module => ({ default: module.Calendar })));
+const Facebook = lazy(() => import('lucide-react').then(module => ({ default: module.Facebook })));
+const Instagram = lazy(() => import('lucide-react').then(module => ({ default: module.Instagram })));
+const Linkedin = lazy(() => import('lucide-react').then(module => ({ default: module.Linkedin })));
+const Youtube = lazy(() => import('lucide-react').then(module => ({ default: module.Youtube })));
+const Mail = lazy(() => import('lucide-react').then(module => ({ default: module.Mail })));
+const Send = lazy(() => import('lucide-react').then(module => ({ default: module.Send })));
+
+// Import the actual atomic habits image
+import atomicHabitsCover from '../assets/atomic_habits.png';
+
+// Preload critical hero image as WebP (fallback to existing images for now)
+const heroImageWebP = '/hero-background.webp';
+const atomicHabitsWebP = atomicHabitsCover; // Use the actual imported image
 
 // Authentication Modal Component
 const AuthModal = ({ isOpen, onClose }) => {
@@ -89,6 +99,7 @@ const Home = () => {
     return months[currentDate.getMonth()];
   };
 
+  // State for non-critical features (loaded after hero)
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showTestimonialModal, setShowTestimonialModal] = useState(false);
   const [testimonials, setTestimonials] = useState([]);
@@ -97,14 +108,16 @@ const Home = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [platformBooks, setPlatformBooks] = useState([]);
   const [booksLoaded, setBooksLoaded] = useState(false);
+  const [heroLoaded, setHeroLoaded] = useState(false);
 
   const quotes = [
     { text: 'Community-Driven Book Sharing', icon: <BookOpen className="badge-icon" /> },
-    { text: 'Share Your Favorite Reads', icon: <Heart className="badge-icon" /> },
+    { text: 'Share Your Favorite Reads', icon: <Suspense fallback={<BookOpen className="badge-icon" />}><Heart className="badge-icon" /></Suspense> },
     { text: 'Discover New Worlds', icon: <Globe className="badge-icon" /> },
     { text: 'Connect With Fellow Readers', icon: <Users className="badge-icon" /> },
   ];
 
+  // Hero animation - start immediately
   useEffect(() => {
     const interval = setInterval(() => {
       setQuoteIndex((prevIndex) => (prevIndex + 1) % quotes.length);
@@ -113,20 +126,27 @@ const Home = () => {
     return () => clearInterval(interval);
   }, [quotes.length]);
 
-  // Check if user needs to set location
+  // Mark hero as loaded after initial render
   useEffect(() => {
+    setHeroLoaded(true);
+  }, []);
+
+  // DEFER all non-critical data loading until after hero is rendered
+  useEffect(() => {
+    if (!heroLoaded) return;
+
+    // Check if user needs to set location (deferred)
     if (user && !hasValidLocation(user)) {
-      // Delay showing modal to avoid overwhelming new users
       const timer = setTimeout(() => {
         setShowLocationModal(true);
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [user]);
+  }, [user, heroLoaded]);
 
-  // Load testimonials on component mount
+  // Load testimonials AFTER hero (deferred)
   useEffect(() => {
-    if (testimonialsLoaded) return; // Prevent duplicate calls
+    if (!heroLoaded || testimonialsLoaded) return;
 
     const loadTestimonials = async () => {
       try {
@@ -140,21 +160,22 @@ const Home = () => {
       }
     };
 
-    loadTestimonials();
-  }, [testimonialsLoaded]);
+    // Delay testimonials loading to prioritize hero
+    setTimeout(loadTestimonials, 100);
+  }, [testimonialsLoaded, heroLoaded]);
 
-  // Load community users for avatar circles
+  // Load community users AFTER hero (deferred)
   useEffect(() => {
+    if (!heroLoaded) return;
+
     const loadCommunityUsers = async () => {
       try {
-        // Try to get users with books first
         const response = await usersAPI.getUsersWithBooks({ limit: 10 });
         const users = response.data.users || [];
 
         if (users.length > 0) {
           setCommunityUsers(users);
         } else {
-          // Fallback: create some placeholder users if no real users available
           const placeholderUsers = [
             { _id: 'placeholder1', name: 'Sarah Johnson', avatar: null },
             { _id: 'placeholder2', name: 'Mike Chen', avatar: null },
@@ -167,7 +188,6 @@ const Home = () => {
         }
       } catch (error) {
         console.error('Failed to load community users:', error);
-        // Fallback to placeholder users if API fails
         const placeholderUsers = [
           { _id: 'placeholder1', name: 'Sarah Johnson', avatar: null },
           { _id: 'placeholder2', name: 'Mike Chen', avatar: null },
@@ -180,8 +200,9 @@ const Home = () => {
       }
     };
 
-    loadCommunityUsers();
-  }, []);
+    // Delay community users loading
+    setTimeout(loadCommunityUsers, 200);
+  }, [heroLoaded]);
 
   const handleAvatarClick = (avatar) => {
     if (!user) {
@@ -221,15 +242,14 @@ const Home = () => {
     }
   };
 
-  // Load books from the platform
+  // Load books from the platform AFTER hero (deferred)
   useEffect(() => {
-    if (booksLoaded) return; // Prevent duplicate calls
+    if (!heroLoaded || booksLoaded) return;
 
     const loadPlatformBooks = async () => {
       try {
         const response = await booksAPI.getAllBooks();
         
-        // Ensure we have a valid response and data is an array
         if (!response || !response.data) {
           setPlatformBooks([]);
           setBooksLoaded(true);
@@ -239,15 +259,13 @@ const Home = () => {
         const books = Array.isArray(response.data) ? response.data : [];
         
         if (books.length === 0) {
-          // No books available - this is normal, not an error
           setPlatformBooks([]);
           setBooksLoaded(true);
           return;
         }
 
-        // Filter and format books with valid cover images
         const formattedBooks = books
-          .filter(book => book && book.coverUrl) // Only books with cover images
+          .filter(book => book && book.coverUrl)
           .map(book => ({
             title: book.title || 'Unknown Title',
             author: book.author || 'Unknown Author',
@@ -255,7 +273,7 @@ const Home = () => {
             description: book.description || book.summary || `A wonderful book by ${book.author || 'Unknown Author'}`,
             _id: book._id
           }))
-          .slice(0, 20); // Limit to 20 most recent books
+          .slice(0, 20);
 
         setPlatformBooks(formattedBooks);
         setBooksLoaded(true);
@@ -266,12 +284,13 @@ const Home = () => {
       }
     };
 
-    loadPlatformBooks();
-  }, [booksLoaded]);
+    // Delay books loading to prioritize hero
+    setTimeout(loadPlatformBooks, 300);
+  }, [booksLoaded, heroLoaded]);
 
 
 
-  // Default books to always show
+  // Default books to always show (using existing images for now, will convert to WebP later)
   const defaultBooks = [
     {
       title: 'The Midnight Library',
@@ -294,7 +313,7 @@ const Home = () => {
     {
       title: 'Atomic Habits',
       author: 'James Clear',
-      coverUrl: 'https://books.google.co.in/books/publisher/content?id=fFCjDQAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U0AbHgCacqSvU34ynU1HMs_Qoqyqg&w=1280',
+      coverUrl: atomicHabitsWebP,
       description: 'No matter your goals, Atomic Habits offers a proven framework for improving every day. Learn how tiny changes can lead to remarkable results.'
     },
     {
@@ -365,7 +384,7 @@ const Home = () => {
         structuredData={generateStructuredData('WebSite')}
       />
       <StyledWrapper>
-        {/* Hero Section */}
+        {/* CRITICAL: Hero Section - Render IMMEDIATELY without any API dependencies */}
         <section className="hero-section">
           <div className="background-gradient"></div>
           <div className="content-container">
@@ -411,104 +430,111 @@ const Home = () => {
               )}
             </div>
           </div>
-        </section>     
-
-        {/* Recently Added Books Section */}
-        <section className="recently-added-section">
-          <div className="content-container">
-            <div className="section-header">
-              <h2 className="section-title">Fresh On The Shelves</h2>
-              <p className="section-subtitle">See what books were recently added by members of the community.</p>
-            </div>
-          </div>
-          <div className="dome-gallery-fullwidth">
-            <DomeGallery
-              images={recentlyAddedBooks.map(book => ({
-                src: getFullImageUrl(book.coverUrl),
-                alt: `${book.title} by ${book.author}`,
-                title: book.title,
-                author: book.author,
-                description: book.description
-              }))}
-              fit={0.55}
-              fitBasis="width"
-              minRadius={400}
-              maxRadius={900}
-              padFactor={0.15}
-              overlayBlurColor="#ffffff"
-              imageBorderRadius="16px"
-              openedImageBorderRadius="24px"
-              openedImageWidth="320px"
-              openedImageHeight="520px"
-              grayscale={false}
-              segments={35}
-            />
-          </div>
-          <div className="content-container">
-            <div className="explore-more-container">
-              <Link to={user ? '/books' : '/register'} className="btn explore-more-btn group">
-                {user ? 'Discover More Books' : 'Explore More'}
-                <ArrowRight className="arrow-icon" />
-              </Link>
-            </div>
-          </div>
         </section>
 
-        {/* Book of the Month Section */}
-        <section className="book-of-the-month-section">
-          <div className="content-container">
-            <div className="book-grid">
-              <div className="book-cover-wrapper">
-                <TiltedCard
-                  imageSrc={getFullImageUrl(bookOfTheMonth.coverUrl)}
-                  altText={`Cover of ${bookOfTheMonth.title}`}
-                  captionText={`${bookOfTheMonth.title} by ${bookOfTheMonth.author}`}
-                  containerHeight="500px"
-                  containerWidth="100%"
-                  imageHeight="500px"
-                  imageWidth="350px"
-                  rotateAmplitude={12}
-                  scaleOnHover={1.1}
-                  showMobileWarning={false}
-                  showTooltip={true}
-                  displayOverlayContent={false}
-                />
-              </div>
-              <div className="book-details">
-                <div className="eyebrow-section">
-                  <p className="eyebrow-text">
-                    <Star className="eyebrow-icon" />
-                    Community Pick for {getCurrentMonth()}
-                  </p>
-                  <div className="community-readers">
-                    {avatars.length > 0 ? (
-                      <AvatarCircles
-                        numPeople={communityUsers.length + 93}
-                        avatarUrls={avatars}
-                        onAvatarClick={handleAvatarClick}
-                      />
-                    ) : (
-                      <div className="loading-avatars">
-                        <div className="avatar-skeleton"></div>
-                        <div className="avatar-skeleton"></div>
-                        <div className="avatar-skeleton"></div>
-                        <span className="loading-text">Loading community...</span>
-                      </div>
-                    )}
+        {/* DEFERRED: All sections below load after hero */}
+        {heroLoaded && (
+          <>
+            {/* Recently Added Books Section */}
+            <Suspense fallback={<div className="section-loading">Loading books...</div>}>
+              <section className="recently-added-section">
+                <div className="content-container">
+                  <div className="section-header">
+                    <h2 className="section-title">Fresh On The Shelves</h2>
+                    <p className="section-subtitle">See what books were recently added by members of the community.</p>
                   </div>
                 </div>
-                <h2 className="book-title-featured">{bookOfTheMonth.title}</h2>
-                <h3 className="book-author-featured">by {bookOfTheMonth.author}</h3>
-                <p className="book-reason">{bookOfTheMonth.reason}</p>
+                <div className="dome-gallery-fullwidth">
+                  <DomeGallery
+                    images={recentlyAddedBooks.map(book => ({
+                      src: getFullImageUrl(book.coverUrl),
+                      alt: `${book.title} by ${book.author}`,
+                      title: book.title,
+                      author: book.author,
+                      description: book.description
+                    }))}
+                    fit={0.55}
+                    fitBasis="width"
+                    minRadius={400}
+                    maxRadius={900}
+                    padFactor={0.15}
+                    overlayBlurColor="#ffffff"
+                    imageBorderRadius="16px"
+                    openedImageBorderRadius="24px"
+                    openedImageWidth="320px"
+                    openedImageHeight="520px"
+                    grayscale={false}
+                    segments={35}
+                  />
+                </div>
+                <div className="content-container">
+                  <div className="explore-more-container">
+                    <Link to={user ? '/books' : '/register'} className="btn explore-more-btn group">
+                      {user ? 'Discover More Books' : 'Explore More'}
+                      <ArrowRight className="arrow-icon" />
+                    </Link>
+                  </div>
+                </div>
+              </section>
+            </Suspense>
 
-                <Link to="/books" className="btn primary-btn group">
-                  Find This Book
-                  <ArrowRight className="arrow-icon" />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
+            {/* Book of the Month Section */}
+            <Suspense fallback={<div className="section-loading">Loading featured book...</div>}>
+              <section className="book-of-the-month-section">
+                <div className="content-container">
+                  <div className="book-grid">
+                    <div className="book-cover-wrapper">
+                      <TiltedCard
+                        imageSrc={getFullImageUrl(bookOfTheMonth.coverUrl)}
+                        altText={`Cover of ${bookOfTheMonth.title}`}
+                        captionText={`${bookOfTheMonth.title} by ${bookOfTheMonth.author}`}
+                        containerHeight="500px"
+                        containerWidth="100%"
+                        imageHeight="500px"
+                        imageWidth="350px"
+                        rotateAmplitude={12}
+                        scaleOnHover={1.1}
+                        showMobileWarning={false}
+                        showTooltip={true}
+                        displayOverlayContent={false}
+                      />
+                    </div>
+                    <div className="book-details">
+                      <div className="eyebrow-section">
+                        <p className="eyebrow-text">
+                          <Star className="eyebrow-icon" />
+                          Community Pick for {getCurrentMonth()}
+                        </p>
+                        <div className="community-readers">
+                          {avatars.length > 0 ? (
+                            <AvatarCircles
+                              numPeople={communityUsers.length + 93}
+                              avatarUrls={avatars}
+                              onAvatarClick={handleAvatarClick}
+                            />
+                          ) : (
+                            <div className="loading-avatars">
+                              <div className="avatar-skeleton"></div>
+                              <div className="avatar-skeleton"></div>
+                              <div className="avatar-skeleton"></div>
+                              <span className="loading-text">Loading community...</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <h2 className="book-title-featured">{bookOfTheMonth.title}</h2>
+                      <h3 className="book-author-featured">by {bookOfTheMonth.author}</h3>
+                      <p className="book-reason">{bookOfTheMonth.reason}</p>
+
+                      <Link to="/books" className="btn primary-btn group">
+                        Find This Book
+                        <ArrowRight className="arrow-icon" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </Suspense>
 
         {/* How It Works Section */}
         <section ref={howItWorksRef} className={`how-it-works-section ${isHowItWorksVisible ? 'is-visible' : ''}`}>
@@ -1023,6 +1049,8 @@ const Home = () => {
             </div>
           </footer>
         </section>
+          </>
+        )}
 
         {/* Location Permission Modal */}
         {showLocationModal && (
@@ -1102,18 +1130,7 @@ const StyledWrapper = styled.div`
   overflow-x: hidden; /* Prevent horizontal scroll */
   margin-top: -30px;
 
-  .content-container {
-    position: relative;
-    z-index: 2;
-    max-width: 80rem;
-    margin: 0 auto;
-    margin-top: -40px;
-    padding: 0 1rem;
-    @media (min-width: 640px) { padding: 0 1.5rem; }
-    @media (min-width: 1024px) { padding: 0 2rem; }
-  }
-
-  /* Hero Section */
+  /* CRITICAL CSS - Inlined for hero section to prevent render blocking */
   .hero-section {
     position: relative;
     padding: 6.2rem 0;
@@ -1128,7 +1145,24 @@ const StyledWrapper = styled.div`
       background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.7), rgba(249, 250, 251, 0.9));
       z-index: 1;
     }
-    .badge-container { margin-bottom: 2rem; display: flex; justify-content: center; }
+    
+    .content-container {
+      position: relative;
+      z-index: 2;
+      max-width: 80rem;
+      margin: 0 auto;
+      margin-top: -40px;
+      padding: 0 1rem;
+      @media (min-width: 640px) { padding: 0 1.5rem; }
+      @media (min-width: 1024px) { padding: 0 2rem; }
+    }
+    
+    .badge-container { 
+      margin-bottom: 2rem; 
+      display: flex; 
+      justify-content: center; 
+    }
+    
     .badge {
       display: inline-flex;
       align-items: center;
@@ -1142,14 +1176,27 @@ const StyledWrapper = styled.div`
       min-width: 300px;
       min-height: 42px;
     }
+    
     .animated-badge {
       display: flex;
       align-items: center;
       justify-content: center;
       animation: ${fadeInOut} 4s ease-in-out infinite;
     }
-    .badge-icon { height: 1.25rem; width: 1.25rem; color: #4F46E5; margin-right: 0.5rem; }
-    .badge-text { font-size: 0.875rem; font-weight: 500; color: #374151; }
+    
+    .badge-icon { 
+      height: 1.25rem; 
+      width: 1.25rem; 
+      color: #4F46E5; 
+      margin-right: 0.5rem; 
+    }
+    
+    .badge-text { 
+      font-size: 0.875rem; 
+      font-weight: 500; 
+      color: #374151; 
+    }
+    
     .main-heading {
       font-size: 3.75rem;
       font-weight: 900;
@@ -1158,12 +1205,14 @@ const StyledWrapper = styled.div`
       line-height: 1.1;
       @media (min-width: 768px) { font-size: 6rem; }
     }
+    
     .highlight-text {
       background-image: linear-gradient(to right, #4F46E5, #a855f7, #3b82f6);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
     }
+    
     .sub-heading {
       font-size: 1.25rem;
       color: #1f2937;
@@ -1175,6 +1224,7 @@ const StyledWrapper = styled.div`
       line-height: 1.625;
       @media (min-width: 768px) { font-size: 1.5rem; }
     }
+    
     .button-group {
       display: flex;
       flex-direction: column;
@@ -1183,6 +1233,41 @@ const StyledWrapper = styled.div`
       align-items: center;
       @media (min-width: 640px) { flex-direction: row; }
     }
+  }
+
+  /* Section loading fallbacks */
+  .section-loading {
+    padding: 4rem 0;
+    text-align: center;
+    color: #6b7280;
+    font-size: 1rem;
+    background-color: #f9fafb;
+    border-radius: 1rem;
+    margin: 2rem 0;
+  }
+
+  .icon-placeholder {
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #e5e7eb;
+    border-radius: 0.25rem;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .content-container {
+    position: relative;
+    z-index: 2;
+    max-width: 80rem;
+    margin: 0 auto;
+    margin-top: -40px;
+    padding: 0 1rem;
+    @media (min-width: 640px) { padding: 0 1.5rem; }
+    @media (min-width: 1024px) { padding: 0 2rem; }
   }
 
   /* Buttons */

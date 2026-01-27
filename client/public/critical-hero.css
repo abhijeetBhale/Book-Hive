@@ -1,0 +1,106 @@
+/* CRITICAL CSS - Hero Section Only - Inlined to prevent render blocking */
+.hero-section {
+  position: relative;
+  padding: 6.2rem 0;
+  width: 100%;
+  overflow: hidden;
+  text-align: center;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+}
+
+.hero-section .background-gradient {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.7), rgba(249, 250, 251, 0.9));
+  z-index: 1;
+}
+
+.hero-section .content-container {
+  position: relative;
+  z-index: 2;
+  max-width: 80rem;
+  margin: 0 auto;
+  margin-top: -40px;
+  padding: 0 1rem;
+}
+
+@media (min-width: 640px) {
+  .hero-section .content-container {
+    padding: 0 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-section .content-container {
+    padding: 0 2rem;
+  }
+}
+
+.hero-section .main-heading {
+  font-size: 3.75rem;
+  font-weight: 900;
+  color: #111827;
+  margin-bottom: 2rem;
+  line-height: 1.1;
+}
+
+@media (min-width: 768px) {
+  .hero-section .main-heading {
+    font-size: 6rem;
+  }
+}
+
+.hero-section .sub-heading {
+  font-size: 1.25rem;
+  color: #1f2937;
+  margin-bottom: 3rem;
+  max-width: 64rem;
+  margin-left: auto;
+  margin-right: auto;
+  font-weight: 500;
+  line-height: 1.625;
+}
+
+@media (min-width: 768px) {
+  .hero-section .sub-heading {
+    font-size: 1.5rem;
+  }
+}
+
+.hero-section .button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  justify-content: center;
+  align-items: center;
+}
+
+@media (min-width: 640px) {
+  .hero-section .button-group {
+    flex-direction: row;
+  }
+}
+
+/* Critical button styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 1.25rem 2.5rem;
+  font-weight: 700;
+  border-radius: 9999px;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  font-size: 1.125rem;
+  text-decoration: none;
+}
+
+.primary-btn {
+  background-image: linear-gradient(to right, #4F46E5, #a855f7);
+  color: white;
+}
+
+.tertiary-btn {
+  background-color: white;
+  color: #111827;
+  border: 2px solid #e5e7eb;
+}

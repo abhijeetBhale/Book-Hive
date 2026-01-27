@@ -9,10 +9,10 @@ const ServerWakeupLoader = ({ onReady }) => {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const maxRetries = 3;
 
-  // Smart timing configuration
-  const MINIMUM_LOADING_TIME = 3000; // 3 seconds minimum
+  // OPTIMIZED: Reduced loading times for better LCP
+  const MINIMUM_LOADING_TIME = 1500; // Reduced from 3000ms
   const LONG_ABSENCE_THRESHOLD = 30 * 60 * 1000; // 30 minutes
-  const EXTENDED_LOADING_TIME = 5000; // 5 seconds for long absence
+  const EXTENDED_LOADING_TIME = 2500; // Reduced from 5000ms
 
   useEffect(() => {
     const getMinimumLoadingTime = () => {
@@ -20,7 +20,7 @@ const ServerWakeupLoader = ({ onReady }) => {
       const now = Date.now();
       
       if (!lastVisit) {
-        // First time visitor - show full animation
+        // First time visitor - show reduced animation
         localStorage.setItem('bookhive_last_visit', now.toString());
         return EXTENDED_LOADING_TIME;
       }
@@ -33,7 +33,7 @@ const ServerWakeupLoader = ({ onReady }) => {
         return EXTENDED_LOADING_TIME;
       }
       
-      // Regular visit - show minimum animation
+      // Regular visit - show minimal animation
       return MINIMUM_LOADING_TIME;
     };
 
@@ -45,9 +45,9 @@ const ServerWakeupLoader = ({ onReady }) => {
       const progressInterval = setInterval(() => {
         setLoadingProgress(prev => {
           if (prev >= 90) return prev; // Don't complete until server responds
-          return prev + Math.random() * 15; // Random increments for realistic feel
+          return prev + Math.random() * 20; // Faster increments
         });
-      }, 200);
+      }, 150); // Faster updates
 
       try {
         setStatus('checking');
@@ -67,7 +67,7 @@ const ServerWakeupLoader = ({ onReady }) => {
             setStatus('ready');
             setTimeout(() => {
               onReady?.(true);
-            }, 300); // Small delay for smooth transition
+            }, 200); // Reduced delay
           }, remainingTime);
         } else {
           // If health check failed but we haven't exceeded max retries
@@ -78,7 +78,7 @@ const ServerWakeupLoader = ({ onReady }) => {
               clearInterval(progressInterval);
               setLoadingProgress(0); // Reset progress for retry
               wakeup();
-            }, 3000);
+            }, 2000); // Reduced retry delay
           } else {
             // Max retries exceeded, continue anyway
             setLoadingProgress(100);
@@ -87,7 +87,7 @@ const ServerWakeupLoader = ({ onReady }) => {
               setStatus('ready');
               setTimeout(() => {
                 onReady?.(true);
-              }, 300);
+              }, 200);
             }, remainingTime);
           }
         }
@@ -103,7 +103,7 @@ const ServerWakeupLoader = ({ onReady }) => {
             clearInterval(progressInterval);
             setLoadingProgress(0);
             wakeup();
-          }, 3000);
+          }, 2000);
         } else {
           // Continue anyway after max retries
           setLoadingProgress(100);
@@ -112,7 +112,7 @@ const ServerWakeupLoader = ({ onReady }) => {
             setStatus('ready');
             setTimeout(() => {
               onReady?.(true);
-            }, 300);
+            }, 200);
           }, remainingTime);
         }
       }
@@ -128,9 +128,8 @@ const ServerWakeupLoader = ({ onReady }) => {
   const getStatusMessage = () => {
     switch (status) {
       case 'checking':
-        if (loadingProgress < 30) return 'Initializing BookHive...';
-        if (loadingProgress < 60) return 'Loading Community...';
-        if (loadingProgress < 90) return 'Preparing Your Experience...';
+        if (loadingProgress < 40) return 'Initializing BookHive...';
+        if (loadingProgress < 80) return 'Loading Community...';
         return 'Almost Ready...';
       case 'retrying':
         return `Reconnecting... (${retryCount}/${maxRetries})`;
@@ -142,24 +141,14 @@ const ServerWakeupLoader = ({ onReady }) => {
   return (
     <LoaderOverlay>
       <LoaderContainer>
-        <DotWaveLoader size={60} color="#C44BEF" speed={0.8} />
+        <DotWaveLoader size={50} color="#C44BEF" speed={1.2} />
         {/* <LoaderText>
           {getStatusMessage()}
-        </LoaderText>
-        <ProgressContainer>
-          <ProgressBar progress={loadingProgress} />
+        </LoaderText> */}
+        {/* <ProgressContainer>
+          <ProgressBar $progress={loadingProgress} />
           <ProgressText>{Math.round(loadingProgress)}%</ProgressText>
-        </ProgressContainer>
-        {status === 'checking' && (
-          <LoadingTips>
-            <TipText>
-              {loadingProgress < 25 && "💡 Tip: You can borrow books from neighbors for free!"}
-              {loadingProgress >= 25 && loadingProgress < 50 && "📚 Did you know? We have over 1000+ books in our community!"}
-              {loadingProgress >= 50 && loadingProgress < 75 && "🌍 Connect with book lovers in your area!"}
-              {loadingProgress >= 75 && "⭐ Join thousands of readers sharing amazing books!"}
-            </TipText>
-          </LoadingTips>
-        )} */}
+        </ProgressContainer> */}
       </LoaderContainer>
     </LoaderOverlay>
   );
@@ -176,7 +165,7 @@ const LoaderOverlay = styled.div`
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  animation: fadeIn 0.5s ease-in-out;
+  animation: fadeIn 0.3s ease-in-out; /* Faster fade in */
 
   @keyframes fadeIn {
     from { opacity: 0; }
@@ -188,29 +177,28 @@ const LoaderContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2rem;
-  max-width: 400px;
-  padding: 2rem;
+  gap: 1.5rem; /* Reduced gap */
+  max-width: 350px; /* Smaller container */
+  padding: 1.5rem; /* Reduced padding */
   text-align: center;
 `;
 
 const LoaderText = styled.div`
   color: white;
-  font-size: 1.2rem;
+  font-size: 1.1rem; /* Slightly smaller */
   font-weight: 600;
   text-align: center;
-  margin-top: 1rem;
-  animation: pulse 2s ease-in-out infinite;
+  animation: pulse 1.5s ease-in-out infinite; /* Faster pulse */
 
   @keyframes pulse {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+    50% { opacity: 0.8; }
   }
 `;
 
 const ProgressContainer = styled.div`
   width: 100%;
-  max-width: 300px;
+  max-width: 250px; /* Smaller progress bar */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -219,9 +207,9 @@ const ProgressContainer = styled.div`
 
 const ProgressBar = styled.div`
   width: 100%;
-  height: 6px;
+  height: 4px; /* Thinner progress bar */
   background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
+  border-radius: 2px;
   overflow: hidden;
   position: relative;
 
@@ -231,47 +219,19 @@ const ProgressBar = styled.div`
     top: 0;
     left: 0;
     height: 100%;
-    width: ${props => props.progress}%;
+    width: ${props => props.$progress}%; /* Use transient prop */
     background: linear-gradient(90deg, #C44BEF, #9333EA, #7C3AED);
-    border-radius: 3px;
-    transition: width 0.3s ease;
-    box-shadow: 0 0 10px rgba(196, 75, 239, 0.5);
+    border-radius: 2px;
+    transition: width 0.2s ease; /* Faster transition */
+    box-shadow: 0 0 8px rgba(196, 75, 239, 0.4);
   }
 `;
 
 const ProgressText = styled.div`
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.875rem;
+  color: #C44BEF;
+  font-size: 0.8rem; /* Smaller text */
   font-weight: 500;
   font-family: 'Courier New', monospace;
-`;
-
-const LoadingTips = styled.div`
-  margin-top: 1rem;
-  padding: 1rem;
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 0.75rem;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  max-width: 350px;
-`;
-
-const TipText = styled.div`
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.9rem;
-  line-height: 1.4;
-  animation: slideInUp 0.5s ease-out;
-
-  @keyframes slideInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
 `;
 
 export default ServerWakeupLoader;

@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { BookOpen, Users, MapPin, MessageCircle, UserCheck } from 'lucide-react';
 
-const DotWaveLoader = ({ size = 50, color = '#956afa', speed = 2.5 }) => {
+const DotWaveLoader = ({ size = 50, color = '#956afa', speed = 1.8 }) => {
   const loadingItems = [
     { icon: BookOpen, text: 'books' },
     { icon: Users, text: 'users' },
@@ -12,7 +12,7 @@ const DotWaveLoader = ({ size = 50, color = '#956afa', speed = 2.5 }) => {
   ];
 
   const itemCount = loadingItems.length;
-  // Determine the delay slice based on total items to create a perfect loop
+  // Optimized animation duration for faster loading perception
   const animationDuration = speed * itemCount; 
 
   return (
@@ -32,19 +32,17 @@ const DotWaveLoader = ({ size = 50, color = '#956afa', speed = 2.5 }) => {
                   key={index} 
                   className="loading-item"
                   style={{ 
-                    // Stagger animations so they overlap perfectly
-                    animationDelay: `${index * speed}s` 
+                    // Faster stagger for quicker perception
+                    animationDelay: `${index * (speed * 0.8)}s` 
                   }}
                 >
                   <div className="icon-wrapper">
                     <IconComponent className="loading-icon" />
                   </div>
-                  {/* <span className="item-text">{item.text}</span> */}
                 </div>
               );
             })}
           </div>
-          {/* <div className="loading-text">loading</div> */}
         </div>
       </div>
     </StyledWrapper>
@@ -65,14 +63,14 @@ const StyledWrapper = styled.div`
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 8px; /* Reduced gap */
   }
 
-  /* Fixed Container to prevent layout jumps */
+  /* Optimized container size */
   .items-container {
     position: relative;
-    width: ${props => Math.max(80, props.size * 1.6)}px;
-    height: ${props => Math.max(80, props.size * 1.6)}px;
+    width: ${props => Math.max(60, props.size * 1.2)}px; /* Smaller container */
+    height: ${props => Math.max(60, props.size * 1.2)}px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -88,89 +86,55 @@ const StyledWrapper = styled.div`
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 6px; /* Reduced gap */
 
     /* Initial state hidden */
     opacity: 0;
     transform: scale(0.9);
-    filter: blur(4px);
+    filter: blur(3px); /* Reduced blur */
 
-    /* Animation */
+    /* Optimized animation */
     animation-name: smoothMorph;
     animation-duration: ${props => props.$duration}s;
-    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); /* Smooth standard ease */
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     animation-iteration-count: infinite;
   }
 
-  // .icon-wrapper {
-  //   width: ${props => Math.max(48, props.size)}px;
-  //   height: ${props => Math.max(48, props.size)}px;
-  //   // border-radius: 50%;
-  //   /* Subtle gradient background */
-  //   // background: linear-gradient(135deg, ${props => props.color}10, ${props => props.color}20);
-  //   display: flex;
-  //   align-items: center;
-  //   justify-content: center;
-  //   border: 1px solid ${props => props.color}20;
-  //   box-shadow: 0 4px 15px ${props => props.color}15;
-  // }
-
   .loading-icon {
-    width: ${props => Math.max(70, props.size * 2.5)}px;
-    height: ${props => Math.max(70, props.size * 2.5)}px;
+    width: ${props => Math.max(50, props.size * 2)}px; /* Smaller icons */
+    height: ${props => Math.max(50, props.size * 2)}px;
     color: ${props => props.color};
+    /* Optimized for performance */
+    will-change: transform, opacity;
   }
 
-  .item-text {
-    font-family: "Poppins", sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    color: ${props => props.color};
-    letter-spacing: 0.5px;
-    opacity: 0.8;
-  }
-
-  .loading-text {
-    font-family: "Poppins", sans-serif;
-    font-size: 12px;
-    font-weight: 600;
-    color: rgb(150, 150, 150);
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    margin-top: 10px;
-  }
-
-  /* MORPHING KEYFRAMES
-    Calculated for N items. 
-    We want the item to fade IN, stay briefly, then fade OUT.
-    100% / 5 items = 20% "slice" per item.
-  */
+  /* OPTIMIZED MORPHING KEYFRAMES - Faster transitions */
   @keyframes smoothMorph {
     0% {
       opacity: 0;
-      transform: scale(0.95); /* Slight shrink */
-      filter: blur(5px);      /* Blurry start */
+      transform: scale(0.95);
+      filter: blur(4px);
     }
     
-    /* FAST ENTRY: 0% to 5% of total time */
-    ${props => 100 / props.$count * 0.9}% {
-      opacity: 1;
-      transform: scale(1);
-      filter: blur(0px);      /* Sharp focus */
-    }
-
-    /* HOLD: 5% to 15% of total time */
-    ${props => 100 / props.$count * 1}% {
+    /* FASTER ENTRY: 0% to 3% of total time */
+    ${props => 100 / props.$count * 0.6}% {
       opacity: 1;
       transform: scale(1);
       filter: blur(0px);
     }
 
-    /* SLOW EXIT: 15% to 20% of total time */
+    /* SHORTER HOLD: 3% to 12% of total time */
+    ${props => 100 / props.$count * 0.8}% {
+      opacity: 1;
+      transform: scale(1);
+      filter: blur(0px);
+    }
+
+    /* FASTER EXIT: 12% to 20% of total time */
     ${props => 100 / props.$count}% {
       opacity: 0;
-      transform: scale(1.05); /* Slight expansion on exit */
-      filter: blur(4px);      /* Blur out to 'morph' into next */
+      transform: scale(1.05);
+      filter: blur(3px);
     }
     
     100% {

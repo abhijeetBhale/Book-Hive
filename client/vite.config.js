@@ -16,24 +16,50 @@ export default defineConfig({
   ],
   assetsInclude: ['**/*.lottie'],
   
-  // Enhanced build configuration for React compatibility
+  // OPTIMIZED: Enhanced build configuration for LCP performance
   build: {
     // Enable source maps for debugging
     sourcemap: true,
-    // Increase chunk size warning limit
-    chunkSizeWarningLimit: 1000,
-    // Use esbuild for minification
+    // Reduce chunk size warning limit for better performance
+    chunkSizeWarningLimit: 500,
+    // Use esbuild for faster minification
     minify: 'esbuild',
-    // Target modern browsers
-    target: 'es2015',
-    // Rollup options
+    // Target modern browsers for smaller bundles
+    target: 'es2020',
+    // Rollup options for optimal code splitting
     rollupOptions: {
       output: {
-        // Ensure React is in its own chunk
+        // CRITICAL: Aggressive code splitting for better LCP
         manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
+          // Core React - highest priority
+          'react-core': ['react', 'react-dom'],
+          // Router - needed early
           'router': ['react-router-dom'],
-          'ui-vendor': ['lucide-react', 'styled-components', 'framer-motion'],
+          // UI libraries - can be lazy loaded
+          'ui-icons': ['lucide-react'],
+          'ui-styled': ['styled-components'],
+          // Animation libraries - defer loading
+          'animations': ['framer-motion'],
+          // Heavy components - lazy load
+          'charts': ['react-countup'],
+          // Utility libraries
+          'utils': ['react-intersection-observer'],
+        },
+        // Optimize chunk naming for caching
+        chunkFileNames: (chunkInfo) => {
+          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop().replace('.jsx', '').replace('.js', '') : 'chunk';
+          return `js/${facadeModuleId}-[hash].js`;
+        },
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name.split('.');
+          const ext = info[info.length - 1];
+          if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico)$/i.test(assetInfo.name)) {
+            return `images/[name]-[hash].${ext}`;
+          }
+          if (/\.(woff2?|eot|ttf|otf)$/i.test(assetInfo.name)) {
+            return `fonts/[name]-[hash].${ext}`;
+          }
+          return `assets/[name]-[hash].${ext}`;
         }
       },
       // External dependencies that should not be bundled
@@ -47,7 +73,7 @@ export default defineConfig({
     }
   },
 
-  // Enhanced dependency optimization
+  // OPTIMIZED: Enhanced dependency optimization for faster loading
   optimizeDeps: {
     include: [
       'react', 
@@ -56,11 +82,15 @@ export default defineConfig({
       'react/jsx-runtime',
       'react/jsx-dev-runtime'
     ],
-    exclude: [],
+    exclude: [
+      // Exclude heavy libraries from pre-bundling to enable lazy loading
+      'framer-motion',
+      'react-countup'
+    ],
     force: true,
     // Ensure proper ESM handling
     esbuildOptions: {
-      target: 'es2015'
+      target: 'es2020'
     }
   },
 

@@ -4,6 +4,96 @@
 <head>
     <meta charset="UTF-8" />
     
+    <!-- CRITICAL: LCP Optimization - Preload hero images with high priority -->
+    <!-- Note: WebP images will be added in future optimization phase -->
+    <link rel="preload" as="image" href="/src/assets/atomic_habits.png" fetchpriority="high" />
+    
+    <!-- CRITICAL: Inline critical CSS for hero section to prevent render blocking -->
+    <style>
+      /* CRITICAL CSS - Hero Section Only */
+      .hero-section {
+        position: relative;
+        padding: 6.2rem 0;
+        width: 100%;
+        overflow: hidden;
+        text-align: center;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+      }
+      .hero-section .background-gradient {
+        position: absolute;
+        inset: 0;
+        background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.7), rgba(249, 250, 251, 0.9));
+        z-index: 1;
+      }
+      .hero-section .content-container {
+        position: relative;
+        z-index: 2;
+        max-width: 80rem;
+        margin: 0 auto;
+        margin-top: -40px;
+        padding: 0 1rem;
+      }
+      @media (min-width: 640px) {
+        .hero-section .content-container { padding: 0 1.5rem; }
+      }
+      @media (min-width: 1024px) {
+        .hero-section .content-container { padding: 0 2rem; }
+      }
+      .hero-section .main-heading {
+        font-size: 3.75rem;
+        font-weight: 900;
+        color: #111827;
+        margin-bottom: 2rem;
+        line-height: 1.1;
+      }
+      @media (min-width: 768px) {
+        .hero-section .main-heading { font-size: 6rem; }
+      }
+      .hero-section .sub-heading {
+        font-size: 1.25rem;
+        color: #1f2937;
+        margin-bottom: 3rem;
+        max-width: 64rem;
+        margin-left: auto;
+        margin-right: auto;
+        font-weight: 500;
+        line-height: 1.625;
+      }
+      @media (min-width: 768px) {
+        .hero-section .sub-heading { font-size: 1.5rem; }
+      }
+      .hero-section .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        justify-content: center;
+        align-items: center;
+      }
+      @media (min-width: 640px) {
+        .hero-section .button-group { flex-direction: row; }
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 1.25rem 2.5rem;
+        font-weight: 700;
+        border-radius: 9999px;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        font-size: 1.125rem;
+        text-decoration: none;
+      }
+      .primary-btn {
+        background-image: linear-gradient(to right, #4F46E5, #a855f7);
+        color: white;
+      }
+      .tertiary-btn {
+        background-color: white;
+        color: #111827;
+        border: 2px solid #e5e7eb;
+      }
+    </style>
+    
     <!-- Favicon and Icons -->
     <link rel="icon" type="image/png" href="/src/assets/icons8-bee-100.png" />
     <link rel="apple-touch-icon" href="/src/assets/icons8-bee-100.png" />
@@ -27,7 +117,7 @@
     <meta property="og:url" content="https://bookhive.vercel.app/" />
     <meta property="og:title" content="BookHive - Share Books, Build Community" />
     <meta property="og:description" content="Join thousands of book lovers on BookHive. Share your library, discover new reads, and connect with fellow readers in your community." />
-    <meta property="og:image" content="https://bookhive.vercel.app/og-image.png" />
+    <meta property="og:image" content="https://bookhive.vercel.app/og-image.webp" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:site_name" content="BookHive" />
@@ -38,7 +128,7 @@
     <meta property="twitter:url" content="https://bookhive.vercel.app/" />
     <meta property="twitter:title" content="BookHive - Share Books, Build Community" />
     <meta property="twitter:description" content="Join thousands of book lovers on BookHive. Share your library, discover new reads, and connect with fellow readers in your community." />
-    <meta property="twitter:image" content="https://bookhive.vercel.app/og-image.png" />
+    <meta property="twitter:image" content="https://bookhive.vercel.app/og-image.webp" />
     <meta property="twitter:creator" content="@BookHiveApp" />
     <meta property="twitter:site" content="@BookHiveApp" />
     
@@ -63,10 +153,14 @@
     <!-- Manifest -->
     <link rel="manifest" href="/manifest.json" />
     
-    <!-- Preconnect to external domains for performance -->
+    <!-- OPTIMIZED: Preconnect to external domains for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="dns-prefetch" href="https://api.bookhive.com" />
+    
+    <!-- OPTIMIZED: Preload critical fonts with font-display: swap -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" /></noscript>
     
     <!-- Structured Data for SEO -->
     <script type="application/ld+json">
@@ -111,13 +205,14 @@
     }
     </script>
     
-    <!-- Performance Hints -->
+    <!-- OPTIMIZED: Performance Hints -->
     <link rel="preload" href="/src/assets/icons8-bee-100.png" as="image" />
   </head>
 
 <body>
   <div id="root"></div>
-  <script type="module" src="/src/main.jsx"></script>
+  <!-- DEFERRED: Load main script with defer for better performance -->
+  <script type="module" src="/src/main.jsx" defer></script>
 </body>
 
 </html>
