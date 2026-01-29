@@ -1105,20 +1105,25 @@ const StyledWrapper = styled.div`
     font-size: 0.75rem;
     color: #6b7280;
     text-align: center;
-    margin: 0.25rem 0;
-    margin-left: 50px;
+    margin: 0.25rem auto; /* Changed to auto for centering */
     font-weight: 500;
     background-color: #f3f4f6;
-    padding: 0.1rem;
+    padding: 0.25rem 0.75rem; /* Improved padding */
     border-radius: 50px;
     display: flex;
     align-items: center;
     justify-content: center;
     border: 1px solid #e5e7eb;
     
-    @media (max-width: 480px) {
+    @media (max-width: 768px) {
+      width: 140px; /* Slightly smaller on tablets */
       font-size: 0.7rem;
-      padding: 0.3rem 0.6rem;
+    }
+    
+    @media (max-width: 480px) {
+      width: 120px; /* Even smaller on mobile */
+      font-size: 0.65rem;
+      padding: 0.2rem 0.5rem;
     }
   }
   }

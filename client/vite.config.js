@@ -80,17 +80,22 @@ export default defineConfig({
       'react-dom', 
       'react-router-dom',
       'react/jsx-runtime',
-      'react/jsx-dev-runtime'
+      'react/jsx-dev-runtime',
+      'react-countup' // Include react-countup to avoid lazy loading issues
     ],
     exclude: [
       // Exclude heavy libraries from pre-bundling to enable lazy loading
-      'framer-motion',
-      'react-countup'
+      'framer-motion'
     ],
     force: true,
     // Ensure proper ESM handling
     esbuildOptions: {
-      target: 'es2020'
+      target: 'es2020',
+      // Fix for "exports is not defined" error
+      format: 'esm',
+      define: {
+        global: 'globalThis',
+      }
     }
   },
 
@@ -122,5 +127,10 @@ export default defineConfig({
   preview: {
     port: 3000,
     host: true
+  },
+
+  // Fix for CommonJS modules
+  define: {
+    global: 'globalThis',
   }
 })

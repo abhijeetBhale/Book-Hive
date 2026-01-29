@@ -16,11 +16,19 @@ import {
   Globe,
   Star,
   X,
-  UserPlus
+  UserPlus,
+  MapPin,
+  Heart,
+  Shield,
+  MessageCircle,
+  Calendar
 } from 'lucide-react';
 import { AuroraText } from '../components/ui/aurora-text';
 import SEO from '../components/SEO';
 import { PAGE_SEO, generateStructuredData } from '../utils/seo';
+
+// Import CountUp normally to avoid CommonJS/ESM issues
+import CountUp from 'react-countup';
 
 // Lazy load ALL non-critical components to reduce initial bundle
 const LocationPermission = lazy(() => import('../components/LocationPermission'));
@@ -29,15 +37,9 @@ const AvatarCircles = lazy(() => import('../components/ui/avatar-circles').then(
 const TiltedCard = lazy(() => import('../components/ui/TiltedCard'));
 const InfiniteMovingCards = lazy(() => import('../components/ui/infinite-moving-cards').then(module => ({ default: module.InfiniteMovingCards })));
 const DomeGallery = lazy(() => import('../components/ui/DomeGallery'));
-const GlobeComponent = lazy(() => import('../components/ui/Globe').then(module => ({ default: module.Globe })));
-const CountUp = lazy(() => import('react-countup'));
+const GlobeComponent = lazy(() => import('../components/ui/Globe').then(module => ({ default: module.Globe })).catch(() => ({ default: () => null })));
 
-// Lazy load remaining icons to reduce initial bundle
-const MapPin = lazy(() => import('lucide-react').then(module => ({ default: module.MapPin })));
-const Heart = lazy(() => import('lucide-react').then(module => ({ default: module.Heart })));
-const Shield = lazy(() => import('lucide-react').then(module => ({ default: module.Shield })));
-const MessageCircle = lazy(() => import('lucide-react').then(module => ({ default: module.MessageCircle })));
-const Calendar = lazy(() => import('lucide-react').then(module => ({ default: module.Calendar })));
+// Lazy load only the less critical icons
 const Facebook = lazy(() => import('lucide-react').then(module => ({ default: module.Facebook })));
 const Instagram = lazy(() => import('lucide-react').then(module => ({ default: module.Instagram })));
 const Linkedin = lazy(() => import('lucide-react').then(module => ({ default: module.Linkedin })));
@@ -45,12 +47,12 @@ const Youtube = lazy(() => import('lucide-react').then(module => ({ default: mod
 const Mail = lazy(() => import('lucide-react').then(module => ({ default: module.Mail })));
 const Send = lazy(() => import('lucide-react').then(module => ({ default: module.Send })));
 
-// Import the actual atomic habits image
-import atomicHabitsCover from '../assets/atomic_habits.png';
+// Use a working external URL for atomic habits cover - defined at module level
+const atomicHabitsCover = 'https://books.google.co.in/books/publisher/content?id=fFCjDQAAQBAJ&pg=PA1&img=1&zoom=3&hl=en&bul=1&sig=ACfU3U0AbHgCacqSvU34ynU1HMs_Qoqyqg&w=1280';
 
 // Preload critical hero image as WebP (fallback to existing images for now)
 const heroImageWebP = '/hero-background.webp';
-const atomicHabitsWebP = atomicHabitsCover; // Use the actual imported image
+const atomicHabitsWebP = atomicHabitsCover; // Use the working URL
 
 // Authentication Modal Component
 const AuthModal = ({ isOpen, onClose }) => {
@@ -112,7 +114,7 @@ const Home = () => {
 
   const quotes = [
     { text: 'Community-Driven Book Sharing', icon: <BookOpen className="badge-icon" /> },
-    { text: 'Share Your Favorite Reads', icon: <Suspense fallback={<BookOpen className="badge-icon" />}><Heart className="badge-icon" /></Suspense> },
+    { text: 'Share Your Favorite Reads', icon: <Heart className="badge-icon" /> },
     { text: 'Discover New Worlds', icon: <Globe className="badge-icon" /> },
     { text: 'Connect With Fellow Readers', icon: <Users className="badge-icon" /> },
   ];
@@ -708,7 +710,9 @@ const Home = () => {
         {/* Community Stats Section */}
         <section className="stats-section" ref={statsRef}>
           <div className="globe-background-stats">
-            <GlobeComponent />
+            <Suspense fallback={<div style={{ opacity: 0.1 }}>Loading...</div>}>
+              <GlobeComponent />
+            </Suspense>
           </div>
           <div className="content-container">
             <div className="section-header">
