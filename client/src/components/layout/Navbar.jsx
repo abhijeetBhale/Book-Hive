@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Menu,
   X,
@@ -34,6 +34,7 @@ const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
   const { badges, clearBadge } = useNotificationBadges();
   const location = useLocation();
+  const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [realtimeNotifications, setRealtimeNotifications] = useState([]);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
@@ -577,7 +578,7 @@ const Navbar = () => {
 
                   <button
                     onClick={() => {
-                      setShowNotificationCenter(true);
+                      window.location.href = '/profile#notifications';
                       setIsOpen(false);
                     }}
                     className="relative flex items-center gap-3 py-2 px-4 rounded-lg text-gray-700 hover:text-primary hover:bg-gray-50 transition-colors duration-300"

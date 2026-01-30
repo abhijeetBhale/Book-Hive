@@ -23,7 +23,20 @@
     "setup:broadcasts": "node scripts/setupBroadcasts.js",
     "redis:start": "redis-server",
     "redis:flush": "redis-cli flushall",
-    "cache:warm": "node scripts/warmCache.js"
+    "cache:warm": "node scripts/warmCache.js",
+    "test": "cross-env NODE_ENV=test jest --detectOpenHandles --forceExit",
+    "test:watch": "cross-env NODE_ENV=test jest --watch --detectOpenHandles",
+    "test:coverage": "cross-env NODE_ENV=test jest --coverage --detectOpenHandles --forceExit",
+    "test:integration": "cross-env NODE_ENV=test jest --testPathPattern=tests/integration --detectOpenHandles --forceExit",
+    "test:unit": "cross-env NODE_ENV=test jest --testPathPattern=tests/unit --detectOpenHandles --forceExit",
+    "jobs:dev": "nodemon workers/jobProcessor.js",
+    "jobs:start": "node workers/jobProcessor.js",
+    "migrate:rbac": "node scripts/migrateRBAC.js",
+    "test:rbac": "node scripts/testRBAC.js",
+    "remove:rbac": "node scripts/removeRBAC.js",
+    "test:swagger": "node scripts/testSwagger.js",
+    "test:swagger-csp": "node scripts/testSwaggerCSP.js",
+    "test:borrow-notifications": "node scripts/testBorrowNotifications.js"
   },
   "keywords": [],
   "author": "",
@@ -32,6 +45,7 @@
   "dependencies": {
     "axios": "^1.11.0",
     "bcryptjs": "^3.0.2",
+    "bullmq": "^5.4.2",
     "cloudinary": "^2.7.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
@@ -54,9 +68,61 @@
     "redis": "^4.7.1",
     "sharp": "^0.33.5",
     "socket.io": "^4.7.5",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0",
     "xss-clean": "^0.1.4"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "@babel/core": "^7.24.0",
+    "@babel/preset-env": "^7.24.0",
+    "babel-jest": "^29.7.0",
+    "cross-env": "^7.0.3",
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^9.1.6",
+    "nodemon": "^3.1.10",
+    "supertest": "^6.3.4"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
+    "testMatch": [
+      "<rootDir>/tests/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "controllers/**/*.js",
+      "middleware/**/*.js",
+      "services/**/*.js",
+      "models/**/*.js",
+      "!**/node_modules/**",
+      "!**/tests/**"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ],
+    "transform": {
+      "^.+\\.js$": "babel-jest"
+    },
+    "moduleFileExtensions": [
+      "js",
+      "json"
+    ],
+    "testTimeout": 30000
+  },
+  "babel": {
+    "presets": [
+      [
+        "@babel/preset-env",
+        {
+          "targets": {
+            "node": "current"
+          }
+        }
+      ]
+    ]
   }
 }

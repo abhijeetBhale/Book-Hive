@@ -200,7 +200,7 @@ const StyledBookDetailsModal = styled.div`
   }
 `;
 
-const BookDetailsModal = ({ isOpen, onClose, book, onRequest }) => {
+const BookDetailsModal = ({ isOpen, onClose, book, onRequest, borrowing }) => {
   if (!isOpen || !book) return null;
 
   return (
@@ -242,10 +242,15 @@ const BookDetailsModal = ({ isOpen, onClose, book, onRequest }) => {
                   <button
                     className="request-btn"
                     onClick={() => onRequest(book._id)}
-                    style={{ flex: book.forSelling ? 1 : 'auto' }}
+                    disabled={borrowing === book._id}
+                    style={{ 
+                      flex: book.forSelling ? 1 : 'auto',
+                      opacity: borrowing === book._id ? 0.6 : 1,
+                      cursor: borrowing === book._id ? 'not-allowed' : 'pointer'
+                    }}
                   >
                     <Send size={18} />
-                    Borrow ({book.lendingDuration || 14} days)
+                    {borrowing === book._id ? 'Sending...' : `Borrow (${book.lendingDuration || 14} days)`}
                   </button>
                 )}
                 {book.forSelling && (
@@ -1130,6 +1135,7 @@ const UserProfile = () => {
         onClose={handleCloseDetailsModal}
         book={viewingBook}
         onRequest={handleBorrowRequest}
+        borrowing={borrowing}
       />
 
       <ReviewsModal 

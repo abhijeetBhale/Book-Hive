@@ -98,6 +98,12 @@ flowchart TD
 - **Real-time Updates**: WebSocket connections for instant notifications
 
 ### 🔒 Security & Reliability
+- **Role-Based Access Control**: Granular permissions for users, organizers, moderators, and admins
+- **API Documentation**: Interactive Swagger/OpenAPI documentation at `/api-docs`
+- **Background Jobs**: Asynchronous email processing, image optimization, and cleanup tasks
+- **Comprehensive Testing**: Unit and integration tests with 80%+ code coverage
+- **Input Validation**: XSS protection, SQL injection prevention, and data sanitization
+- **Rate Limiting**: Redis-backed protection against API abuse and DDoS attacks
 - **JWT Authentication**: Secure token-based authentication
 - **Input Validation**: Comprehensive data sanitization
 - **Error Handling**: Graceful fallbacks and monitoring
@@ -153,6 +159,10 @@ BookHive leverages **Redis Cloud** for enterprise-grade performance:
 | **Frontend** | React 18, React Router, Tailwind CSS, Framer Motion, Leaflet, React-Leaflet, Axios, Styled Components |
 | **Backend**  | Node.js, Express.js, MongoDB, Mongoose, Socket.IO, Passport.js, JWT |
 | **Caching & Performance** | **Redis Cloud**, Rate Limiting, Connection Pooling |
+| **Background Jobs** | **BullMQ**, Job Queues, Email Processing, Image Optimization |
+| **API Documentation** | **Swagger/OpenAPI 3.0**, Interactive API Explorer |
+| **Access Control** | **Role-Based Access Control (RBAC)**, Permission Management |
+| **Testing** | **Jest**, Supertest, MongoDB Memory Server, Unit & Integration Tests |
 | **Real-time** | Socket.IO, WebSocket, Live Notifications |
 | **Payments** | Razorpay Integration |
 | **Media & Storage** | Cloudinary (Images), File Upload |
@@ -227,6 +237,19 @@ SUPER_ADMIN_EMAIL=your_admin_email
 # Razorpay Payment Gateway
 RAZORPAY_KEY_ID=your_razorpay_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+
+# API Documentation
+SWAGGER_ENABLED=true
+API_DOCS_PATH=/api-docs
+
+# Background Jobs (BullMQ)
+BULL_BOARD_USERNAME=admin
+BULL_BOARD_PASSWORD=secure_admin_password
+
+# Testing Configuration (Optional)
+MONGODB_URI_TEST=mongodb://localhost:27017/bookhive_test
+JWT_SECRET_TEST=test_jwt_secret_for_testing_only
+REDIS_URL_TEST=redis://localhost:6379/1
 ```
 
 Install dependencies and start the server:
@@ -253,13 +276,56 @@ npm start
 ```
 
 ### 5. Verify Installation
-- Backend: http://localhost:5000/api/health
-- Frontend: http://localhost:3000
-- Redis Health: http://localhost:5000/api/books-cached/cache/health
+- **Backend**: http://localhost:5000/api/health
+- **Frontend**: http://localhost:3000
+- **API Documentation**: http://localhost:5000/api-docs
+- **Redis Health**: http://localhost:5000/api/books-cached/cache/health
+- **Job Queue Status**: http://localhost:5000/api/jobs/status
 
 ---
 
 ## 🔧 Development Tools
+
+### API Documentation
+- **Interactive Swagger UI**: http://localhost:5000/api-docs
+- **OpenAPI Specification**: Complete API documentation with examples
+- **Try It Out**: Test endpoints directly from the browser
+
+### Background Jobs & Queues
+```bash
+# Start job processor
+npm run jobs:start
+
+# Development mode with auto-restart
+npm run jobs:dev
+
+# Check queue status
+curl http://localhost:5000/api/jobs/status
+```
+
+### Testing Suite
+```bash
+# Run all tests
+npm test
+
+# Unit tests only
+npm run test:unit
+
+# Integration tests only
+npm run test:integration
+
+# Test coverage report
+npm run test:coverage
+```
+
+### RBAC Management
+```bash
+# Initialize roles and migrate users
+npm run migrate:rbac
+
+# Test admin endpoints
+npm run test:admin
+```
 
 ### Cache Management
 ```bash

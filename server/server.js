@@ -46,6 +46,11 @@ import NotificationService from './services/notificationService.js';
 import AdminNotificationService from './services/adminNotificationService.js';
 import User from './models/User.js';
 
+// New imports for added features
+import { swaggerSpec, swaggerUi, swaggerUiOptions } from './config/swagger.js';
+import { getUserPermissions } from './middleware/rbac.js';
+import { initializeQueues, getAllQueueStats, getQueuesHealth } from './services/jobQueue.js';
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -64,14 +69,27 @@ const initializeApp = async () => {
       if (redisInitialized) {
         console.log('✅ Redis initialized successfully');
         app.set('redisEnabled', true);
+        
+        // Initialize job queues after Redis connection
+        console.log('🔄 Initializing job queues...');
+        const queuesInitialized = await initializeQueues();
+        app.set('jobQueuesEnabled', queuesInitialized);
+        
+        if (queuesInitialized) {
+          console.log('✅ Job queues initialized successfully');
+        } else {
+          console.log('⚠️  Job queues initialization failed, continuing without background jobs');
+        }
       } else {
-        console.log('⚠️  Redis initialization failed, continuing without cache');
+        console.log('⚠️  Redis initialization failed, continuing without cache and job queues');
         app.set('redisEnabled', false);
+        app.set('jobQueuesEnabled', false);
       }
     } catch (redisError) {
       console.error('❌ Redis initialization error:', redisError.message);
-      console.log('⚠️  Application will continue without Redis caching');
+      console.log('⚠️  Application will continue without Redis caching and job queues');
       app.set('redisEnabled', false);
+      app.set('jobQueuesEnabled', false);
     }
     
     console.log('🔄 Initializing achievements and user stats...');
@@ -86,7 +104,22 @@ const initializeApp = async () => {
 initializeApp();
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "http://localhost:5000", "http://localhost:3000", "ws://localhost:5000"],
+      fontSrc: ["'self'", "https:", "data:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
 app.use(hpp());
 
 // Compression middleware - compress all responses
@@ -156,6 +189,99 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Initialize Passport
 app.use(passport.initialize());
 
+// Add user permissions middleware for all routes
+app.use(getUserPermissions);
+
+// API Documentation (Swagger)
+if (process.env.SWAGGER_ENABLED === 'true') {
+  const docsPath = process.env.API_DOCS_PATH || '/api-docs';
+  
+  // Disable CSP for Swagger UI to allow it to make API calls
+  app.use(docsPath, (req, res, next) => {
+    res.removeHeader('Content-Security-Policy');
+    res.removeHeader('X-Content-Security-Policy');
+    res.removeHeader('X-WebKit-CSP');
+    next();
+  });
+  
+  app.use(docsPath, swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
+  console.log(`📚 API Documentation available at: ${docsPath}`);
+}
+
+/**
+ * @swagger
+ * /api/health:
+ *   get:
+ *     summary: Health check endpoint
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: Server is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "ok"
+ *                 message:
+ *                   type: string
+ *                   example: "Server is running"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 uptime:
+ *                   type: number
+ *                   example: 123.456
+ *                 version:
+ *                   type: string
+ *                   example: "2.0.0"
+ *                 features:
+ *                   type: object
+ *                   properties:
+ *                     redis:
+ *                       type: object
+ *                       properties:
+ *                         enabled:
+ *                           type: boolean
+ *                         connected:
+ *                           type: boolean
+ *                     jobQueues:
+ *                       type: object
+ *                       properties:
+ *                         enabled:
+ *                           type: boolean
+ *                         healthy:
+ *                           type: boolean
+ *                     database:
+ *                       type: string
+ *                       example: "connected"
+ *                     swagger:
+ *                       type: boolean
+ *                       example: true
+ *                     rbac:
+ *                       type: boolean
+ *                       example: true
+ *       500:
+ *         description: Server health check failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "error"
+ *                 message:
+ *                   type: string
+ *                   example: "Health check failed"
+ *                 error:
+ *                   type: string
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
 // Health check endpoint (before other routes)
 app.get('/api/health', async (req, res) => {
   try {
@@ -171,13 +297,31 @@ app.get('/api/health', async (req, res) => {
       }
     }
 
+    // Check job queues status
+    let jobQueuesStatus = { enabled: false };
+    if (app.get('jobQueuesEnabled')) {
+      try {
+        jobQueuesStatus = await getQueuesHealth();
+        jobQueuesStatus.enabled = true;
+      } catch (jobError) {
+        jobQueuesStatus = { enabled: false, error: jobError.message };
+      }
+    }
+
     res.status(200).json({ 
       status: 'ok', 
       message: 'Server is running',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      redis: redisStatus,
-      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+      version: '2.0.0',
+      features: {
+        redis: redisStatus,
+        jobQueues: jobQueuesStatus,
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        swagger: process.env.SWAGGER_ENABLED === 'true',
+        rbac: true,
+        testing: process.env.NODE_ENV === 'test'
+      }
     });
   } catch (error) {
     res.status(500).json({
@@ -189,12 +333,127 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/test:
+ *   get:
+ *     summary: Test endpoint
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: Test endpoint working
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Test endpoint working"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
 // Test endpoint to debug routing issues
 app.get('/api/test', (req, res) => {
   res.status(200).json({ 
     message: 'Test endpoint working',
     timestamp: new Date().toISOString()
   });
+});
+
+/**
+ * @swagger
+ * /api/jobs/status:
+ *   get:
+ *     summary: Get job queue status
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Job queue status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 queues:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                         example: "email"
+ *                       waiting:
+ *                         type: number
+ *                         example: 0
+ *                       active:
+ *                         type: number
+ *                         example: 1
+ *                       completed:
+ *                         type: number
+ *                         example: 25
+ *                       failed:
+ *                         type: number
+ *                         example: 2
+ *                       delayed:
+ *                         type: number
+ *                         example: 0
+ *                 health:
+ *                   type: boolean
+ *                   example: true
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       500:
+ *         description: Failed to get job queue status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: "Job queues not enabled"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
+// Job queue status endpoint
+app.get('/api/jobs/status', async (req, res) => {
+  try {
+    if (!app.get('jobQueuesEnabled')) {
+      return res.json({
+        success: false,
+        error: 'Job queues not enabled',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    const stats = await getAllQueueStats();
+    const health = await getQueuesHealth();
+    
+    res.json({
+      success: true,
+      queues: stats,
+      health: health.healthy,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Add specific headers for Razorpay integration

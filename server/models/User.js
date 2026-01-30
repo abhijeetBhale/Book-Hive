@@ -232,6 +232,18 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'organizer', 'admin', 'superadmin'],
     default: 'user'
   },
+  // RBAC fields
+  roles: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Role'
+  }],
+  permissions: [{
+    type: String
+  }],
+  // Computed permissions (roles + direct permissions)
+  effectivePermissions: [{
+    type: String
+  }],
   verified: {
     type: Boolean,
     default: false
@@ -490,6 +502,96 @@ userSchema.methods.getPublicProfile = function() {
   return userObject
 }
 
+// RBAC Methods
+userSchema.methods.hasPermission = function(permission) {
+  // Check direct permissions
+  if (this.permissions && this.permissions.includes(permission)) {
+    return true;
+  }
+  
+  // Check effective permissions (computed from roles)
+  if (this.effectivePermissions && this.effectivePermissions.includes(permission)) {
+    return true;
+  }
+  
+  // Legacy role-based permissions for backward compatibility
+  const legacyPermissions = this.getLegacyPermissions();
+  return legacyPermissions.includes(permission);
+};
+
+userSchema.methods.hasRole = function(roleName) {
+  // Check if user has the role by name
+  if (this.roles && this.roles.length > 0) {
+    // This would need to be populated to check by name
+    // For now, we'll use the legacy role field
+  }
+  
+  // Legacy role check
+  return this.role === roleName;
+};
+
+userSchema.methods.getLegacyPermissions = function() {
+  // Map legacy roles to permissions for backward compatibility
+  const rolePermissions = {
+    'user': ['read'],
+    'organizer': ['read', 'write', 'manage_events'],
+    'admin': ['read', 'write', 'delete', 'manage_users', 'manage_events'],
+    'superadmin': ['read', 'write', 'delete', 'manage_users', 'manage_events', 'manage_system']
+  };
+  
+  return rolePermissions[this.role] || ['read'];
+};
+
+userSchema.methods.addRole = async function(roleId) {
+  if (!this.roles.includes(roleId)) {
+    this.roles.push(roleId);
+    await this.computeEffectivePermissions();
+  }
+  return this;
+};
+
+userSchema.methods.removeRole = async function(roleId) {
+  this.roles = this.roles.filter(id => !id.equals(roleId));
+  await this.computeEffectivePermissions();
+  return this;
+};
+
+userSchema.methods.addPermission = function(permission) {
+  if (!this.permissions.includes(permission)) {
+    this.permissions.push(permission);
+  }
+  return this;
+};
+
+userSchema.methods.removePermission = function(permission) {
+  this.permissions = this.permissions.filter(p => p !== permission);
+  return this;
+};
+
+userSchema.methods.computeEffectivePermissions = async function() {
+  const Role = mongoose.model('Role');
+  const allPermissions = new Set([...this.permissions]);
+  
+  // Add permissions from roles
+  if (this.roles && this.roles.length > 0) {
+    const roles = await Role.find({ _id: { $in: this.roles }, isActive: true });
+    roles.forEach(role => {
+      role.permissions.forEach(permission => {
+        allPermissions.add(permission);
+      });
+    });
+  }
+  
+  // Add legacy permissions
+  const legacyPermissions = this.getLegacyPermissions();
+  legacyPermissions.forEach(permission => {
+    allPermissions.add(permission);
+  });
+  
+  this.effectivePermissions = Array.from(allPermissions);
+  return this;
+};
+
 // Create indexes for performance optimization
 userSchema.index({ location: '2dsphere' }); // Geospatial queries
 // Note: email and googleId already have unique indexes from schema definition
@@ -502,6 +604,10 @@ userSchema.index({ 'rating.overallRating': -1 }); // Rating queries
 userSchema.index({ 'wishlist': 1 }); // Wishlist queries
 userSchema.index({ 'recentlyViewed.viewedAt': -1 }); // Recently viewed sorting
 userSchema.index({ 'readingPreferences.favoriteGenres': 1 }); // Genre preferences
+// RBAC indexes
+userSchema.index({ roles: 1 }); // Role-based queries
+userSchema.index({ permissions: 1 }); // Permission-based queries
+userSchema.index({ effectivePermissions: 1 }); // Effective permission queries
 
 const User = mongoose.model('User', userSchema)
 export default User

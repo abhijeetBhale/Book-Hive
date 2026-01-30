@@ -7,6 +7,12 @@ import { hasValidLocation } from '../utils/locationHelpers';
 import { useInView } from 'react-intersection-observer';
 import { testimonialAPI, usersAPI, booksAPI } from '../utils/api';
 
+// Import the B&E image
+import BEImage from '../assets/B&E.png';
+
+//Importing the BookHive Login Page image
+import LoginPageImage from '../assets/BookHive_Login_Page.png';
+
 // Critical imports for hero section (loaded immediately)
 import {
   BookOpen,
@@ -552,9 +558,7 @@ const Home = () => {
                   <UserPlus size={24} />
                 </div>
                 <h3 className="how-card-title">Create an Account</h3>
-                <div className="how-card-visual">
-
-                  {/* SMOOTH GOOGLE LOGIN MOCKUP */}
+                {/* <div className="how-card-visual">
                   <div className="login-mockup-card">
                     <div className="login-header">
                       <span className="login-title">Sign in to BookHive</span>
@@ -586,7 +590,55 @@ const Home = () => {
                     </div>
                   </div>
 
+                </div> */}
+                <p className="how-card-description">
+                  Join our vibrant community of book lovers in just minutes. Create your personalized profile, set your reading preferences, add your location to connect with nearby readers, add upload your favorite books with customize your privacy settings, & start building your literary network.
+                </p>
+                <Link to="/login" className="explore-btn">
+                  Login In
+                </Link>
+                <div className="how-card-visual-center">
+                  <div className="browser-mockup">
+                    <div className="browser-header">
+                      <div className="browser-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                    </div>
+                    <div className="browser-content">
+                      <img
+                        src={LoginPageImage}
+                        alt="BookHive Community Screenshot"
+                        className="community-screenshot"
+                        onError={(e) => {
+                          // Fallback to showing the profile grid if image fails to load
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'grid';
+                        }}
+                      />
+                      <div className="profile-grid" style={{ display: 'none' }}>
+                        <div className="profile-card">
+                          <div className="profile-avatar" style={{ backgroundImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}></div>
+                          <div className="profile-bar"></div>
+                        </div>
+                        <div className="profile-card">
+                          <div className="profile-avatar" style={{ backgroundImage: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}></div>
+                          <div className="profile-bar"></div>
+                        </div>
+                        <div className="profile-card">
+                          <div className="profile-avatar" style={{ backgroundImage: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}></div>
+                          <div className="profile-bar"></div>
+                        </div>
+                        <div className="profile-card">
+                          <div className="profile-avatar" style={{ backgroundImage: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}></div>
+                          <div className="profile-bar"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
               </div>
 
               {/* Card 2 - Connect with readers (Featured/Purple) */}
@@ -651,15 +703,58 @@ const Home = () => {
                 </div>
                 <h3 className="how-card-title">Borrow & Exchange</h3>
                 <p className="how-card-description">
-                  Found a book you love? Send a request with one tap. Coordinate the exchange via our secure chat and track your lending history effortlessly.
+                  Found a book you love? Send a request with one tap and connect directly with the book owner. Coordinate the exchange details via our secure, encrypted chat system where you can discuss pickup locations, timing, and book condition.
                 </p>
 
+                 <Link to="/borrow-request" className="explore-btn">
+                  Start Borrowing
+                </Link>      
+
                 <div className="how-card-visual">
-                  <div className="phone-mockup">
+                  <div className="how-card-visual-center">
+                  <div className="browser-mockup">
+                    <div className="browser-header">
+                      <div className="browser-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                    </div>
+                    <div className="browser-content">
+                      <img
+                        src={BEImage}
+                        alt="BookHive Community Screenshot"
+                        className="community-screenshot"
+                        onError={(e) => {
+                          // Fallback to showing the profile grid if image fails to load
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'grid';
+                        }}
+                      />
+                      <div className="profile-grid" style={{ display: 'none' }}>
+                        <div className="profile-card">
+                          <div className="profile-avatar" style={{ backgroundImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}></div>
+                          <div className="profile-bar"></div>
+                        </div>
+                        <div className="profile-card">
+                          <div className="profile-avatar" style={{ backgroundImage: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}></div>
+                          <div className="profile-bar"></div>
+                        </div>
+                        <div className="profile-card">
+                          <div className="profile-avatar" style={{ backgroundImage: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}></div>
+                          <div className="profile-bar"></div>
+                        </div>
+                        <div className="profile-card">
+                          <div className="profile-avatar" style={{ backgroundImage: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}></div>
+                          <div className="profile-bar"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                  {/* <div className="phone-mockup">
                     <div className="phone-screen">
                       <div className="phone-content">
-
-                        {/* Mini App UI: Book Request Screen */}
                         <div className="app-ui-container">
                           <div className="app-nav">
                             <div className="nav-dot"></div>
@@ -693,7 +788,7 @@ const Home = () => {
 
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>
@@ -1711,7 +1806,7 @@ const StyledWrapper = styled.div`
       line-height: 1.6;
       margin-bottom: 1.5rem;
     }
-    
+
     .explore-btn {
       background-color: #5b21b6;
       color: white;

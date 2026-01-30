@@ -104,52 +104,63 @@ export const requestBook = async (req, res) => {
     
     // Create a notification for the book owner
     try {
-      const ownerNotification = await Notification.create({
+      // Check if notification already exists to prevent duplicates
+      const existingOwnerNotification = await Notification.findOne({
         userId: book.owner,
         type: 'borrow_request',
-        title: 'New Borrow Request',
-        message: `${req.user.name} wants to borrow "${book.title}" from you`,
-        fromUserId: req.user._id,
-        link: '/borrow-requests',
-        metadata: {
-          bookId: book._id,
-          bookTitle: book.title,
-          borrowRequestId: borrowRequest._id
-        }
+        'metadata.borrowRequestId': borrowRequest._id
       });
 
-      // Emit real-time notification via WebSocket to owner
-      try {
-        const io = req.app.get('io');
-        if (io) {
-          const ownerNotificationData = {
-            id: ownerNotification._id,
-            type: 'borrow_request',
-            message: `You have a new borrow request from ${req.user.name}!`,
-            fromUser: {
-              _id: req.user._id,
-              name: req.user.name,
-              avatar: req.user.avatar
-            },
-            book: {
-              _id: book._id,
-              title: book.title,
-              coverImage: book.coverImage
-            },
-            link: '/borrow-requests',
-            createdAt: ownerNotification.createdAt,
-            read: false
-          };
+      if (!existingOwnerNotification) {
+        const ownerNotification = await Notification.create({
+          userId: book.owner,
+          type: 'borrow_request',
+          title: 'New Borrow Request',
+          message: `${req.user.name} wants to borrow "${book.title}" from you`,
+          fromUserId: req.user._id,
+          link: '/borrow-requests',
+          metadata: {
+            bookId: book._id,
+            bookTitle: book.title,
+            borrowRequestId: borrowRequest._id
+          }
+        });
 
-          console.log(`Emitting notification to owner user:${book.owner}`, ownerNotificationData);
-          io.to(`user:${book.owner}`).emit('new_notification', ownerNotificationData);
-          // Emit badge update event
-          io.to(`user:${book.owner}`).emit('borrow_request:new', { borrowRequestId: borrowRequest._id });
-        } else {
-          console.warn('Socket.IO instance not available');
+        // Emit real-time notification via WebSocket to owner
+        try {
+          const io = req.app.get('io');
+          if (io) {
+            const ownerNotificationData = {
+              id: ownerNotification._id,
+              type: 'borrow_request',
+              message: `You have a new borrow request from ${req.user.name}!`,
+              fromUser: {
+                _id: req.user._id,
+                name: req.user.name,
+                avatar: req.user.avatar
+              },
+              book: {
+                _id: book._id,
+                title: book.title,
+                coverImage: book.coverImage
+              },
+              link: '/borrow-requests',
+              createdAt: ownerNotification.createdAt,
+              read: false
+            };
+
+            console.log(`Emitting notification to owner user:${book.owner}`, ownerNotificationData);
+            io.to(`user:${book.owner}`).emit('new_notification', ownerNotificationData);
+            // Emit badge update event
+            io.to(`user:${book.owner}`).emit('borrow_request:new', { borrowRequestId: borrowRequest._id });
+          } else {
+            console.warn('Socket.IO instance not available');
+          }
+        } catch (socketError) {
+          console.error('Failed to emit new_notification event to owner:', socketError.message);
         }
-      } catch (socketError) {
-        console.error('Failed to emit new_notification event to owner:', socketError.message);
+      } else {
+        console.log('Owner notification already exists, skipping duplicate creation');
       }
     } catch (e) {
       // Log and continue; do not fail the main action due to notification issues
@@ -158,51 +169,62 @@ export const requestBook = async (req, res) => {
 
     // Create a confirmation notification for the borrower (person requesting the book)
     try {
-      const borrowerNotification = await Notification.create({
+      // Check if confirmation notification already exists to prevent duplicates
+      const existingBorrowerNotification = await Notification.findOne({
         userId: req.user._id,
         type: 'info',
-        title: 'Borrow Request Sent',
-        message: `Your request to borrow "${book.title}" from ${populatedBook.owner.name} has been sent successfully. You'll be notified when they respond.`,
-        fromUserId: book.owner,
-        link: '/borrow-requests',
-        metadata: {
-          bookId: book._id,
-          bookTitle: book.title,
-          borrowRequestId: borrowRequest._id,
-          ownerId: book.owner
-        }
+        'metadata.borrowRequestId': borrowRequest._id
       });
 
-      // Emit real-time notification via WebSocket to borrower
-      try {
-        const io = req.app.get('io');
-        if (io) {
-          const borrowerNotificationData = {
-            id: borrowerNotification._id,
-            type: 'info',
-            message: `Your request to borrow "${book.title}" has been sent successfully!`,
-            fromUser: {
-              _id: populatedBook.owner._id,
-              name: populatedBook.owner.name,
-              avatar: populatedBook.owner.avatar
-            },
-            book: {
-              _id: book._id,
-              title: book.title,
-              coverImage: book.coverImage
-            },
-            link: '/borrow-requests',
-            createdAt: borrowerNotification.createdAt,
-            read: false
-          };
+      if (!existingBorrowerNotification) {
+        const borrowerNotification = await Notification.create({
+          userId: req.user._id,
+          type: 'info',
+          title: 'Borrow Request Sent',
+          message: `Your request to borrow "${book.title}" from ${populatedBook.owner.name} has been sent successfully. You'll be notified when they respond.`,
+          fromUserId: book.owner,
+          link: '/borrow-requests',
+          metadata: {
+            bookId: book._id,
+            bookTitle: book.title,
+            borrowRequestId: borrowRequest._id,
+            ownerId: book.owner
+          }
+        });
 
-          console.log(`Emitting confirmation notification to borrower user:${req.user._id}`, borrowerNotificationData);
-          io.to(`user:${req.user._id}`).emit('new_notification', borrowerNotificationData);
-          // Emit badge update event
-          io.to(`user:${req.user._id}`).emit('borrow_request:sent', { borrowRequestId: borrowRequest._id });
+        // Emit real-time notification via WebSocket to borrower
+        try {
+          const io = req.app.get('io');
+          if (io) {
+            const borrowerNotificationData = {
+              id: borrowerNotification._id,
+              type: 'info',
+              message: `Your request to borrow "${book.title}" has been sent successfully!`,
+              fromUser: {
+                _id: populatedBook.owner._id,
+                name: populatedBook.owner.name,
+                avatar: populatedBook.owner.avatar
+              },
+              book: {
+                _id: book._id,
+                title: book.title,
+                coverImage: book.coverImage
+              },
+              link: '/borrow-requests',
+              createdAt: borrowerNotification.createdAt,
+              read: false
+            };
+
+            console.log(`Emitting confirmation notification to borrower user:${req.user._id}`, borrowerNotificationData);
+            io.to(`user:${req.user._id}`).emit('new_notification', borrowerNotificationData);
+            // Emit badge update event
+            io.to(`user:${req.user._id}`).emit('borrow_request:sent', { borrowRequestId: borrowRequest._id });
+          }
+        } catch (socketError) {
+          console.error('Failed to emit confirmation notification to borrower:', socketError.message);
         }
-      } catch (socketError) {
-        console.error('Failed to emit confirmation notification to borrower:', socketError.message);
+      } else {
+        console.log('Borrower confirmation notification already exists, skipping duplicate creation');
       }
     } catch (e) {
       // Log and continue; do not fail the main action due to notification issues

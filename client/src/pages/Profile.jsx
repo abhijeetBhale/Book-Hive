@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { getFullImageUrl } from '../utils/imageHelpers';
 
 // Import new icons for the password fields
-import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy, Shield, Activity, RefreshCw, Search, CheckCircle, ChevronRight, Star, BadgeCheck, Wallet } from 'lucide-react';
+import { Loader, Camera, MapPin, User, Mail, Bell, Lock, BookOpen, Trash2, Eye, EyeOff, AlertTriangle, ArrowLeft, Trophy, Shield, Activity, RefreshCw, Search, CheckCircle, ChevronRight, Star, BadgeCheck, Wallet, MessageSquare, Heart } from 'lucide-react';
 import GamificationSection from '../components/profile/GamificationSection';
 import ReviewsModal from '../components/ReviewsModal';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
@@ -18,6 +18,346 @@ import TransactionHistory from '../components/wallet/TransactionHistory';
 import WithdrawalModal from '../components/wallet/WithdrawalModal';
 import { walletAPI } from '../utils/walletAPI';
 import { useNavigate } from 'react-router-dom';
+
+// Notifications Section Component
+const NotificationsSection = ({ onNotificationCountChange }) => {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Fetch notifications
+  const fetchNotifications = async (showRefreshLoader = false) => {
+    try {
+      if (showRefreshLoader) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      const { notificationsAPI } = await import('../utils/api');
+      const response = await notificationsAPI.getAll({ limit: 100 });
+      setNotifications(response || []);
+      
+      // Update parent component with unread count
+      const unreadCount = (response || []).filter(n => !n.isRead).length;
+      if (onNotificationCountChange) {
+        onNotificationCountChange(unreadCount);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      toast.error('Failed to load notifications');
+      setNotifications([]);
+      if (onNotificationCountChange) {
+        onNotificationCountChange(0);
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  // Group notifications by date
+  const groupNotificationsByDate = (notifications) => {
+    const groups = {};
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    notifications.forEach(notification => {
+      const notifDate = new Date(notification.createdAt);
+      const notifDateString = notifDate.toDateString();
+      const todayString = today.toDateString();
+      const yesterdayString = yesterday.toDateString();
+
+      let groupKey;
+      if (notifDateString === todayString) {
+        groupKey = 'Today';
+      } else if (notifDateString === yesterdayString) {
+        groupKey = 'Yesterday';
+      } else {
+        // Format as "Month Day, Year" for older dates
+        groupKey = notifDate.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        });
+      }
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(notification);
+    });
+
+    return groups;
+  };
+
+  // Get icon for notification type
+  const getNotificationIcon = (type, severity) => {
+    const iconProps = { size: 20 };
+    
+    switch (type) {
+      case 'borrow_request':
+        return <BookOpen {...iconProps} />;
+      case 'request_approved':
+        return <CheckCircle {...iconProps} />;
+      case 'request_denied':
+        return <AlertTriangle {...iconProps} />;
+      case 'friend_request':
+      case 'friend_accepted':
+        return <User {...iconProps} />;
+      case 'message':
+        return <MessageSquare {...iconProps} />;
+      case 'review_prompt':
+        return <Heart {...iconProps} />;
+      case 'event_invitation':
+      case 'event_reminder':
+        return <Activity {...iconProps} />;
+      case 'warning':
+      case 'ban':
+        return <AlertTriangle {...iconProps} />;
+      case 'success':
+        return <CheckCircle {...iconProps} />;
+      default:
+        return severity === 'warning' ? <AlertTriangle {...iconProps} /> : <Bell {...iconProps} />;
+    }
+  };
+
+  // Get icon color based on type and severity
+  const getIconColor = (type, severity) => {
+    switch (type) {
+      case 'borrow_request':
+        return '#3b82f6'; // blue
+      case 'request_approved':
+      case 'success':
+        return '#10b981'; // green
+      case 'request_denied':
+      case 'warning':
+      case 'ban':
+        return '#ef4444'; // red
+      case 'friend_request':
+      case 'friend_accepted':
+        return '#8b5cf6'; // purple
+      case 'message':
+        return '#06b6d4'; // cyan
+      case 'review_prompt':
+        return '#f59e0b'; // amber
+      case 'event_invitation':
+      case 'event_reminder':
+        return '#6366f1'; // indigo
+      default:
+        return severity === 'warning' ? '#ef4444' : '#6b7280'; // red or gray
+    }
+  };
+
+  // Handle notification click
+  const handleNotificationClick = async (notification) => {
+    try {
+      // Mark as read if not already read
+      if (!notification.isRead) {
+        const { notificationsAPI } = await import('../utils/api');
+        await notificationsAPI.markAsRead([notification._id]);
+        
+        // Update local state
+        setNotifications(prev => 
+          prev.map(n => 
+            n._id === notification._id ? { ...n, isRead: true } : n
+          )
+        );
+
+        // Update parent component with new unread count
+        const updatedNotifications = notifications.map(n => 
+          n._id === notification._id ? { ...n, isRead: true } : n
+        );
+        const unreadCount = updatedNotifications.filter(n => !n.isRead).length;
+        if (onNotificationCountChange) {
+          onNotificationCountChange(unreadCount);
+        }
+
+        // Notify other components
+        window.dispatchEvent(new Event('notifications-read'));
+      }
+
+      // Navigate to link if available
+      if (notification.metadata?.link) {
+        window.location.href = notification.metadata.link;
+      } else if (notification.link) {
+        window.location.href = notification.link;
+      }
+    } catch (error) {
+      console.error('Error handling notification click:', error);
+      toast.error('Failed to process notification');
+    }
+  };
+
+  // Handle delete notification
+  const handleDeleteNotification = async (notificationId, event) => {
+    event.stopPropagation();
+
+    try {
+      const { notificationsAPI } = await import('../utils/api');
+      await notificationsAPI.delete(notificationId);
+      
+      // Update local state
+      setNotifications(prev => prev.filter(n => n._id !== notificationId));
+      
+      // Update parent component with new unread count
+      const updatedNotifications = notifications.filter(n => n._id !== notificationId);
+      const unreadCount = updatedNotifications.filter(n => !n.isRead).length;
+      if (onNotificationCountChange) {
+        onNotificationCountChange(unreadCount);
+      }
+      
+      // Notify other components
+      window.dispatchEvent(new Event('notifications-read'));
+      
+      toast.success('Notification deleted');
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      toast.error('Failed to delete notification');
+    }
+  };
+
+  // Handle mark all as read
+  const handleMarkAllAsRead = async () => {
+    try {
+      const { notificationsAPI } = await import('../utils/api');
+      await notificationsAPI.markAllAsRead();
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(n => ({ ...n, isRead: true }))
+      );
+      
+      // Update parent component with new unread count (0)
+      if (onNotificationCountChange) {
+        onNotificationCountChange(0);
+      }
+      
+      // Notify other components
+      window.dispatchEvent(new Event('notifications-read'));
+      
+      toast.success('All notifications marked as read');
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+      toast.error('Failed to mark all as read');
+    }
+  };
+
+  const groupedNotifications = groupNotificationsByDate(notifications);
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  if (loading) {
+    return (
+      <div className="notifications-loading">
+        <Loader className="animate-spin" size={32} />
+        <p>Loading notifications...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="notifications-section">
+      <div className="notifications-header">
+        <div className="header-actions">
+          <button 
+            className="refresh-button"
+            onClick={() => fetchNotifications(true)}
+            disabled={refreshing}
+          >
+            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+          
+          {unreadCount > 0 && (
+            <button 
+              className="mark-all-read-button"
+              onClick={handleMarkAllAsRead}
+            >
+              <CheckCircle size={16} />
+              Mark all as read ({unreadCount})
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="notifications-content">
+        <div className="notifications-scroll-container">
+          {Object.keys(groupedNotifications).length === 0 ? (
+            <div className="empty-state">
+              <Bell size={48} />
+              <h4>No notifications yet</h4>
+              <p>When you have new activity, notifications will appear here.</p>
+            </div>
+          ) : (
+            Object.entries(groupedNotifications).map(([dateGroup, groupNotifications]) => (
+              <div key={dateGroup} className="notification-group">
+                <div className="group-header">
+                  <h4>{dateGroup}</h4>
+                  <span className="group-count">
+                    {groupNotifications.length} {groupNotifications.length === 1 ? 'notification' : 'notifications'}
+                  </span>
+                </div>
+                
+                <div className="notification-list">
+                  {groupNotifications.map(notification => (
+                    <div 
+                      key={notification._id}
+                      className={`notification-item ${!notification.isRead ? 'unread' : ''}`}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      <div className="notification-icon" style={{ color: getIconColor(notification.type, notification.severity) }}>
+                        {getNotificationIcon(notification.type, notification.severity)}
+                      </div>
+                      
+                      <div className="notification-content">
+                        <div className="notification-header">
+                          <h5>{notification.title}</h5>
+                          <div className="notification-actions">
+                            <span className="notification-time">
+                              {new Date(notification.createdAt).toLocaleTimeString([], { 
+                                hour: 'numeric', 
+                                minute: '2-digit', 
+                                hour12: true 
+                              })}
+                            </span>
+                            {!notification.isRead && (
+                              <div className="unread-indicator" />
+                            )}
+                            <button
+                              className="delete-button"
+                              onClick={(e) => handleDeleteNotification(notification._id, e)}
+                              title="Delete notification"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <p className="notification-message">{notification.message}</p>
+                        
+                        {(notification.metadata?.link || notification.link) && (
+                          <button className="view-button">
+                            <Eye size={14} />
+                            View
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Profile = () => {
   const { user, setUser, fetchProfile } = useContext(AuthContext);
@@ -80,6 +420,9 @@ const Profile = () => {
     approvedList: []
   });
 
+  // State for notification count in sidebar
+  const [notificationCount, setNotificationCount] = useState(0);
+
   // Wallet state
   const [walletData, setWalletData] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -135,52 +478,27 @@ const Profile = () => {
   }, [user._id, fetchProfile]);
 
   useEffect(() => {
-    const fetchNotifications = async () => {
+    // Fetch notification count for sidebar
+    const fetchNotificationCount = async () => {
       try {
-        const [receivedRequests, inquiryNotes] = await Promise.all([
-          borrowAPI.getReceivedRequests(),
-          (await import('../utils/api')).notificationsAPI.listBookInquiries({ limit: 20 }).catch(() => ({ data: { data: { notifications: [] } } }))
-        ]);
-
-        const pendingList = receivedRequests.data?.requests?.filter(r => r.status === 'pending') || [];
-        const approvedList = receivedRequests.data?.requests?.filter(r => r.status === 'approved') || [];
-        const pendingCount = pendingList.length;
-        const approvedCount = approvedList.length;
-
-        const messages = (inquiryNotes.data?.data?.notifications || inquiryNotes.data?.notifications || []).map(n => ({
-          id: n._id,
-          from: n.fromUser?.name || 'User',
-          text: n.message,
-          avatar: n.fromUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(n.fromUser?.name || 'User')}&background=818cf8&color=fff`
-        }));
-
-        setNotifications({
-          pendingRequests: pendingCount,
-          approvedRequests: approvedCount,
-          messages: messages,
-          pendingList,
-          approvedList
-        });
-        // Mark relevant notifications as read and notify navbar to refresh count
-        try {
-          const { notificationsAPI } = await import('../utils/api');
-          await notificationsAPI.markRead();
-          window.dispatchEvent(new Event('notifications-read'));
-        } catch (error) {
-          // Don't show error to user as this is not critical functionality
-        }
+        const { notificationsAPI } = await import('../utils/api');
+        const response = await notificationsAPI.getUnreadCount();
+        setNotificationCount(response.count || 0);
       } catch (error) {
-        console.error("Failed to fetch notifications:", error);
-        setNotifications({
-          pendingRequests: 0,
-          approvedRequests: 0,
-          messages: [],
-          pendingList: [],
-          approvedList: []
-        });
+        console.error('Error fetching notification count:', error);
+        setNotificationCount(0);
       }
     };
-    fetchNotifications();
+
+    fetchNotificationCount();
+
+    // Listen for notification updates
+    const handleNotificationUpdate = () => {
+      fetchNotificationCount();
+    };
+
+    window.addEventListener('notifications-read', handleNotificationUpdate);
+    return () => window.removeEventListener('notifications-read', handleNotificationUpdate);
   }, []);
 
   const handleChange = (e) => {
@@ -393,51 +711,11 @@ const Profile = () => {
   };
 
   const handleDeleteRequest = async (requestId) => {
-    const originalPending = [...notifications.pendingList];
-    const originalApproved = [...notifications.approvedList];
-    setNotifications(prev => {
-      const pendingList = prev.pendingList.filter(r => r._id !== requestId);
-      const approvedList = prev.approvedList.filter(r => r._id !== requestId);
-      return {
-        ...prev,
-        pendingList,
-        approvedList,
-        pendingRequests: pendingList.length,
-        approvedRequests: approvedList.length,
-      };
-    });
-    try {
-      await borrowAPI.deleteRequest(requestId);
-      toast.success('Request removed.');
-    } catch (error) {
-      toast.error('Could not remove request. Please try again.');
-      setNotifications(prev => ({
-        ...prev,
-        pendingList: originalPending,
-        approvedList: originalApproved,
-        pendingRequests: originalPending.length,
-        approvedRequests: originalApproved.length,
-      }));
-    }
+    // This function is no longer used since we redirect to dedicated notifications page
   };
 
   const handleDeleteMessage = async (messageId) => {
-    const originalMessages = [...notifications.messages];
-    setNotifications(prev => ({
-      ...prev,
-      messages: prev.messages.filter(msg => msg.id !== messageId)
-    }));
-    try {
-      const { notificationsAPI } = await import('../utils/api');
-      await notificationsAPI.delete(messageId);
-      toast.success("Notification removed.");
-    } catch (error) {
-      toast.error("Could not remove notification. Please try again.");
-      setNotifications(prev => ({
-        ...prev,
-        messages: originalMessages
-      }));
-    }
+    // This function is no longer used since we redirect to dedicated notifications page
   };
 
   // --- HANDLERS FOR REPORT USER ---
@@ -549,7 +827,7 @@ const Profile = () => {
     window.location.href = '/';
   };
 
-  const totalNotifications = notifications.pendingRequests + notifications.messages.length;
+  const totalNotifications = notificationCount;
 
   const renderContent = () => {
     switch (activeTab) {
@@ -646,64 +924,9 @@ const Profile = () => {
           <div>
             <div className="section-header">
               <h3>Notifications</h3>
-              <p>All your recent activity in one place.</p>
+              <p>Stay updated with your BookHive activity</p>
             </div>
-            <div className="notification-list">
-              <h4>Book Requests</h4>
-              <div className="notification-item">
-                <div className="item-icon pending"><BookOpen size={20} /></div>
-                <div className="item-content">
-                  <strong>{notifications.pendingRequests} Pending Request{notifications.pendingRequests !== 1 && 's'}</strong>
-                  <p>You have new requests from readers wanting to borrow your books.</p>
-                </div>
-              </div>
-              {notifications.pendingList.map(req => (
-                <div className="notification-item" key={req._id}>
-                  <img src={req.borrower?.avatar || `https://ui-avatars.com/api/?name=${req.borrower?.name || 'User'}&background=818cf8&color=fff`} alt={req.borrower?.name || 'User'} className="item-avatar" />
-                  <div className="item-content">
-                    <strong>{req.borrower?.name || 'User'} requested "{req.book?.title || 'Book'}"</strong>
-                    <p>Requested on {new Date(req.createdAt).toLocaleDateString()}</p>
-                  </div>
-                  <button onClick={() => handleDeleteRequest(req._id)} className="delete-notification-btn" aria-label="Delete pending request">
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              ))}
-              <div className="notification-item">
-                <div className="item-icon approved"><BookOpen size={20} /></div>
-                <div className="item-content">
-                  <strong>{notifications.approvedRequests} Approved Request{notifications.approvedRequests !== 1 && 's'}</strong>
-                  <p>You have approved these requests. Don't forget to arrange the exchange!</p>
-                </div>
-              </div>
-              {notifications.approvedList.map(req => (
-                <div className="notification-item" key={req._id}>
-                  <img src={req.borrower?.avatar || `https://ui-avatars.com/api/?name=${req.borrower?.name || 'User'}&background=818cf8&color=fff`} alt={req.borrower?.name || 'User'} className="item-avatar" />
-                  <div className="item-content">
-                    <strong>Approved: "{req.book?.title || 'Book'}" for {req.borrower?.name || 'User'}</strong>
-                    <p>Approved on {new Date(req.updatedAt || req.createdAt).toLocaleDateString()}</p>
-                  </div>
-                  <button onClick={() => handleDeleteRequest(req._id)} className="delete-notification-btn" aria-label="Delete approved request">
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              ))}
-              <h4 className="mt-8">Book Inquiries</h4>
-              <div className="messages-scroll">
-                {notifications.messages.length > 0 ? notifications.messages.map(msg => (
-                  <div className="notification-item" key={msg.id}>
-                    <img src={msg.avatar} alt={msg.from} className="item-avatar" />
-                    <div className="item-content">
-                      <strong>Book inquiry from {msg.from}</strong>
-                      <p>"{msg.text}"</p>
-                    </div>
-                    <button onClick={() => handleDeleteMessage(msg.id)} className="delete-notification-btn" aria-label={`Delete inquiry from ${msg.from}`}>
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                )) : <p className="text-gray-500">No book inquiries yet.</p>}
-              </div>
-            </div>
+            <NotificationsSection onNotificationCountChange={setNotificationCount} />
           </div>
         );
       // --- JSX FOR NEW TABS ---
@@ -1564,10 +1787,14 @@ const StyledWrapper = styled.div`
     flex: 1;
     padding: 3rem;
     background-color: #f9fafb;
+    height: calc(100vh - 140px);
+    overflow: hidden;
 
     /* Mobile responsive main content */
     @media (max-width: 768px) {
       padding: 1.5rem 1rem;
+      height: auto;
+      overflow: visible;
     }
     
     /* Report User Styles */
@@ -2689,6 +2916,430 @@ const StyledWrapper = styled.div`
       }
     }
     
+    /* Notifications Section Styles */
+    .notifications-section {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      
+      .notifications-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 2rem;
+        color: #6b7280;
+        
+        p {
+          margin-top: 1rem;
+          font-size: 1rem;
+        }
+      }
+
+      .notifications-header {
+        margin-bottom: 1.5rem;
+        flex-shrink: 0;
+
+        .header-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 1rem;
+          align-items: center;
+
+          /* Mobile responsive */
+          @media (max-width: 768px) {
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: stretch;
+          }
+
+          .refresh-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            color: #374151;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+
+            &:hover:not(:disabled) {
+              background: #e5e7eb;
+            }
+
+            &:disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
+            }
+          }
+
+          .mark-all-read-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.875rem;
+            transition: background-color 0.2s;
+
+            &:hover {
+              background: #4338ca;
+            }
+          }
+        }
+      }
+
+      .notifications-content {
+        flex: 1;
+        min-height: 0;
+        
+        .notifications-scroll-container {
+          max-height: calc(100vh - 400px);
+          min-height: 300px;
+          overflow-y: auto;
+          padding-right: 0.5rem;
+          
+          /* Custom scrollbar styling */
+          &::-webkit-scrollbar {
+            width: 6px;
+          }
+          
+          &::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+          }
+          
+          &::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+            
+            &:hover {
+              background: #94a3b8;
+            }
+          }
+          
+          /* Firefox scrollbar styling */
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e1 #f1f5f9;
+
+          /* Mobile responsive */
+          @media (max-width: 768px) {
+            max-height: 500px;
+            min-height: 250px;
+            padding-right: 0.25rem;
+          }
+        }
+
+        .empty-state {
+          background: white;
+          border-radius: 0.75rem;
+          padding: 3rem 2rem;
+          text-align: center;
+          border: 1px solid #e5e7eb;
+          color: #6b7280;
+          margin: 1rem 0;
+
+          svg {
+            margin-bottom: 1rem;
+            opacity: 0.5;
+          }
+
+          h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #374151;
+            margin: 0 0 0.5rem 0;
+          }
+
+          p {
+            margin: 0;
+            font-size: 1rem;
+          }
+        }
+
+        .notification-group {
+          background: white;
+          border-radius: 0.75rem;
+          margin-bottom: 1rem;
+          border: 1px solid #e5e7eb;
+          overflow: hidden;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          .group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+
+            /* Mobile responsive */
+            @media (max-width: 768px) {
+              padding: 0.75rem 1rem;
+              flex-direction: column;
+              gap: 0.25rem;
+              align-items: flex-start;
+            }
+
+            h4 {
+              font-size: 1rem;
+              font-weight: 600;
+              color: #111827;
+              margin: 0;
+            }
+
+            .group-count {
+              font-size: 0.875rem;
+              color: #6b7280;
+              font-weight: 500;
+            }
+          }
+
+          .notification-list {
+            .notification-item {
+              display: flex;
+              gap: 1rem;
+              padding: 1rem 1.5rem;
+              border-bottom: 1px solid #f3f4f6;
+              cursor: pointer;
+              transition: background-color 0.2s;
+              position: relative;
+
+              /* Mobile responsive */
+              @media (max-width: 768px) {
+                padding: 0.75rem 1rem;
+                gap: 0.75rem;
+              }
+
+              &:last-child {
+                border-bottom: none;
+              }
+
+              &:hover {
+                background: #f9fafb;
+              }
+
+              &.unread {
+                background: #fefbff;
+                border-left: 3px solid #4f46e5;
+              }
+
+              .notification-icon {
+                width: 2.5rem;
+                height: 2.5rem;
+                border-radius: 50%;
+                background: rgba(79, 70, 229, 0.1);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                margin-top: 0.25rem;
+
+                /* Mobile responsive */
+                @media (max-width: 768px) {
+                  width: 2rem;
+                  height: 2rem;
+                  
+                  svg {
+                    width: 16px;
+                    height: 16px;
+                  }
+                }
+              }
+
+              .notification-content {
+                flex: 1;
+                min-width: 0;
+
+                .notification-header {
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: flex-start;
+                  margin-bottom: 0.5rem;
+
+                  /* Mobile responsive */
+                  @media (max-width: 768px) {
+                    flex-direction: column;
+                    gap: 0.5rem;
+                    align-items: flex-start;
+                  }
+
+                  h5 {
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    color: #111827;
+                    margin: 0;
+                    line-height: 1.4;
+
+                    /* Mobile responsive */
+                    @media (max-width: 768px) {
+                      font-size: 0.8rem;
+                    }
+                  }
+
+                  .notification-actions {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    flex-shrink: 0;
+                    margin-left: 1rem;
+
+                    /* Mobile responsive */
+                    @media (max-width: 768px) {
+                      margin-left: 0;
+                      justify-content: space-between;
+                      width: 100%;
+                    }
+
+                    .notification-time {
+                      font-size: 0.75rem;
+                      color: #9ca3af;
+                      font-weight: 500;
+                    }
+
+                    .unread-indicator {
+                      width: 0.5rem;
+                      height: 0.5rem;
+                      background: #4f46e5;
+                      border-radius: 50%;
+                    }
+
+                    .delete-button {
+                      background: none;
+                      border: none;
+                      color: #9ca3af;
+                      cursor: pointer;
+                      padding: 0.25rem;
+                      border-radius: 0.25rem;
+                      transition: all 0.2s;
+                      opacity: 0;
+
+                      &:hover {
+                        color: #ef4444;
+                        background: #fee2e2;
+                      }
+
+                      /* Mobile responsive - always show */
+                      @media (max-width: 768px) {
+                        opacity: 1 !important;
+                      }
+                    }
+                  }
+                }
+
+                .notification-message {
+                  color: #6b7280;
+                  margin: 0 0 0.75rem 0;
+                  line-height: 1.5;
+                  font-size: 0.875rem;
+
+                  /* Mobile responsive */
+                  @media (max-width: 768px) {
+                    font-size: 0.8rem;
+                  }
+                }
+
+                .view-button {
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 0.375rem;
+                  background: #4f46e5;
+                  color: white;
+                  border: none;
+                  padding: 0.375rem 0.75rem;
+                  border-radius: 0.375rem;
+                  font-size: 0.75rem;
+                  font-weight: 500;
+                  cursor: pointer;
+                  transition: background-color 0.2s;
+
+                  &:hover {
+                    background: #4338ca;
+                  }
+                }
+              }
+
+              &:hover .delete-button {
+                opacity: 1;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    /* Notifications Redirect Styles */
+    .notifications-redirect {
+      .redirect-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 1rem;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        
+        .redirect-icon {
+          margin-bottom: 1.5rem;
+          color: #4f46e5;
+          
+          svg {
+            opacity: 0.8;
+          }
+        }
+        
+        .redirect-content {
+          h4 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #111827;
+            margin: 0 0 0.75rem 0;
+          }
+          
+          p {
+            color: #6b7280;
+            margin: 0 0 1.5rem 0;
+            line-height: 1.6;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+          }
+          
+          .redirect-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            
+            &:hover {
+              background: #4338ca;
+              transform: translateY(-1px);
+              box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+            }
+          }
+        }
+      }
+    }
+    
     .notification-list {
         display: flex; flex-direction: column; gap: 1.5rem;
 
@@ -2746,6 +3397,20 @@ const StyledWrapper = styled.div`
         background-color: #fee2e2;
       }
     }
+  }
+
+  /* Animation keyframes */
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-spin {
+    animation: spin 1s linear infinite;
   }
 `;
 

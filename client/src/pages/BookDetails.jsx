@@ -187,6 +187,7 @@ const BookDetails = () => {
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [borrowing, setBorrowing] = useState(false);
   const [upgradeModalData, setUpgradeModalData] = useState(null);
 
   useEffect(() => {
@@ -205,6 +206,7 @@ const BookDetails = () => {
   }, [id]);
 
   const handleBorrowRequest = async () => {
+    setBorrowing(true);
     try {
       const response = await borrowAPI.createRequest(id);
       toast.success(`📚 Borrow request sent for "${book?.title}"! You'll be notified when the owner responds.`, { 
@@ -224,6 +226,8 @@ const BookDetails = () => {
       } else {
         toast.error(`❌ ${errorData?.message || 'Failed to send borrow request.'}`, { duration: 4000 });
       }
+    } finally {
+      setBorrowing(false);
     }
   };
 
@@ -353,8 +357,15 @@ const BookDetails = () => {
                 
                 <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
                   {book.forBorrowing && (
-                    <ActionButton onClick={handleBorrowRequest}>
-                      Request to Borrow
+                    <ActionButton 
+                      onClick={handleBorrowRequest}
+                      disabled={borrowing}
+                      style={{ 
+                        opacity: borrowing ? 0.6 : 1,
+                        cursor: borrowing ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {borrowing ? 'Sending Request...' : 'Request to Borrow'}
                     </ActionButton>
                   )}
                   {book.forSelling && (
