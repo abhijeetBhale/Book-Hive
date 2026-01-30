@@ -20,7 +20,10 @@
     "update:covers": "node scripts/updateBookCovers.js",
     "migrate:location-privacy": "node scripts/migrateLocationPrivacy.js",
     "init:gamification": "node scripts/initializeGamification.js",
-    "setup:broadcasts": "node scripts/setupBroadcasts.js"
+    "setup:broadcasts": "node scripts/setupBroadcasts.js",
+    "redis:start": "redis-server",
+    "redis:flush": "redis-cli flushall",
+    "cache:warm": "node scripts/warmCache.js"
   },
   "keywords": [],
   "author": "",
@@ -39,6 +42,7 @@
     "express-rate-limit": "^8.0.1",
     "helmet": "^8.1.0",
     "hpp": "^0.2.3",
+    "ioredis": "^5.9.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.0",
     "multer": "^2.0.2",
@@ -47,6 +51,7 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "razorpay": "^2.9.6",
+    "redis": "^4.7.1",
     "sharp": "^0.33.5",
     "socket.io": "^4.7.5",
     "xss-clean": "^0.1.4"

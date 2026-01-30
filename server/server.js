@@ -17,6 +17,7 @@ import './config/cloudinary.js';
 import './config/passport-setup.js';
 import authRoutes from './routes/auth.js';
 import bookRoutes from './routes/books.js';
+import cachedBookRoutes from './routes/cachedBooks.js';
 import bookSearchRoutes from './routes/bookSearch.js';
 import borrowRoutes from './routes/borrow.js';
 import userRoutes from './routes/users.js';
@@ -53,6 +54,26 @@ const PORT = process.env.PORT || 5000;
 const initializeApp = async () => {
   try {
     await connectDatabase();
+    
+    // Initialize Redis
+    console.log('🔄 Initializing Redis...');
+    try {
+      const redisInit = await import('./config/redisInit.js');
+      const redisInitialized = await redisInit.default.initialize();
+      
+      if (redisInitialized) {
+        console.log('✅ Redis initialized successfully');
+        app.set('redisEnabled', true);
+      } else {
+        console.log('⚠️  Redis initialization failed, continuing without cache');
+        app.set('redisEnabled', false);
+      }
+    } catch (redisError) {
+      console.error('❌ Redis initialization error:', redisError.message);
+      console.log('⚠️  Application will continue without Redis caching');
+      app.set('redisEnabled', false);
+    }
+    
     console.log('🔄 Initializing achievements and user stats...');
     await initializeDefaultAchievements();
     await initializeAllUserStats();
@@ -136,13 +157,36 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(passport.initialize());
 
 // Health check endpoint (before other routes)
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok', 
-    message: 'Server is running',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    // Check Redis status if enabled
+    let redisStatus = { enabled: false };
+    if (app.get('redisEnabled')) {
+      try {
+        const redisInit = await import('./config/redisInit.js');
+        redisStatus = await redisInit.default.getStatus();
+        redisStatus.enabled = true;
+      } catch (redisError) {
+        redisStatus = { enabled: true, connected: false, error: redisError.message };
+      }
+    }
+
+    res.status(200).json({ 
+      status: 'ok', 
+      message: 'Server is running',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      redis: redisStatus,
+      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Health check failed',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Test endpoint to debug routing issues
@@ -163,6 +207,7 @@ app.use('/api/payment', (req, res, next) => {
 // Mount routers
 app.use('/api/auth', authRoutes);
 app.use('/api/books', bookRoutes);
+app.use('/api/books-cached', cachedBookRoutes);
 app.use('/api/book-search', bookSearchRoutes);
 app.use('/api/borrow', borrowRoutes);
 app.use('/api/users', userRoutes);
@@ -398,4 +443,45 @@ process.on('uncaughtException', (err) => {
   console.error('Stack:', err.stack);
   // Exit the process for uncaught exceptions
   process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('🔄 SIGTERM received, shutting down gracefully...');
+  
+  // Close Redis connection
+  if (app.get('redisEnabled')) {
+    try {
+      const redisInit = await import('./config/redisInit.js');
+      await redisInit.default.shutdown();
+    } catch (error) {
+      console.error('❌ Error shutting down Redis:', error.message);
+    }
+  }
+  
+  // Close server
+  server.close(() => {
+    console.log('✅ Server closed gracefully');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', async () => {
+  console.log('🔄 SIGINT received, shutting down gracefully...');
+  
+  // Close Redis connection
+  if (app.get('redisEnabled')) {
+    try {
+      const redisInit = await import('./config/redisInit.js');
+      await redisInit.default.shutdown();
+    } catch (error) {
+      console.error('❌ Error shutting down Redis:', error.message);
+    }
+  }
+  
+  // Close server
+  server.close(() => {
+    console.log('✅ Server closed gracefully');
+    process.exit(0);
+  });
 });
