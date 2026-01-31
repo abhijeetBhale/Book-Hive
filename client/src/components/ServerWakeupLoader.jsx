@@ -1,154 +1,106 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { wakeupServer } from '../utils/serverWakeup';
-import DotWaveLoader from './ui/DotWaveLoader';
+import LightPillar from './ui/LightPillar';
+import CountUp from './ui/CountUp';
+import './ServerWakeupLoader.css';
 
 const ServerWakeupLoader = ({ onReady }) => {
-  const [status, setStatus] = useState('checking');
-  const [retryCount, setRetryCount] = useState(0);
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  const maxRetries = 3;
+  const [status, setStatus] = useState('loading');
+  const [countUpStarted, setCountUpStarted] = useState(false);
+  const [serverReady, setServerReady] = useState(false);
 
-  // OPTIMIZED: Reduced loading times for better LCP
-  const MINIMUM_LOADING_TIME = 1500; // Reduced from 3000ms
-  const LONG_ABSENCE_THRESHOLD = 30 * 60 * 1000; // 30 minutes
-  const EXTENDED_LOADING_TIME = 2500; // Reduced from 5000ms
+  // Calculate loading duration based on user visit history
+  const getLoadingDuration = () => {
+    const lastVisit = localStorage.getItem('bookhive_last_visit');
+    const now = Date.now();
+    const LONG_ABSENCE_THRESHOLD = 30 * 60 * 1000; // 30 minutes
+    
+    if (!lastVisit) {
+      // First time visitor - longer animation
+      localStorage.setItem('bookhive_last_visit', now.toString());
+      return 4; // 4 seconds
+    }
+    
+    const timeSinceLastVisit = now - parseInt(lastVisit);
+    localStorage.setItem('bookhive_last_visit', now.toString());
+    
+    if (timeSinceLastVisit > LONG_ABSENCE_THRESHOLD) {
+      // User hasn't visited for a while - longer animation
+      return 4; // 4 seconds
+    }
+    
+    // Regular visit - shorter animation
+    return 2.5; // 2.5 seconds
+  };
 
   useEffect(() => {
-    const getMinimumLoadingTime = () => {
-      const lastVisit = localStorage.getItem('bookhive_last_visit');
-      const now = Date.now();
+    const initializeApp = async () => {
+      // Start the count up animation immediately
+      setCountUpStarted(true);
       
-      if (!lastVisit) {
-        // First time visitor - show reduced animation
-        localStorage.setItem('bookhive_last_visit', now.toString());
-        return EXTENDED_LOADING_TIME;
-      }
-      
-      const timeSinceLastVisit = now - parseInt(lastVisit);
-      localStorage.setItem('bookhive_last_visit', now.toString());
-      
-      if (timeSinceLastVisit > LONG_ABSENCE_THRESHOLD) {
-        // User hasn't visited for a while - show extended animation
-        return EXTENDED_LOADING_TIME;
-      }
-      
-      // Regular visit - show minimal animation
-      return MINIMUM_LOADING_TIME;
-    };
-
-    const wakeup = async () => {
-      const startTime = Date.now();
-      const minimumTime = getMinimumLoadingTime();
-      
-      // Start progress animation
-      const progressInterval = setInterval(() => {
-        setLoadingProgress(prev => {
-          if (prev >= 90) return prev; // Don't complete until server responds
-          return prev + Math.random() * 20; // Faster increments
-        });
-      }, 150); // Faster updates
-
+      // Start server wakeup in parallel
       try {
-        setStatus('checking');
-        const success = await wakeupServer();
-        
-        // Calculate remaining time to meet minimum loading duration
-        const elapsedTime = Date.now() - startTime;
-        const remainingTime = Math.max(0, minimumTime - elapsedTime);
-        
-        if (success) {
-          // Complete the progress bar
-          setLoadingProgress(100);
-          
-          // Wait for remaining time if needed
-          setTimeout(() => {
-            clearInterval(progressInterval);
-            setStatus('ready');
-            setTimeout(() => {
-              onReady?.(true);
-            }, 200); // Reduced delay
-          }, remainingTime);
-        } else {
-          // If health check failed but we haven't exceeded max retries
-          if (retryCount < maxRetries) {
-            setStatus('retrying');
-            setRetryCount(prev => prev + 1);
-            setTimeout(() => {
-              clearInterval(progressInterval);
-              setLoadingProgress(0); // Reset progress for retry
-              wakeup();
-            }, 2000); // Reduced retry delay
-          } else {
-            // Max retries exceeded, continue anyway
-            setLoadingProgress(100);
-            setTimeout(() => {
-              clearInterval(progressInterval);
-              setStatus('ready');
-              setTimeout(() => {
-                onReady?.(true);
-              }, 200);
-            }, remainingTime);
-          }
-        }
+        await wakeupServer();
+        setServerReady(true);
       } catch (error) {
-        console.error('❌ Server wakeup error:', error);
-        const elapsedTime = Date.now() - startTime;
-        const remainingTime = Math.max(0, minimumTime - elapsedTime);
-        
-        if (retryCount < maxRetries) {
-          setStatus('retrying');
-          setRetryCount(prev => prev + 1);
-          setTimeout(() => {
-            clearInterval(progressInterval);
-            setLoadingProgress(0);
-            wakeup();
-          }, 2000);
-        } else {
-          // Continue anyway after max retries
-          setLoadingProgress(100);
-          setTimeout(() => {
-            clearInterval(progressInterval);
-            setStatus('ready');
-            setTimeout(() => {
-              onReady?.(true);
-            }, 200);
-          }, remainingTime);
-        }
+        console.error('Server wakeup error:', error);
+        // Continue anyway - the app should still work
+        setServerReady(true);
       }
     };
 
-    wakeup();
-  }, [onReady, retryCount]);
+    initializeApp();
+  }, []);
+
+  const handleCountUpComplete = () => {
+    // When count up reaches 100, wait a moment then trigger onReady
+    setTimeout(() => {
+      setStatus('ready');
+      onReady?.(true);
+    }, 300);
+  };
 
   if (status === 'ready') {
     return null;
   }
 
-  const getStatusMessage = () => {
-    switch (status) {
-      case 'checking':
-        if (loadingProgress < 40) return 'Initializing BookHive...';
-        if (loadingProgress < 80) return 'Loading Community...';
-        return 'Almost Ready...';
-      case 'retrying':
-        return `Reconnecting... (${retryCount}/${maxRetries})`;
-      default:
-        return 'Loading Books...';
-    }
-  };
+  const loadingDuration = getLoadingDuration();
 
   return (
     <LoaderOverlay>
+      {/* LightPillar Background */}
+      <LightPillarBackground>
+        <LightPillar
+          topColor="#5227FF"
+          bottomColor="#FF9FFC"
+          intensity={0.8}
+          rotationSpeed={0.2}
+          glowAmount={0.003}
+          pillarWidth={4}
+          pillarHeight={0.3}
+          noiseIntensity={0.3}
+          pillarRotation={15}
+          interactive={false}
+          mixBlendMode="screen"
+          quality="medium"
+        />
+      </LightPillarBackground>
+      
+      {/* CountUp Animation */}
       <LoaderContainer>
-        <DotWaveLoader size={50} color="#C44BEF" speed={1.2} />
-        {/* <LoaderText>
-          {getStatusMessage()}
-        </LoaderText> */}
-        {/* <ProgressContainer>
-          <ProgressBar $progress={loadingProgress} />
-          <ProgressText>{Math.round(loadingProgress)}%</ProgressText>
-        </ProgressContainer> */}
+        <CountUpContainer>
+          <CountUp
+            from={0}
+            to={100}
+            duration={loadingDuration}
+            className="count-up-text"
+            startWhen={countUpStarted}
+            onEnd={handleCountUpComplete}
+          />
+          {/* <CountUpLabel>%</CountUpLabel> */}
+        </CountUpContainer>
+        <LoadingText>Initializing BookHive...</LoadingText>
       </LoaderContainer>
     </LoaderOverlay>
   );
@@ -160,7 +112,7 @@ const LoaderOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  // background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -173,65 +125,94 @@ const LoaderOverlay = styled.div`
   }
 `;
 
+const LightPillarBackground = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  opacity: 0.7;
+`;
+
 const LoaderContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.5rem; /* Reduced gap */
-  max-width: 350px; /* Smaller container */
-  padding: 1.5rem; /* Reduced padding */
+  gap: 2rem;
+  max-width: 400px;
+  padding: 2rem;
   text-align: center;
+  position: relative;
+  z-index: 2;
 `;
 
-const LoaderText = styled.div`
-  color: white;
-  font-size: 1.1rem; /* Slightly smaller */
-  font-weight: 600;
+const CountUpContainer = styled.div`
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.5rem;
+  animation: fadeInUp 0.8s ease-out;
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const CountUpLabel = styled.span`
+  font-size: 4rem;
+  font-weight: 700;
+  color: #C44BEF;
+  text-shadow: 0 0 20px rgba(196, 75, 239, 0.5);
+  animation: glow 2s ease-in-out infinite alternate;
+
+  @keyframes glow {
+    from {
+      text-shadow: 0 0 20px rgba(196, 75, 239, 0.5);
+    }
+    to {
+      text-shadow: 0 0 30px rgba(196, 75, 239, 0.8), 0 0 40px rgba(196, 75, 239, 0.6);
+    }
+  }
+
+  @media (max-width: 768px) {
+    font-size: 3rem;
+  }
+`;
+
+const LoadingText = styled.div`
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.2rem;
+  font-weight: 500;
   text-align: center;
-  animation: pulse 1.5s ease-in-out infinite; /* Faster pulse */
+  animation: pulse 2s ease-in-out infinite, fadeInUp 0.8s ease-out 0.3s both;
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.8; }
+    0%, 100% { opacity: 0.9; }
+    50% { opacity: 0.6; }
   }
-`;
 
-const ProgressContainer = styled.div`
-  width: 100%;
-  max-width: 250px; /* Smaller progress bar */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const ProgressBar = styled.div`
-  width: 100%;
-  height: 4px; /* Thinner progress bar */
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
-  overflow: hidden;
-  position: relative;
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: ${props => props.$progress}%; /* Use transient prop */
-    background: linear-gradient(90deg, #C44BEF, #9333EA, #7C3AED);
-    border-radius: 2px;
-    transition: width 0.2s ease; /* Faster transition */
-    box-shadow: 0 0 8px rgba(196, 75, 239, 0.4);
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 0.9;
+      transform: translateY(0);
+    }
   }
-`;
 
-const ProgressText = styled.div`
-  color: #C44BEF;
-  font-size: 0.8rem; /* Smaller text */
-  font-weight: 500;
-  font-family: 'Courier New', monospace;
+  @media (max-width: 768px) {
+    font-size: 1rem;
+  }
 `;
 
 export default ServerWakeupLoader;

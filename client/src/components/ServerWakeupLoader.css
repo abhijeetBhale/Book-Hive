@@ -1,0 +1,31 @@
+/* Global styles for CountUp component */
+.count-up-text {
+  font-size: 6rem;
+  font-weight: 800;
+  color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.02em;
+  animation: countGlow 2s ease-in-out infinite alternate;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+}
+
+@keyframes countGlow {
+  from {
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  }
+  to {
+    text-shadow: 0 0 40px rgba(255, 255, 255, 0.8), 0 0 60px rgba(255, 255, 255, 0.4);
+  }
+}
+
+@media (max-width: 768px) {
+  .count-up-text {
+    font-size: 4.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .count-up-text {
+    font-size: 3.5rem;
+  }
+}
