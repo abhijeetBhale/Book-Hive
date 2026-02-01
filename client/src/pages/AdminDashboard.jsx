@@ -61,7 +61,6 @@ import OrganizerApplicationsTab from '../components/admin/OrganizerApplicationsT
 import EventsTab from '../components/admin/EventsTab';
 import EnhancedWalletManagement from '../components/admin/EnhancedWalletManagement';
 import VerificationApplicationsTab from '../components/admin/VerificationApplicationsTab';
-import VersionNotificationsTab from '../components/admin/VersionNotificationsTab';
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -152,8 +151,7 @@ const AdminDashboard = () => {
     reviews: 0,
     reports: 0,
     walletManagement: 0,
-    lendingFees: 0,
-    versionNotifications: 0
+    lendingFees: 0
   });
 
   // Track which tabs have been visited to clear badges
@@ -198,8 +196,7 @@ const AdminDashboard = () => {
         reviews: data.overview?.pendingReviews || 0,
         reports: data.overview?.unresolvedReports || 0,
         walletManagement: data.overview?.pendingWithdrawals || 0,
-        lendingFees: data.overview?.newLendingFeesToday || 0,
-        versionNotifications: data.overview?.activeVersionNotifications || 0
+        lendingFees: data.overview?.newLendingFeesToday || 0
       });
       
       toast.success('Notification counts refreshed!');
@@ -223,10 +220,9 @@ const AdminDashboard = () => {
       reviews: 0,
       reports: 0,
       walletManagement: 0,
-      lendingFees: 0,
-      versionNotifications: 0
+      lendingFees: 0
     });
-    setVisitedTabs(new Set(['overview', 'users', 'books', 'books-for-sale', 'borrows', 'clubs', 'organizer-applications', 'events', 'verification', 'reviews', 'reports', 'wallet-management', 'lending-fees', 'version-notifications']));
+    setVisitedTabs(new Set(['overview', 'users', 'books', 'books-for-sale', 'borrows', 'clubs', 'organizer-applications', 'events', 'verification', 'reviews', 'reports', 'wallet-management', 'lending-fees']));
     toast.success('All notification badges cleared!');
   };
   const handleTabChange = (tabName) => {
@@ -246,8 +242,7 @@ const AdminDashboard = () => {
       'reviews': 'reviews',
       'reports': 'reports',
       'wallet-management': 'walletManagement',
-      'lending-fees': 'lendingFees',
-      'version-notifications': 'versionNotifications'
+      'lending-fees': 'lendingFees'
     };
     
     const countKey = tabKeyMap[tabName];
@@ -469,17 +464,6 @@ const AdminDashboard = () => {
       toast.success('New lending fee recorded!', { icon: '💵' });
     });
 
-    // Version notification events
-    socket.on('version_notification:new', (data) => {
-      setNotificationCounts(prev => ({ ...prev, versionNotifications: prev.versionNotifications + 1 }));
-      setVisitedTabs(prev => {
-        const newSet = new Set(prev);
-        newSet.delete('version-notifications');
-        return newSet;
-      });
-      toast.success('New version notification created!', { icon: '🔔' });
-    });
-
     // Listen for book deletion/update events
     socket.on('book:deleted', (data) => {
       setNotificationCounts(prev => ({ ...prev, books: prev.books + 1 }));
@@ -572,8 +556,7 @@ const AdminDashboard = () => {
         reviews: data.overview?.pendingReviews || 0,
         reports: data.overview?.unresolvedReports || 0,
         walletManagement: data.overview?.pendingWithdrawals || 0,
-        lendingFees: data.overview?.newLendingFeesToday || 0,
-        versionNotifications: data.overview?.activeVersionNotifications || 0
+        lendingFees: data.overview?.newLendingFeesToday || 0
       });
       
       setError(null);
@@ -4014,17 +3997,7 @@ const AdminDashboard = () => {
               {getNotificationBadge(notificationCounts.reports, 'reports')}
             </button>
 
-            <button
-              onClick={() => handleTabChange('version-notifications')}
-              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'version-notifications'
-                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-            >
-              <Bell className="w-4 h-4 mr-3" />
-              Version Notifications
-              {getNotificationBadge(notificationCounts.versionNotifications, 'version-notifications')}
-            </button>
+
 
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 mt-6">SETTINGS</div>
 
@@ -4134,7 +4107,6 @@ const AdminDashboard = () => {
             {activeTab === 'organizer-applications' && <OrganizerApplicationsTab />}
             {activeTab === 'events' && <EventsTab />}
             {activeTab === 'verification' && <VerificationApplicationsTab />}
-            {activeTab === 'version-notifications' && <VersionNotificationsTab />}
           </div>
         </div>
       </div>

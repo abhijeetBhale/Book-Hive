@@ -35,9 +35,31 @@ const bookSchema = new mongoose.Schema({
   },
   condition: {
     type: String,
-    enum: ['New', 'Like New', 'Very Good', 'Good', 'Fair', 'Poor'],
+    enum: ['new', 'good', 'worn'],
+    required: [true, 'Book condition is required'],
     index: true, // Add index for condition filtering
   },
+  // Track condition changes over time
+  conditionHistory: [{
+    condition: {
+      type: String,
+      enum: ['new', 'good', 'worn'],
+      required: true
+    },
+    changedAt: {
+      type: Date,
+      default: Date.now
+    },
+    changedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    notes: {
+      type: String,
+      trim: true
+    }
+  }],
   language: {
     type: String,
     default: 'English',
@@ -137,6 +159,15 @@ const bookSchema = new mongoose.Schema({
   viewCount: { type: Number, default: 0 },
   borrowCount: { type: Number, default: 0 },
   lastBorrowed: { type: Date },
+  // Auto re-listing fields
+  lastReturnedAt: { type: Date },
+  timesLent: { type: Number, default: 0 },
+  autoRelist: { type: Boolean, default: true }, // Owner preference for auto re-listing
+  unavailableReason: { 
+    type: String, 
+    enum: ['pending_damage_report', 'owner_disabled', 'maintenance'],
+    sparse: true 
+  },
 }, {
   timestamps: true
 })
@@ -147,9 +178,44 @@ bookSchema.index({ category: 1, isAvailable: 1 });
 bookSchema.index({ owner: 1, isAvailable: 1 });
 bookSchema.index({ createdAt: -1 }); // For sorting by newest
 
-// Pre-save middleware to update searchText field
-bookSchema.pre('save', function(next) {
+// Pre-save middleware to update searchText field and track condition changes
+bookSchema.pre('save', async function(next) {
   this.searchText = `${this.title} ${this.author} ${this.description} ${this.category} ${this.genre.join(' ')} ${this.tags.join(' ')}`.toLowerCase();
+  
+  // Track condition changes
+  if (this.isModified('condition') && !this.isNew) {
+    // Check if book has active borrow request
+    const BorrowRequest = mongoose.model('BorrowRequest');
+    const activeBorrow = await BorrowRequest.findOne({
+      book: this._id,
+      status: { $in: ['approved', 'borrowed'] }
+    });
+    
+    if (activeBorrow) {
+      const error = new Error('Cannot change book condition while it is actively borrowed');
+      error.name = 'ValidationError';
+      return next(error);
+    }
+    
+    // Add to condition history
+    this.conditionHistory.push({
+      condition: this.condition,
+      changedAt: new Date(),
+      changedBy: this.owner,
+      notes: 'Condition updated by owner'
+    });
+  }
+  
+  // Initialize condition history for new books
+  if (this.isNew && this.condition) {
+    this.conditionHistory = [{
+      condition: this.condition,
+      changedAt: new Date(),
+      changedBy: this.owner,
+      notes: 'Initial condition set during book creation'
+    }];
+  }
+  
   next();
 });
 

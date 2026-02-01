@@ -4,21 +4,26 @@ import Button from '../ui/Button';
 import { BOOK_CATEGORIES, BOOK_CONDITIONS } from '../../utils/constants';
 
 const BookForm = ({ onSubmit, initialData = {}, isSubmitting }) => {
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
     defaultValues: {
       forBorrowing: initialData.forBorrowing !== undefined ? initialData.forBorrowing : true,
       lendingFee: initialData.lendingFee || 0,
       lendingDuration: initialData.lendingDuration || 14,
+      condition: initialData.condition || 'good',
       ...initialData,
     },
   });
   const [coverPreview, setCoverPreview] = useState(initialData.coverImage || null);
   const [priceValidation, setPriceValidation] = useState(null);
   const [isValidatingPrice, setIsValidatingPrice] = useState(false);
+  const [isbnMetadata, setIsbnMetadata] = useState(null);
+  const [isFetchingISBN, setIsFetchingISBN] = useState(false);
+  const [isbnError, setIsbnError] = useState(null);
   
   const watchForBorrowing = watch('forBorrowing');
   const watchForSelling = watch('forSelling');
   const watchSellingPrice = watch('sellingPrice');
+  const watchISBN = watch('isbn');
 
   const handleCoverChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -62,12 +67,71 @@ const BookForm = ({ onSubmit, initialData = {}, isSubmitting }) => {
     }
   };
 
+  const fetchISBNMetadata = async (isbn) => {
+    if (!isbn || isbn.trim().length < 10) {
+      return;
+    }
+
+    setIsFetchingISBN(true);
+    setIsbnError(null);
+    
+    try {
+      const response = await fetch(`/api/books/isbn/${isbn.trim()}/metadata`);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setIsbnMetadata(result.data);
+        setIsbnError(null);
+      } else {
+        setIsbnError(result.message || 'Book not found for this ISBN');
+        setIsbnMetadata(null);
+      }
+    } catch (error) {
+      console.error('ISBN fetch error:', error);
+      setIsbnError('Failed to fetch book details. Please try again.');
+      setIsbnMetadata(null);
+    } finally {
+      setIsFetchingISBN(false);
+    }
+  };
+
+  const applyISBNMetadata = () => {
+    if (!isbnMetadata) return;
+
+    // Auto-fill form fields with fetched metadata
+    setValue('title', isbnMetadata.title);
+    setValue('author', isbnMetadata.author);
+    setValue('description', isbnMetadata.description || '');
+    setValue('publicationYear', isbnMetadata.publicationYear || '');
+    setValue('category', isbnMetadata.category || '');
+    
+    // Set cover image if available
+    if (isbnMetadata.coverImage) {
+      setCoverPreview(isbnMetadata.coverImage);
+      setValue('coverImageUrl', isbnMetadata.coverImage);
+    }
+
+    // Clear the metadata after applying
+    setIsbnMetadata(null);
+  };
+
   useEffect(() => {
     if (watchForSelling && watchSellingPrice && parseFloat(watchSellingPrice) > 0) {
       const timeoutId = setTimeout(validatePrice, 1000); // Debounce validation
       return () => clearTimeout(timeoutId);
     }
   }, [watchSellingPrice, watchForSelling]);
+
+  // ISBN metadata fetching with debounce
+  useEffect(() => {
+    if (watchISBN && watchISBN.trim().length >= 10) {
+      const timeoutId = setTimeout(() => fetchISBNMetadata(watchISBN), 1500); // Debounce ISBN fetch
+      return () => clearTimeout(timeoutId);
+    } else {
+      setIsbnMetadata(null);
+      setIsbnError(null);
+    }
+  }, [watchISBN]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -122,22 +186,82 @@ const BookForm = ({ onSubmit, initialData = {}, isSubmitting }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-lg font-bold text-gray-900 mb-3">ISBN</label>
-          <input 
-            {...register('isbn')} 
-            className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] text-gray-900 font-medium text-lg placeholder-gray-500 transition-all duration-200" 
-            placeholder="Enter ISBN (optional)"
-          />
+          <div className="relative">
+            <input 
+              {...register('isbn')} 
+              className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] text-gray-900 font-medium text-lg placeholder-gray-500 transition-all duration-200" 
+              placeholder="Enter ISBN (10 or 13 digits)"
+            />
+            {isFetchingISBN && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              </div>
+            )}
+          </div>
+          
+          {/* ISBN Metadata Results */}
+          {isbnMetadata && (
+            <div className="mt-3 p-4 bg-green-50 border border-green-200 rounded-xl">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-green-800 mb-2">Book Found!</h4>
+                  <p className="text-sm text-green-700">
+                    <strong>{isbnMetadata.title}</strong> by {isbnMetadata.author}
+                  </p>
+                  {isbnMetadata.publicationYear && (
+                    <p className="text-xs text-green-600">Published: {isbnMetadata.publicationYear}</p>
+                  )}
+                </div>
+                {isbnMetadata.coverImage && (
+                  <img 
+                    src={isbnMetadata.coverImage} 
+                    alt="Book cover" 
+                    className="w-12 h-16 object-cover rounded ml-3"
+                  />
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={applyISBNMetadata}
+                className="mt-3 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Use This Information
+              </button>
+            </div>
+          )}
+          
+          {isbnError && (
+            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+              <p className="text-sm text-yellow-700">{isbnError}</p>
+            </div>
+          )}
+          
+          <p className="text-sm text-gray-500 mt-2">
+            Enter ISBN to auto-fill book details from online databases
+          </p>
         </div>
         
         <div>
-          <label className="block text-lg font-bold text-gray-900 mb-3">Book Condition</label>
+          <label className="block text-lg font-bold text-gray-900 mb-3">Book Condition *</label>
           <select 
-            {...register('condition')} 
+            {...register('condition', { required: 'Book condition is required' })} 
             className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] text-gray-900 font-medium text-lg bg-white transition-all duration-200"
           >
             <option value="">Select condition</option>
-            {BOOK_CONDITIONS.map(condition => <option key={condition} value={condition}>{condition}</option>)}
+            {BOOK_CONDITIONS.map(condition => (
+              <option key={condition.value} value={condition.value} title={condition.description}>
+                {condition.label}
+              </option>
+            ))}
           </select>
+          {errors.condition && <p className="text-red-600 text-sm mt-2 font-medium">{errors.condition.message}</p>}
+          <div className="mt-2 space-y-1">
+            {BOOK_CONDITIONS.map(condition => (
+              <div key={condition.value} className="text-xs text-gray-600">
+                <span className="font-medium">{condition.label}:</span> {condition.description}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

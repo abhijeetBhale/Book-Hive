@@ -22,13 +22,17 @@ export const getAllBooks = async (req, res) => {
       genre = '',
       minYear = '',
       maxYear = '',
+      minPrice = '',
+      maxPrice = '',
       isAvailable = '',
       forBorrowing = '',
+      bookType = '', // New parameter from frontend
       sortBy = 'createdAt',
       sortOrder = 'desc',
       latitude = '',
       longitude = '',
       maxDistance = '50000', // 50km default
+      useLocation = 'false',
       isbn = '',
       tags = ''
     } = req.query;
@@ -83,18 +87,47 @@ export const getAllBooks = async (req, res) => {
       if (maxYear) query.publicationYear.$lte = Number(maxYear);
     }
 
+    // Price range filter (for selling books)
+    if (minPrice || maxPrice) {
+      query.sellingPrice = {};
+      if (minPrice) query.sellingPrice.$gte = Number(minPrice);
+      if (maxPrice) query.sellingPrice.$lte = Number(maxPrice);
+    }
+
     // Availability filters
     if (isAvailable !== '') {
       query.isAvailable = isAvailable === 'true';
     }
 
-    if (forBorrowing !== '') {
-      query.forBorrowing = forBorrowing === 'true';
+    // Handle bookType parameter from frontend
+    if (bookType) {
+      switch (bookType) {
+        case 'borrowing':
+          query.forBorrowing = true;
+          break;
+        case 'selling':
+          query.forSelling = true;
+          break;
+        case 'both':
+          query.$or = [
+            { forBorrowing: true },
+            { forSelling: true }
+          ];
+          break;
+        default:
+          // If bookType is provided but not recognized, default to borrowing
+          query.forBorrowing = true;
+      }
+    } else {
+      // Legacy support for forBorrowing parameter
+      if (forBorrowing !== '') {
+        query.forBorrowing = forBorrowing === 'true';
+      }
     }
 
-    // Add forSelling filter
+    // Add forSelling filter (legacy support)
     const { forSelling } = req.query;
-    if (forSelling !== '' && forSelling !== undefined) {
+    if (forSelling !== '' && forSelling !== undefined && !bookType) {
       query.forSelling = forSelling === 'true';
     }
 
@@ -111,7 +144,7 @@ export const getAllBooks = async (req, res) => {
 
     // Build sort object with verified user boost
     let sort = {};
-    const validSortFields = ['title', 'author', 'createdAt', 'publicationYear', 'viewCount', 'borrowCount'];
+    const validSortFields = ['title', 'author', 'createdAt', 'publicationYear', 'viewCount', 'borrowCount', 'sellingPrice'];
     const sortField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
     const sortDirection = sortOrder === 'asc' ? 1 : -1;
     
@@ -125,7 +158,7 @@ export const getAllBooks = async (req, res) => {
     // Location-based search
     let aggregationPipeline = [];
     
-    if (latitude && longitude) {
+    if (latitude && longitude && useLocation === 'true') {
       const lat = parseFloat(latitude);
       const lng = parseFloat(longitude);
       const maxDist = parseInt(maxDistance) || 50000;
@@ -288,13 +321,17 @@ export const getAllBooks = async (req, res) => {
         search,
         category,
         condition,
+        bookType,
         sortBy,
         sortOrder
       }
     });
   } catch (error) {
     console.error('Get all books error:', error);
-    res.status(500).json({ message: 'Server error getting books' });
+    res.status(500).json({ 
+      message: 'Server error getting books', 
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   }
 };
 
@@ -342,6 +379,14 @@ export const createBook = async (req, res) => {
       lendingFee
     } = req.body;
     
+    // Validate condition value
+    const validConditions = ['new', 'good', 'worn'];
+    if (condition && !validConditions.includes(condition.toLowerCase())) {
+      return res.status(400).json({ 
+        message: `Invalid condition. Must be one of: ${validConditions.join(', ')}` 
+      });
+    }
+    
     let finalCoverImageUrl;
     
     // Priority: uploaded file > Google Books URL > no image
@@ -377,7 +422,7 @@ export const createBook = async (req, res) => {
       category,
       isbn,
       publicationYear: publicationYear ? Number(publicationYear) : undefined,
-      condition: condition && condition.trim() !== '' ? condition : 'Good', // Default to 'Good' if empty
+      condition: condition && condition.trim() !== '' ? condition.toLowerCase() : 'good', // Default to 'good' if empty
       // Handle different boolean field names from frontend
       forBorrowing: isAvailableForBorrowing !== undefined ? isAvailableForBorrowing : (forBorrowing !== undefined ? forBorrowing : true),
       forSelling: forSelling || false,
@@ -481,6 +526,16 @@ export const updateBook = async (req, res) => {
         return res.status(401).json({ message: 'Not authorized' });
       }
 
+      // Validate condition value if provided
+      if (condition) {
+        const validConditions = ['new', 'good', 'worn'];
+        if (!validConditions.includes(condition.toLowerCase())) {
+          return res.status(400).json({ 
+            message: `Invalid condition. Must be one of: ${validConditions.join(', ')}` 
+          });
+        }
+      }
+
       let finalCoverImageUrl = book.coverImage;
       
       if (req.file) {
@@ -512,7 +567,7 @@ export const updateBook = async (req, res) => {
       book.category = category || book.category;
       book.isbn = isbn || book.isbn;
       book.publicationYear = publicationYear ? Number(publicationYear) : book.publicationYear;
-      book.condition = condition || book.condition;
+      book.condition = condition ? condition.toLowerCase() : book.condition;
       
       // Handle booleans carefully
       if (forBorrowing !== undefined) book.forBorrowing = forBorrowing;
@@ -1192,3 +1247,183 @@ export const getPersonalizedRecommendations = async (req, res) => {
     res.status(500).json({ message: 'Server error getting recommendations' });
   }
 };
+
+// @desc    Fetch book metadata by ISBN
+// @route   GET /api/books/isbn/:isbn/metadata
+export const fetchISBNMetadata = async (req, res) => {
+  try {
+    const { isbn } = req.params;
+    
+    if (!isbn || isbn.trim().length === 0) {
+      return res.status(400).json({ 
+        message: 'ISBN is required' 
+      });
+    }
+
+    // Clean ISBN (remove hyphens and spaces)
+    const cleanISBN = isbn.replace(/[-\s]/g, '');
+    
+    // Validate ISBN format (basic validation)
+    if (!/^\d{10}(\d{3})?$/.test(cleanISBN)) {
+      return res.status(400).json({ 
+        message: 'Invalid ISBN format. Please provide a valid 10 or 13 digit ISBN.' 
+      });
+    }
+
+    // Check Redis cache first
+    const cacheService = req.app.get('cacheService');
+    const cacheKey = `isbn_metadata:${cleanISBN}`;
+    
+    if (cacheService) {
+      try {
+        const cachedData = await cacheService.get(cacheKey);
+        if (cachedData) {
+          return res.json({
+            success: true,
+            data: JSON.parse(cachedData),
+            source: 'cache'
+          });
+        }
+      } catch (cacheError) {
+        console.error('Cache read error:', cacheError);
+      }
+    }
+
+    // Fetch from book API service
+    const bookApiService = new (await import('../services/bookApiService.js')).default();
+    const bookData = await bookApiService.searchByISBN(cleanISBN);
+
+    if (!bookData) {
+      return res.status(404).json({ 
+        message: 'No book found for the provided ISBN',
+        isbn: cleanISBN
+      });
+    }
+
+    // Normalize the data for our application
+    const normalizedData = {
+      title: bookData.title,
+      author: bookData.author,
+      authors: bookData.authors,
+      description: bookData.description,
+      isbn: bookData.isbn || cleanISBN,
+      publicationYear: bookData.publicationYear,
+      publishedDate: bookData.publishedDate,
+      publisher: bookData.publisher,
+      pageCount: bookData.pageCount,
+      language: bookData.language,
+      // Normalize categories to our internal genres
+      categories: bookData.categories || [],
+      category: bookData.category || 'General',
+      genres: normalizeGenres(bookData.categories || []),
+      // Cover images
+      coverImage: bookData.coverImage,
+      images: bookData.images,
+      // Additional metadata
+      rating: bookData.rating,
+      ratingsCount: bookData.ratingsCount,
+      previewLink: bookData.previewLink,
+      infoLink: bookData.infoLink,
+      source: bookData.source,
+      // Metadata for our system
+      fetchedAt: new Date(),
+      isbnSearched: cleanISBN
+    };
+
+    // Cache the result for 24 hours
+    if (cacheService) {
+      try {
+        await cacheService.set(cacheKey, JSON.stringify(normalizedData), 24 * 60 * 60); // 24 hours
+      } catch (cacheError) {
+        console.error('Cache write error:', cacheError);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: normalizedData,
+      source: bookData.source
+    });
+  } catch (error) {
+    console.error('Fetch ISBN metadata error:', error);
+    res.status(500).json({ 
+      message: 'Server error fetching book metadata',
+      error: error.message 
+    });
+  }
+};
+
+// Helper function to normalize genres from external APIs to our internal categories
+function normalizeGenres(externalCategories) {
+  const genreMapping = {
+    // Fiction categories
+    'fiction': ['Fiction'],
+    'literary fiction': ['Fiction'],
+    'science fiction': ['Sci-Fi'],
+    'fantasy': ['Fantasy'],
+    'mystery': ['Mystery'],
+    'thriller': ['Mystery'],
+    'romance': ['Romance'],
+    'horror': ['Fiction'],
+    'adventure': ['Fiction'],
+    'historical fiction': ['Fiction', 'History'],
+    
+    // Non-fiction categories
+    'biography': ['Biography'],
+    'autobiography': ['Biography'],
+    'memoir': ['Biography'],
+    'history': ['History'],
+    'science': ['Science'],
+    'technology': ['Technology'],
+    'business': ['Business'],
+    'self-help': ['Self-Help'],
+    'health': ['Self-Help'],
+    'cooking': ['Other'],
+    'travel': ['Other'],
+    'religion': ['Other'],
+    'philosophy': ['Other'],
+    'psychology': ['Science'],
+    
+    // Educational
+    'textbook': ['Other'],
+    'education': ['Other'],
+    'reference': ['Other'],
+    
+    // Children's books
+    'juvenile fiction': ['Children'],
+    'children': ['Children'],
+    'young adult': ['Young Adult'],
+    'teen': ['Young Adult'],
+    
+    // Other
+    'poetry': ['Poetry'],
+    'drama': ['Drama'],
+    'comics': ['Comics'],
+    'graphic novel': ['Comics']
+  };
+
+  const normalizedGenres = new Set();
+  
+  externalCategories.forEach(category => {
+    const lowerCategory = category.toLowerCase();
+    
+    // Check for exact matches first
+    if (genreMapping[lowerCategory]) {
+      genreMapping[lowerCategory].forEach(genre => normalizedGenres.add(genre));
+    } else {
+      // Check for partial matches
+      Object.keys(genreMapping).forEach(key => {
+        if (lowerCategory.includes(key) || key.includes(lowerCategory)) {
+          genreMapping[key].forEach(genre => normalizedGenres.add(genre));
+        }
+      });
+    }
+  });
+
+  // If no matches found, default to appropriate category
+  if (normalizedGenres.size === 0) {
+    normalizedGenres.add('Other');
+  }
+
+  return Array.from(normalizedGenres);
+}

@@ -325,6 +325,118 @@ class PriceValidationService {
     
     return Math.round(recommendedPrice * 100) / 100;
   }
+
+  /**
+   * Calculate damage penalty based on book condition and damage severity
+   * @param {string} originalCondition - Original book condition ('new', 'good', 'worn')
+   * @param {string} damageSeverity - Damage severity ('minor', 'moderate', 'severe')
+   * @param {number} depositAmount - Security deposit amount
+   * @returns {Object} Penalty calculation result
+   */
+  calculateDamagePenalty(originalCondition, damageSeverity, depositAmount) {
+    // Penalty calculation rules based on original condition and damage severity
+    const penaltyRules = {
+      'new': {
+        'minor': 0.10,    // 10% of deposit
+        'moderate': 0.30, // 30% of deposit
+        'severe': 0.50    // 50% of deposit
+      },
+      'good': {
+        'minor': 0.05,    // 5% of deposit
+        'moderate': 0.20, // 20% of deposit
+        'severe': 0.35    // 35% of deposit
+      },
+      'worn': {
+        'minor': 0.03,    // 3% of deposit
+        'moderate': 0.15, // 15% of deposit
+        'severe': 0.20    // 20% of deposit
+      }
+    };
+
+    // Validate inputs
+    if (!penaltyRules[originalCondition]) {
+      throw new Error(`Invalid original condition: ${originalCondition}`);
+    }
+
+    if (!penaltyRules[originalCondition][damageSeverity]) {
+      throw new Error(`Invalid damage severity: ${damageSeverity}`);
+    }
+
+    if (depositAmount <= 0) {
+      throw new Error('Deposit amount must be greater than 0');
+    }
+
+    const penaltyPercentage = penaltyRules[originalCondition][damageSeverity];
+    const calculatedAmount = Math.round(depositAmount * penaltyPercentage * 100) / 100;
+
+    return {
+      originalCondition,
+      damageSeverity,
+      depositAmount,
+      penaltyPercentage,
+      calculatedAmount,
+      calculatedAt: new Date(),
+      explanation: this.generatePenaltyExplanation(originalCondition, damageSeverity, penaltyPercentage, calculatedAmount)
+    };
+  }
+
+  /**
+   * Generate explanation for penalty calculation
+   * @param {string} originalCondition - Original book condition
+   * @param {string} damageSeverity - Damage severity
+   * @param {number} penaltyPercentage - Applied penalty percentage
+   * @param {number} calculatedAmount - Calculated penalty amount
+   * @returns {string} Human-readable explanation
+   */
+  generatePenaltyExplanation(originalCondition, damageSeverity, penaltyPercentage, calculatedAmount) {
+    const conditionLabels = {
+      'new': 'New',
+      'good': 'Good',
+      'worn': 'Worn'
+    };
+
+    const severityLabels = {
+      'minor': 'minor',
+      'moderate': 'moderate',
+      'severe': 'severe'
+    };
+
+    return `Based on the book's original condition (${conditionLabels[originalCondition]}) and the ${severityLabels[damageSeverity]} damage reported, a penalty of ${(penaltyPercentage * 100).toFixed(0)}% of the security deposit (₹${calculatedAmount}) has been calculated.`;
+  }
+
+  /**
+   * Get penalty guidelines for reference
+   * @returns {Object} Penalty calculation guidelines
+   */
+  getPenaltyGuidelines() {
+    return {
+      description: 'Penalty calculation is based on the original book condition and damage severity',
+      rules: {
+        'new': {
+          'minor': { percentage: 10, description: 'Light wear on a new book' },
+          'moderate': { percentage: 30, description: 'Noticeable damage on a new book' },
+          'severe': { percentage: 50, description: 'Significant damage on a new book' }
+        },
+        'good': {
+          'minor': { percentage: 5, description: 'Additional minor wear on a good condition book' },
+          'moderate': { percentage: 20, description: 'Noticeable additional damage on a good condition book' },
+          'severe': { percentage: 35, description: 'Significant additional damage on a good condition book' }
+        },
+        'worn': {
+          'minor': { percentage: 3, description: 'Minor additional wear on an already worn book' },
+          'moderate': { percentage: 15, description: 'Moderate additional damage on an already worn book' },
+          'severe': { percentage: 20, description: 'Severe additional damage on an already worn book' }
+        }
+      },
+      notes: [
+        'Penalties are calculated as a percentage of the security deposit',
+        'Original book condition affects the penalty rate',
+        'More severe damage results in higher penalties',
+        'Books in better original condition have higher penalty rates for the same damage',
+        'All calculations are rounded to the nearest cent'
+      ]
+    };
+  }
 }
 
 export default PriceValidationService;

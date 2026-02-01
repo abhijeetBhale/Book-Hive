@@ -2,6 +2,7 @@ import BookBroadcast from '../models/BookBroadcast.js';
 import Notification from '../models/Notification.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
+import User from '../models/User.js';
 
 // @desc    Create a new book broadcast request
 // @route   POST /api/broadcasts
@@ -45,6 +46,59 @@ export const createBroadcast = async (req, res) => {
         durationNeeded: populatedBroadcast.durationNeeded,
         createdAt: populatedBroadcast.createdAt
       });
+    }
+
+    // Send notifications to all users except the broadcast creator
+    try {
+      // Get all users except the broadcast creator
+      const allUsers = await User.find({ 
+        _id: { $ne: req.user._id } 
+      }).select('_id');
+
+      // Create notifications for all users
+      const notificationPromises = allUsers.map(user => 
+        Notification.create({
+          userId: user._id,
+          type: 'broadcast_created',
+          title: 'New Book Request',
+          message: `${req.user.name} is looking for "${bookTitle}"${bookAuthor ? ` by ${bookAuthor}` : ''}. Can you help?`,
+          fromUserId: req.user._id,
+          link: '/broadcasts',
+          metadata: {
+            broadcastId: broadcast._id,
+            bookTitle: bookTitle,
+            bookAuthor: bookAuthor,
+            priority: 'medium'
+          }
+        })
+      );
+
+      await Promise.all(notificationPromises);
+
+      // Emit real-time notifications to all users except creator
+      if (io) {
+        allUsers.forEach(user => {
+          io.to(`user:${user._id}`).emit('new_notification', {
+            id: `broadcast_${broadcast._id}_${user._id}`, // Temporary ID for real-time
+            type: 'broadcast_created',
+            title: 'New Book Request',
+            message: `${req.user.name} is looking for "${bookTitle}"${bookAuthor ? ` by ${bookAuthor}` : ''}. Can you help?`,
+            fromUser: {
+              _id: req.user._id,
+              name: req.user.name,
+              avatar: req.user.avatar
+            },
+            link: '/broadcasts',
+            createdAt: new Date(),
+            isRead: false
+          });
+        });
+      }
+
+      console.log(`✅ Sent broadcast notifications to ${allUsers.length} users`);
+    } catch (notificationError) {
+      console.error('❌ Error sending broadcast notifications:', notificationError);
+      // Don't fail the broadcast creation if notifications fail
     }
 
     res.status(201).json({

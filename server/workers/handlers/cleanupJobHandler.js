@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import fs from 'fs/promises';
 import path from 'path';
+import DamageReportService from '../../services/damageReportService.js';
 
 // Cleanup expired tokens (JWT blacklist, password reset tokens, etc.)
 const cleanupExpiredTokens = async (data) => {
@@ -159,6 +160,25 @@ const cleanupOldBorrowRequests = async (data) => {
   }
 };
 
+// Auto-resolve expired damage reports
+const autoResolveDamageReports = async (data) => {
+  try {
+    console.log('🔍 Starting auto-resolution of expired damage reports...');
+    
+    const result = await DamageReportService.autoResolveExpiredReports();
+    
+    return {
+      success: true,
+      reportsResolved: result.resolved,
+      errors: result.errors,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error('Damage report auto-resolution failed:', error);
+    throw new Error(`Failed to auto-resolve damage reports: ${error.message}`);
+  }
+};
+
 // Comprehensive cleanup (runs all cleanup tasks)
 const comprehensiveCleanup = async (data) => {
   try {
@@ -170,6 +190,7 @@ const comprehensiveCleanup = async (data) => {
     results.tempFiles = await cleanupTempFiles(data);
     results.sessions = await cleanupInactiveSessions(data);
     results.borrowRequests = await cleanupOldBorrowRequests(data);
+    results.damageReports = await autoResolveDamageReports(data);
     
     return {
       success: true,
@@ -188,5 +209,6 @@ export default {
   cleanupTempFiles,
   cleanupInactiveSessions,
   cleanupOldBorrowRequests,
+  autoResolveDamageReports,
   comprehensiveCleanup,
 };

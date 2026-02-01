@@ -1,13 +1,19 @@
 /**
  * NotificationCenter Component
  * 
- * Notification Types and their corresponding page links:
- * - borrow_request, request_approved, request_denied, review_prompt, due_reminder, overdue_reminder -> /borrow-requests
- * - new_message, broadcast_confirmed -> /messages
- * - friend_request, friend_accepted -> /friends
- * - broadcast_response -> /broadcasts
- * - new_book_nearby, availability_alert -> /books/{bookId}
- * - rating_received -> /profile
+ * Enhanced notification handling with specific navigation and type icons:
+ * - broadcast_created, broadcast_response -> /broadcasts (RadioTower icon)
+ * - borrow_request, request_approved, request_denied, due_reminder, overdue_reminder, review_prompt -> /borrow-requests (ArrowLeftRight icon)
+ * - new_message, broadcast_confirmed -> /messages (MessageSquare icon)
+ * - friend_request, friend_accepted, friend_activity -> /friends (Users icon)
+ * - new_book_nearby, availability_alert -> /books/{bookId} or /books (MapPin icon)
+ * - rating_received -> /profile (Star icon)
+ * - event_invitation, event_reminder -> /events/{eventId} or /events (Calendar icon)
+ * - book_returned -> /borrow-requests (BookOpen icon)
+ * - warning, ban, account_deleted -> /profile (AlertCircle icon)
+ * - success -> current page (UserCheck icon)
+ * 
+ * Each notification displays a small type icon in the top-left corner for quick identification.
  */
 
 import React, { useState, useEffect, useContext } from 'react';
@@ -27,7 +33,11 @@ import {
   AlertCircle,
   Calendar,
   Star,
-  MapPin
+  MapPin,
+  RadioTower,
+  ArrowLeftRight,
+  UserCheck,
+  Gift
 } from 'lucide-react';
 import { notificationsAPI } from '../../utils/api';
 import { AuthContext } from '../../context/AuthContext';
@@ -166,24 +176,56 @@ const NotificationIcon = styled.div`
   background: ${props => {
     switch (props.type) {
       case 'borrow_request': return '#dbeafe';
-      case 'request_accepted': return '#d1fae5';
+      case 'request_approved': return '#d1fae5';
+      case 'request_denied': return '#fee2e2';
       case 'new_message': return '#e0e7ff';
       case 'due_reminder': return '#fef3c7';
       case 'overdue_reminder': return '#fee2e2';
       case 'friend_activity': return '#f3e8ff';
+      case 'friend_request': return '#f3e8ff';
+      case 'friend_accepted': return '#d1fae5';
       case 'availability_alert': return '#ecfdf5';
+      case 'new_book_nearby': return '#ecfdf5';
+      case 'broadcast_created': return '#fef3c7';
+      case 'broadcast_response': return '#dbeafe';
+      case 'broadcast_confirmed': return '#d1fae5';
+      case 'rating_received': return '#fef3c7';
+      case 'review_prompt': return '#fef3c7';
+      case 'book_returned': return '#d1fae5';
+      case 'event_invitation': return '#e0e7ff';
+      case 'event_reminder': return '#fef3c7';
+      case 'warning': return '#fef3c7';
+      case 'ban': return '#fee2e2';
+      case 'account_deleted': return '#fee2e2';
+      case 'success': return '#d1fae5';
       default: return '#f3f4f6';
     }
   }};
   color: ${props => {
     switch (props.type) {
       case 'borrow_request': return '#2563eb';
-      case 'request_accepted': return '#059669';
+      case 'request_approved': return '#059669';
+      case 'request_denied': return '#dc2626';
       case 'new_message': return '#4f46e5';
       case 'due_reminder': return '#d97706';
       case 'overdue_reminder': return '#dc2626';
       case 'friend_activity': return '#7c3aed';
+      case 'friend_request': return '#7c3aed';
+      case 'friend_accepted': return '#059669';
       case 'availability_alert': return '#10b981';
+      case 'new_book_nearby': return '#10b981';
+      case 'broadcast_created': return '#d97706';
+      case 'broadcast_response': return '#2563eb';
+      case 'broadcast_confirmed': return '#059669';
+      case 'rating_received': return '#d97706';
+      case 'review_prompt': return '#d97706';
+      case 'book_returned': return '#059669';
+      case 'event_invitation': return '#4f46e5';
+      case 'event_reminder': return '#d97706';
+      case 'warning': return '#d97706';
+      case 'ban': return '#dc2626';
+      case 'account_deleted': return '#dc2626';
+      case 'success': return '#059669';
       default: return '#6b7280';
     }
   }};
@@ -191,6 +233,48 @@ const NotificationIcon = styled.div`
 
 const NotificationContent = styled.div`
   flex: 1;
+`;
+
+const NotificationTypeIcon = styled.div`
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${props => {
+    switch (props.type) {
+      case 'broadcast_created':
+      case 'broadcast_response':
+        return '#f59e0b';
+      case 'borrow_request':
+      case 'request_approved':
+      case 'request_denied':
+        return '#3b82f6';
+      case 'new_message':
+      case 'broadcast_confirmed':
+        return '#6366f1';
+      case 'friend_request':
+      case 'friend_accepted':
+      case 'friend_activity':
+        return '#8b5cf6';
+      case 'due_reminder':
+      case 'overdue_reminder':
+        return '#f59e0b';
+      case 'rating_received':
+      case 'review_prompt':
+        return '#eab308';
+      default:
+        return '#6b7280';
+    }
+  }};
+  color: white;
+  font-size: 0.625rem;
+  z-index: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 `;
 
 const NotificationMessage = styled.p`
@@ -321,15 +405,59 @@ const BulkButton = styled.button`
   }
 `;
 
+const getNotificationTypeIcon = (type) => {
+  switch (type) {
+    case 'broadcast_created':
+    case 'broadcast_response':
+      return <RadioTower size={10} />;
+    case 'borrow_request':
+    case 'request_approved':
+    case 'request_denied':
+      return <ArrowLeftRight size={10} />;
+    case 'new_message':
+    case 'broadcast_confirmed':
+      return <MessageSquare size={10} />;
+    case 'friend_request':
+    case 'friend_accepted':
+    case 'friend_activity':
+      return <Users size={10} />;
+    case 'due_reminder':
+    case 'overdue_reminder':
+    case 'event_invitation':
+    case 'event_reminder':
+      return <Calendar size={10} />;
+    case 'rating_received':
+    case 'review_prompt':
+      return <Star size={10} />;
+    case 'availability_alert':
+    case 'new_book_nearby':
+      return <MapPin size={10} />;
+    case 'book_returned':
+      return <BookOpen size={10} />;
+    case 'warning':
+    case 'ban':
+    case 'account_deleted':
+      return <AlertCircle size={10} />;
+    case 'success':
+      return <UserCheck size={10} />;
+    default:
+      return <Bell size={10} />;
+  }
+};
+
 const getNotificationIcon = (type) => {
   switch (type) {
     case 'borrow_request':
-    case 'request_accepted':
-    case 'request_declined':
-      return <BookOpen size={16} />;
+    case 'request_approved':
+    case 'request_denied':
+      return <ArrowLeftRight size={16} />;
     case 'new_message':
       return <MessageSquare size={16} />;
+    case 'broadcast_confirmed':
+      return <MessageSquare size={16} />;
     case 'friend_activity':
+    case 'friend_request':
+    case 'friend_accepted':
       return <Users size={16} />;
     case 'due_reminder':
     case 'overdue_reminder':
@@ -339,6 +467,22 @@ const getNotificationIcon = (type) => {
       return <MapPin size={16} />;
     case 'rating_received':
       return <Star size={16} />;
+    case 'broadcast_created':
+    case 'broadcast_response':
+      return <RadioTower size={16} />;
+    case 'review_prompt':
+      return <Star size={16} />;
+    case 'book_returned':
+      return <BookOpen size={16} />;
+    case 'event_invitation':
+    case 'event_reminder':
+      return <Calendar size={16} />;
+    case 'warning':
+    case 'ban':
+    case 'account_deleted':
+      return <AlertCircle size={16} />;
+    case 'success':
+      return <UserCheck size={16} />;
     default:
       return <Bell size={16} />;
   }
@@ -402,14 +546,79 @@ const NotificationCenter = ({ isOpen, onClose }) => {
         );
       }
 
-      // Navigate to the notification link if available
-      const link = notification.link || notification.metadata?.link;
-      if (link) {
-        onClose(); // Close the notification panel before navigating
-        navigate(link);
+      onClose(); // Close the notification panel before navigating
+
+      // Handle navigation based on notification type
+      switch (notification.type) {
+        case 'broadcast_created':
+        case 'broadcast_response':
+          navigate('/broadcasts');
+          break;
+          
+        case 'borrow_request':
+        case 'request_approved':
+        case 'request_denied':
+        case 'due_reminder':
+        case 'overdue_reminder':
+        case 'review_prompt':
+          navigate('/borrow-requests');
+          break;
+          
+        case 'new_message':
+        case 'broadcast_confirmed':
+          navigate('/messages');
+          break;
+          
+        case 'friend_request':
+        case 'friend_accepted':
+        case 'friend_activity':
+          navigate('/friends');
+          break;
+          
+        case 'new_book_nearby':
+        case 'availability_alert':
+          // Navigate to specific book if bookId is available
+          const bookId = notification.metadata?.bookId;
+          if (bookId) {
+            navigate(`/books/${bookId}`);
+          } else {
+            navigate('/books');
+          }
+          break;
+          
+        case 'rating_received':
+          navigate('/profile');
+          break;
+          
+        case 'event_invitation':
+        case 'event_reminder':
+          // Navigate to specific event if eventId is available
+          const eventId = notification.metadata?.eventId;
+          if (eventId) {
+            navigate(`/events/${eventId}`);
+          } else {
+            navigate('/events');
+          }
+          break;
+          
+        case 'warning':
+        case 'ban':
+        case 'account_deleted':
+          // For moderation notifications, stay on current page or go to profile
+          navigate('/profile');
+          break;
+          
+        default:
+          // Fallback to notification link if available
+          const link = notification.link || notification.metadata?.link;
+          if (link) {
+            navigate(link);
+          }
+          break;
       }
     } catch (error) {
       console.error('Error handling notification click:', error);
+      toast.error('Failed to open notification');
     }
   };
 
@@ -524,6 +733,9 @@ const NotificationCenter = ({ isOpen, onClose }) => {
                   read={notification.isRead}
                   onClick={() => handleNotificationClick(notification)}
                 >
+                  <NotificationTypeIcon type={notification.type}>
+                    {getNotificationTypeIcon(notification.type)}
+                  </NotificationTypeIcon>
                   <NotificationHeader>
                     <div style={{ display: 'flex', alignItems: 'flex-start' }}>
                       <NotificationIcon type={notification.type}>

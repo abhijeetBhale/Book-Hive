@@ -14,7 +14,8 @@ import {
   validateBookPrice,
   getBooksForSale,
   getEnhancedFilters,
-  getPersonalizedRecommendations
+  getPersonalizedRecommendations,
+  fetchISBNMetadata
 } from '../controllers/bookController.js';
 import { protect } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
@@ -135,6 +136,7 @@ router.route('/').get(getAllBooks).post(protect, upload.single('coverImage'), cr
 
 // Search and filter routes
 router.get('/search/isbn/:isbn', searchByISBN);
+router.get('/isbn/:isbn/metadata', fetchISBNMetadata);
 router.get('/suggestions', protect, getBookSuggestions);
 router.get('/recommendations', protect, getPersonalizedRecommendations);
 /**

@@ -11,9 +11,14 @@ import {
   deleteRequest,
   getAllBorrowRequests,
   getBookHistory,
-  testReminders
+  testReminders,
+  reportDamage,
+  respondToDamageReport,
+  getDamageReports,
+  getDamageReportById
 } from '../controllers/borrowController.js';
 import { protect } from '../middleware/auth.js';
+import upload from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -29,5 +34,11 @@ router.put('/:requestId/returned', protect, markAsReturned);
 router.delete('/:requestId', protect, deleteRequest);
 router.put('/:requestId/return', protect, returnBook);
 router.put('/accept/:requestId', protect, acceptRequest);
+
+// Damage reporting routes
+router.post('/:requestId/damage-report', protect, upload.array('images', 5), reportDamage);
+router.put('/damage-reports/:reportId/respond', protect, respondToDamageReport);
+router.get('/damage-reports', protect, getDamageReports);
+router.get('/damage-reports/:reportId', protect, getDamageReportById);
 
 export default router;

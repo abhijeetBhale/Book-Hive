@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { Search, Clock, User, MessageCircle, Check, X, Radio, BookOpen, Plus, Loader, Calendar } from 'lucide-react';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
+import VerifiedBadge from '../components/ui/VerifiedBadge';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -233,6 +234,24 @@ const RequesterAvatar = styled.img`
   object-fit: cover;
   border: 2px solid white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #f3f4f6;
+  flex-shrink: 0;
+  
+  &:not([src]), &[src=""], &[src="/default-avatar.png"] {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.75rem;
+    
+    &::after {
+      content: attr(alt);
+      display: block;
+      text-transform: uppercase;
+    }
+  }
 `;
 
 const RequesterName = styled.span`
@@ -242,12 +261,6 @@ const RequesterName = styled.span`
   display: flex;
   align-items: center;
   gap: 0.25rem;
-`;
-
-const VerifiedBadge = styled.span`
-  color: #4f46e5;
-  font-size: 1rem;
-  line-height: 1;
 `;
 
 const RequestDate = styled.div`
@@ -356,6 +369,24 @@ const Avatar = styled.img`
   border-radius: 9999px;
   object-fit: cover;
   border: 2px solid white;
+  background-color: #f3f4f6;
+  flex-shrink: 0;
+  
+  &:not([src]), &[src=""], &[src="/default-avatar.png"] {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.875rem;
+    
+    &::after {
+      content: attr(alt);
+      display: block;
+      text-transform: uppercase;
+    }
+  }
 `;
 
 const ResponderName = styled.span`
@@ -1007,9 +1038,71 @@ export default function Broadcasts() {
     }
   };
 
+  // Helper function to get user initials
+  const getUserInitials = (name) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
+  // Avatar component with fallback
+  const AvatarWithFallback = ({ src, alt, size = 'sm', className = '' }) => {
+    const [imageError, setImageError] = useState(false);
+    const [imageLoaded, setImageLoaded] = useState(false);
+    
+    const sizeClasses = {
+      sm: 'w-7 h-7 text-xs',
+      md: 'w-8 h-8 text-sm'
+    };
+    
+    if (imageError || !src || src === '/default-avatar.png') {
+      return (
+        <div 
+          className={`${sizeClasses[size]} rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold border-2 border-white shadow-sm ${className}`}
+          style={{ flexShrink: 0 }}
+        >
+          {getUserInitials(alt)}
+        </div>
+      );
+    }
+    
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className={`${sizeClasses[size]} rounded-full object-cover border-2 border-white shadow-sm ${className}`}
+        style={{ flexShrink: 0, backgroundColor: '#f3f4f6' }}
+        onError={() => setImageError(true)}
+        onLoad={() => setImageLoaded(true)}
+      />
+    );
+  };
+
   const BroadcastCard = ({ broadcast, isMine = false }) => {
     const hasResponded = broadcast.responses?.some(r => r.responder._id === user?._id);
     const isActive = broadcast.status === 'active';
+    
+    // For "My Requests" tab, use current user data as fallback
+    const displayUser = isMine && user ? {
+      name: broadcast.requester?.name || user.name,
+      avatar: broadcast.requester?.avatar || user.avatar,
+      isVerified: broadcast.requester?.isVerified !== undefined ? broadcast.requester.isVerified : user.isVerified
+    } : broadcast.requester;
+
+    // Debug logging for avatar issues
+    if (isMine && process.env.NODE_ENV === 'development') {
+      console.log('Broadcast Card Debug:', {
+        isMine,
+        broadcastRequester: broadcast.requester,
+        currentUser: user,
+        displayUser,
+        avatarUrl: displayUser?.avatar
+      });
+    }
 
     return (
       <Card>
@@ -1032,14 +1125,15 @@ export default function Broadcasts() {
           </CardHeader>
           
           <RequesterInfo>
-            <RequesterAvatar
-              src={broadcast.requester?.avatar || '/default-avatar.png'}
-              alt={broadcast.requester?.name}
+            <AvatarWithFallback
+              src={displayUser?.avatar}
+              alt={displayUser?.name || 'User'}
+              size="sm"
             />
             <div>
               <RequesterName>
-                {broadcast.requester?.name}
-                {broadcast.requester?.isVerified && <VerifiedBadge>✓</VerifiedBadge>}
+                {displayUser?.name || 'Unknown User'}
+                {displayUser?.isVerified && <VerifiedBadge size={16} />}
               </RequesterName>
               <RequestDate>
                 <Calendar size={12} style={{ display: 'inline', marginRight: '0.25rem' }} />
@@ -1076,13 +1170,14 @@ export default function Broadcasts() {
               {broadcast.responses.map((response) => (
                 <ResponseItem key={response._id}>
                   <ResponderInfo>
-                    <Avatar
-                      src={response.responder?.avatar || '/default-avatar.png'}
-                      alt={response.responder?.name}
+                    <AvatarWithFallback
+                      src={response.responder?.avatar}
+                      alt={response.responder?.name || 'Responder'}
+                      size="md"
                     />
                     <ResponderName>
-                      {response.responder?.name}
-                      {response.responder?.isVerified && <VerifiedBadge>✓</VerifiedBadge>}
+                      {response.responder?.name || 'Unknown User'}
+                      {response.responder?.isVerified && <VerifiedBadge size={14} />}
                     </ResponderName>
                   </ResponderInfo>
                   <ConfirmButton

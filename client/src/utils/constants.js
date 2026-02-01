@@ -20,12 +20,9 @@ export const BOOK_CATEGORIES = [
   ]
 
 export const BOOK_CONDITIONS = [
-    'New',
-    'Like New',
-    'Very Good',
-    'Good',
-    'Fair',
-    'Poor'
+    { value: 'new', label: 'New', description: 'Brand new, never used' },
+    { value: 'good', label: 'Good', description: 'Minor wear, fully readable' },
+    { value: 'worn', label: 'Worn', description: 'Visible wear but still functional' }
   ]
   
   export const BORROW_STATUS = {

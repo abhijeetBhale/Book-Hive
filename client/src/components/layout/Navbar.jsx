@@ -9,11 +9,16 @@ import {
   ArrowLeftRight,
   MessageSquare,
   Heart,
-  AudioWaveform,
+  RadioTower,
   Bell,
   Trash2,
-  LibraryBig,
   Wallet,
+  BookOpen,
+  Calendar,
+  Star,
+  MapPin,
+  AlertCircle,
+  UserCheck
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { useNotificationBadges } from '../../context/NotificationBadgeContext';
@@ -99,12 +104,21 @@ const Navbar = () => {
       });
     });
 
-    socket.on('disconnect', (reason) => {
-      // Socket disconnected
+    socket.on('disconnect', () => {
+      // Socket disconnected - cleanup handled in useEffect return
     });
 
-    socket.on('reconnect', (attemptNumber) => {
-      // Socket reconnected
+    socket.on('reconnect', () => {
+      // Socket reconnected - refresh notifications
+      const fetchUnread = async () => {
+        try {
+          const result = await notificationsAPI.getUnreadCount();
+          setUnreadCount(result.count || 0);
+        } catch (error) {
+          console.error('Error fetching unread count on reconnect:', error);
+        }
+      };
+      fetchUnread();
     });
 
     socket.on('reconnect_error', (error) => {
@@ -199,12 +213,124 @@ const Navbar = () => {
       // Close dropdown
       setShowNotificationDropdown(false);
 
-      // Navigate to the notification link if available
-      if (notification.metadata?.link) {
-        window.location.href = notification.metadata.link;
+      // Enhanced navigation based on notification type
+      switch (notification.type) {
+        case 'broadcast_created':
+        case 'broadcast_response':
+          navigate('/broadcasts');
+          break;
+          
+        case 'borrow_request':
+        case 'request_approved':
+        case 'request_denied':
+        case 'due_reminder':
+        case 'overdue_reminder':
+        case 'review_prompt':
+          navigate('/borrow-requests');
+          break;
+          
+        case 'new_message':
+        case 'broadcast_confirmed':
+          navigate('/messages');
+          break;
+          
+        case 'friend_request':
+        case 'friend_accepted':
+        case 'friend_activity':
+          navigate('/friends');
+          break;
+          
+        case 'new_book_nearby':
+        case 'availability_alert':
+          // Navigate to specific book if bookId is available
+          const bookId = notification.metadata?.bookId;
+          if (bookId) {
+            navigate(`/books/${bookId}`);
+          } else {
+            navigate('/books');
+          }
+          break;
+          
+        case 'rating_received':
+          navigate('/profile');
+          break;
+          
+        case 'event_invitation':
+        case 'event_reminder':
+          // Navigate to specific event if eventId is available
+          const eventId = notification.metadata?.eventId;
+          if (eventId) {
+            navigate(`/events/${eventId}`);
+          } else {
+            navigate('/events');
+          }
+          break;
+          
+        case 'book_returned':
+          navigate('/borrow-requests');
+          break;
+          
+        case 'warning':
+        case 'ban':
+        case 'account_deleted':
+          navigate('/profile');
+          break;
+          
+        default:
+          // Fallback to notification link if available
+          const link = notification.link || notification.metadata?.link;
+          if (link) {
+            navigate(link);
+          } else {
+            // If no specific link, try to navigate based on content
+            navigate('/profile');
+          }
+          break;
       }
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error('Error handling notification click:', error);
+      toast.error('Failed to open notification');
+    }
+  };
+
+  // Get notification type icon
+  const getNotificationTypeIcon = (type) => {
+    switch (type) {
+      case 'broadcast_created':
+      case 'broadcast_response':
+        return <RadioTower size={16} className="text-orange-600" />;
+      case 'borrow_request':
+      case 'request_approved':
+      case 'request_denied':
+        return <ArrowLeftRight size={16} className="text-blue-600" />;
+      case 'new_message':
+      case 'broadcast_confirmed':
+        return <MessageSquare size={16} className="text-indigo-600" />;
+      case 'friend_request':
+      case 'friend_accepted':
+      case 'friend_activity':
+        return <Users size={16} className="text-purple-600" />;
+      case 'due_reminder':
+      case 'overdue_reminder':
+      case 'event_invitation':
+      case 'event_reminder':
+        return <Calendar size={16} className="text-orange-600" />;
+      case 'rating_received':
+      case 'review_prompt':
+        return <Star size={16} className="text-yellow-600" />;
+      case 'availability_alert':
+      case 'new_book_nearby':
+        return <MapPin size={16} className="text-green-600" />;
+      case 'book_returned':
+        return <BookOpen size={16} className="text-green-600" />;
+      case 'warning':
+      case 'ban':
+      case 'account_deleted':
+        return <AlertCircle size={16} className="text-red-600" />;
+      case 'success':
+        return <UserCheck size={16} className="text-green-600" />;
+      default:
+        return <Bell size={16} className="text-blue-600" />;
     }
   };
 
@@ -238,11 +364,7 @@ const Navbar = () => {
     }
   };
 
-  const navLinkClass = ({ isActive }) =>
-    `transition-colors duration-300 text-lg ${isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'
-    }`;
-
-  // Conditional navigation based on user role
+  // Get notification type icon
   const getNavLinks = () => {
     const baseLinks = [
       { 
@@ -268,8 +390,8 @@ const Navbar = () => {
       { 
         to: '/broadcasts', 
         text: 'Broadcasts', 
-        tooltip: 'Stay updated with community announcements',
-        icon: <AudioWaveform size={24} />, 
+        tooltip: 'Get all the broadcast announcements',
+        icon: <RadioTower size={24} />, 
         badgeKey: 'broadcasts' 
       },
       { 
@@ -459,9 +581,14 @@ const Navbar = () => {
                                   handleNotificationClick(notification);
                                 }}
                               >
+                                {/* Type indicator icon in top-left corner */}
+                                {/* <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center z-10">
+                                  {getNotificationTypeIcon(notification.type)}
+                                </div> */}
+                                
                                 <div className="flex items-start gap-3 group">
                                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                                    <Bell size={16} className="text-blue-600" />
+                                    {getNotificationTypeIcon(notification.type)}
                                   </div>
                                   <div className="flex-1">
                                     <div className="flex items-start justify-between">
@@ -578,7 +705,7 @@ const Navbar = () => {
 
                   <button
                     onClick={() => {
-                      window.location.href = '/profile#notifications';
+                      setShowNotificationCenter(true);
                       setIsOpen(false);
                     }}
                     className="relative flex items-center gap-3 py-2 px-4 rounded-lg text-gray-700 hover:text-primary hover:bg-gray-50 transition-colors duration-300"

@@ -1,10 +1,13 @@
 import BorrowRequest from '../models/BorrowRequest.js';
 import Book from '../models/Book.js';
+import DamageReport from '../models/DamageReport.js';
 import Notification from '../models/Notification.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import { awardPoints, updateUserStatsAndAchievements } from '../services/achievementService.js';
 import { sendOverdueReminders } from '../services/reminderService.js';
+import PriceValidationService from '../services/priceValidationService.js';
+import { uploadToCloudinary } from '../config/cloudinary.js';
 
 // @desc    Request to borrow a book
 // @route   POST /api/borrow/request/:bookId
@@ -760,18 +763,49 @@ export const markAsReturned = async (req, res) => {
       ...(request.depositStatus === 'paid' && { depositStatus: 'refunded' })
     });
 
-    // Update book availability
-    await Book.findByIdAndUpdate(request.book._id, {
-      $set: {
-        isAvailable: true
-      },
-      $unset: {
-        isBooked: 1,
-        bookedFrom: 1,
-        bookedUntil: 1,
-        currentBorrowRequest: 1
+    // Auto re-listing logic
+    const book = await Book.findById(request.book._id);
+    if (book) {
+      // Update book fields for return
+      const updateFields = {
+        $set: {
+          isAvailable: true,
+          lastReturnedAt: new Date()
+        },
+        $unset: {
+          isBooked: 1,
+          bookedFrom: 1,
+          bookedUntil: 1,
+          currentBorrowRequest: 1
+        },
+        $inc: {
+          timesLent: 1 // Increment the times lent counter
+        }
+      };
+
+      await Book.findByIdAndUpdate(request.book._id, updateFields);
+
+      // Check for pending damage reports - delay re-listing if damage report exists
+      const pendingDamageReport = await DamageReport.findOne({
+        book: request.book._id,
+        borrowRequest: req.params.requestId,
+        status: 'pending'
+      });
+
+      if (pendingDamageReport) {
+        // Temporarily mark as unavailable until damage report is resolved
+        await Book.findByIdAndUpdate(request.book._id, {
+          $set: { 
+            isAvailable: false,
+            unavailableReason: 'pending_damage_report'
+          }
+        });
+        
+        console.log(`Book ${book.title} re-listing delayed due to pending damage report`);
+      } else {
+        console.log(`Book ${book.title} automatically re-listed after return`);
       }
-    });
+    }
 
     res.json({ message: 'Book marked as returned successfully' });
   } catch (error) {
@@ -911,5 +945,396 @@ export const getBookHistory = async (req, res) => {
   } catch (error) {
     console.error('Get book history error:', error);
     res.status(500).json({ message: 'Server error getting book history' });
+  }
+};
+
+// @desc    Report damage to a returned book
+// @route   POST /api/borrow/:requestId/damage-report
+export const reportDamage = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { severity, description } = req.body;
+
+    // Validate input
+    if (!severity || !description) {
+      return res.status(400).json({ 
+        message: 'Damage severity and description are required' 
+      });
+    }
+
+    const validSeverities = ['minor', 'moderate', 'severe'];
+    if (!validSeverities.includes(severity)) {
+      return res.status(400).json({ 
+        message: `Invalid severity. Must be one of: ${validSeverities.join(', ')}` 
+      });
+    }
+
+    // Find the borrow request
+    const borrowRequest = await BorrowRequest.findById(requestId)
+      .populate('book')
+      .populate('borrower', 'name email')
+      .populate('owner', 'name email');
+
+    if (!borrowRequest) {
+      return res.status(404).json({ message: 'Borrow request not found' });
+    }
+
+    // Only the book owner can report damage
+    if (borrowRequest.owner._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the book owner can report damage' });
+    }
+
+    // Check if book has been returned
+    if (borrowRequest.status !== 'returned') {
+      return res.status(400).json({ 
+        message: 'Damage can only be reported after the book has been returned' 
+      });
+    }
+
+    // Check if damage report already exists
+    const existingReport = await DamageReport.findOne({
+      book: borrowRequest.book._id,
+      borrowRequest: requestId
+    });
+
+    if (existingReport) {
+      return res.status(400).json({ 
+        message: 'Damage report already exists for this borrow request' 
+      });
+    }
+
+    // Process uploaded images
+    const images = [];
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        try {
+          const result = await uploadToCloudinary(file.buffer, {
+            folder: 'bookhive_damage_reports',
+            width: 800,
+            height: 600,
+            crop: 'limit',
+            resource_type: 'image'
+          });
+          
+          images.push({
+            url: result.secure_url,
+            publicId: result.public_id,
+            uploadedAt: new Date()
+          });
+        } catch (uploadError) {
+          console.error('Image upload error:', uploadError);
+          return res.status(500).json({ 
+            message: 'Failed to upload damage evidence images' 
+          });
+        }
+      }
+    }
+
+    if (images.length === 0) {
+      return res.status(400).json({ 
+        message: 'At least one image is required as evidence of damage' 
+      });
+    }
+
+    // Calculate penalty using the price validation service
+    const priceValidationService = new PriceValidationService();
+    const penaltyCalculation = priceValidationService.calculateDamagePenalty(
+      borrowRequest.book.condition,
+      severity,
+      borrowRequest.depositAmount || 100 // Default deposit if none set
+    );
+
+    // Create damage report
+    const damageReport = new DamageReport({
+      book: borrowRequest.book._id,
+      borrowRequest: requestId,
+      reportedBy: req.user._id,
+      borrower: borrowRequest.borrower._id,
+      severity,
+      description: description.trim(),
+      images,
+      autoPenaltyAmount: penaltyCalculation.calculatedAmount,
+      metadata: {
+        bookConditionBefore: borrowRequest.book.condition,
+        penaltyCalculationDetails: penaltyCalculation
+      }
+    });
+
+    await damageReport.save();
+
+    // Notify the borrower about the damage report
+    try {
+      const notification = await Notification.create({
+        userId: borrowRequest.borrower._id,
+        type: 'damage_report',
+        title: 'Damage Report Filed',
+        message: `A damage report has been filed for "${borrowRequest.book.title}". Please review and respond.`,
+        fromUserId: req.user._id,
+        link: `/damage-reports/${damageReport._id}`,
+        metadata: {
+          damageReportId: damageReport._id,
+          bookId: borrowRequest.book._id,
+          bookTitle: borrowRequest.book.title,
+          severity,
+          penaltyAmount: penaltyCalculation.calculatedAmount
+        }
+      });
+
+      // Emit real-time notification
+      const io = req.app.get('io');
+      if (io) {
+        const notificationData = {
+          id: notification._id,
+          type: 'damage_report',
+          message: `A damage report has been filed for "${borrowRequest.book.title}". Penalty: ₹${penaltyCalculation.calculatedAmount}`,
+          fromUser: {
+            _id: req.user._id,
+            name: req.user.name,
+            avatar: req.user.avatar
+          },
+          book: {
+            _id: borrowRequest.book._id,
+            title: borrowRequest.book.title,
+            coverImage: borrowRequest.book.coverImage
+          },
+          link: `/damage-reports/${damageReport._id}`,
+          createdAt: notification.createdAt,
+          read: false
+        };
+
+        io.to(`user:${borrowRequest.borrower._id}`).emit('new_notification', notificationData);
+      }
+    } catch (notificationError) {
+      console.error('Failed to send damage report notification:', notificationError);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Damage report filed successfully',
+      damageReport: {
+        _id: damageReport._id,
+        severity,
+        description,
+        autoPenaltyAmount: penaltyCalculation.calculatedAmount,
+        status: damageReport.status,
+        createdAt: damageReport.createdAt,
+        autoResolveAt: damageReport.autoResolveAt
+      },
+      penaltyCalculation
+    });
+  } catch (error) {
+    console.error('Report damage error:', error);
+    res.status(500).json({ message: 'Server error filing damage report' });
+  }
+};
+
+// @desc    Respond to a damage report (accept or dispute)
+// @route   PUT /api/borrow/damage-reports/:reportId/respond
+export const respondToDamageReport = async (req, res) => {
+  try {
+    const { reportId } = req.params;
+    const { action, message } = req.body;
+
+    // Validate input
+    const validActions = ['accept', 'dispute'];
+    if (!validActions.includes(action)) {
+      return res.status(400).json({ 
+        message: `Invalid action. Must be one of: ${validActions.join(', ')}` 
+      });
+    }
+
+    // Find the damage report
+    const damageReport = await DamageReport.findById(reportId)
+      .populate('book', 'title coverImage')
+      .populate('reportedBy', 'name email')
+      .populate('borrower', 'name email');
+
+    if (!damageReport) {
+      return res.status(404).json({ message: 'Damage report not found' });
+    }
+
+    // Only the borrower can respond
+    if (damageReport.borrower._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the borrower can respond to this damage report' });
+    }
+
+    // Check if report is still pending
+    if (damageReport.status !== 'pending') {
+      return res.status(400).json({ 
+        message: `Cannot respond to a ${damageReport.status} damage report` 
+      });
+    }
+
+    // Check if response time hasn't expired
+    if (!damageReport.canBeDisputed()) {
+      return res.status(400).json({ 
+        message: 'Response time has expired. This report has been auto-resolved.' 
+      });
+    }
+
+    // Update the damage report
+    damageReport.borrowerResponse = {
+      action,
+      message: message?.trim() || '',
+      respondedAt: new Date()
+    };
+
+    if (action === 'accept') {
+      damageReport.status = 'accepted';
+      damageReport.finalPenaltyAmount = damageReport.autoPenaltyAmount;
+      
+      // Re-enable book listing after damage report is resolved
+      await Book.findByIdAndUpdate(damageReport.book._id, {
+        $set: { isAvailable: true },
+        $unset: { unavailableReason: 1 }
+      });
+    } else {
+      damageReport.status = 'disputed';
+      // Disputed reports will need admin review - keep book unavailable
+    }
+
+    await damageReport.save();
+
+    // Notify the book owner about the response
+    try {
+      const notificationMessage = action === 'accept' 
+        ? `${req.user.name} accepted the damage report for "${damageReport.book.title}"`
+        : `${req.user.name} disputed the damage report for "${damageReport.book.title}". Admin review required.`;
+
+      const notification = await Notification.create({
+        userId: damageReport.reportedBy._id,
+        type: `damage_report_${action}ed`,
+        title: `Damage Report ${action === 'accept' ? 'Accepted' : 'Disputed'}`,
+        message: notificationMessage,
+        fromUserId: req.user._id,
+        link: `/damage-reports/${damageReport._id}`,
+        metadata: {
+          damageReportId: damageReport._id,
+          bookId: damageReport.book._id,
+          bookTitle: damageReport.book.title,
+          borrowerAction: action
+        }
+      });
+
+      // Emit real-time notification
+      const io = req.app.get('io');
+      if (io) {
+        const notificationData = {
+          id: notification._id,
+          type: `damage_report_${action}ed`,
+          message: notificationMessage,
+          fromUser: {
+            _id: req.user._id,
+            name: req.user.name,
+            avatar: req.user.avatar
+          },
+          book: {
+            _id: damageReport.book._id,
+            title: damageReport.book.title,
+            coverImage: damageReport.book.coverImage
+          },
+          link: `/damage-reports/${damageReport._id}`,
+          createdAt: notification.createdAt,
+          read: false
+        };
+
+        io.to(`user:${damageReport.reportedBy._id}`).emit('new_notification', notificationData);
+      }
+    } catch (notificationError) {
+      console.error('Failed to send damage report response notification:', notificationError);
+    }
+
+    res.json({
+      success: true,
+      message: `Damage report ${action}ed successfully`,
+      damageReport: {
+        _id: damageReport._id,
+        status: damageReport.status,
+        finalPenaltyAmount: damageReport.finalPenaltyAmount,
+        borrowerResponse: damageReport.borrowerResponse
+      }
+    });
+  } catch (error) {
+    console.error('Respond to damage report error:', error);
+    res.status(500).json({ message: 'Server error responding to damage report' });
+  }
+};
+
+// @desc    Get damage reports for a user
+// @route   GET /api/borrow/damage-reports
+export const getDamageReports = async (req, res) => {
+  try {
+    const { status, role } = req.query;
+    
+    // Build query based on user role
+    let query = {};
+    if (role === 'reporter') {
+      query.reportedBy = req.user._id;
+    } else if (role === 'borrower') {
+      query.borrower = req.user._id;
+    } else {
+      // Get all reports where user is involved
+      query.$or = [
+        { reportedBy: req.user._id },
+        { borrower: req.user._id }
+      ];
+    }
+
+    // Filter by status if provided
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    const damageReports = await DamageReport.find(query)
+      .populate('book', 'title author coverImage')
+      .populate('reportedBy', 'name avatar')
+      .populate('borrower', 'name avatar')
+      .populate('borrowRequest', 'createdAt')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      damageReports,
+      total: damageReports.length
+    });
+  } catch (error) {
+    console.error('Get damage reports error:', error);
+    res.status(500).json({ message: 'Server error getting damage reports' });
+  }
+};
+
+// @desc    Get single damage report details
+// @route   GET /api/borrow/damage-reports/:reportId
+export const getDamageReportById = async (req, res) => {
+  try {
+    const { reportId } = req.params;
+
+    const damageReport = await DamageReport.findById(reportId)
+      .populate('book', 'title author coverImage condition')
+      .populate('reportedBy', 'name avatar email')
+      .populate('borrower', 'name avatar email')
+      .populate('borrowRequest', 'createdAt borrowedDate returnedDate depositAmount');
+
+    if (!damageReport) {
+      return res.status(404).json({ message: 'Damage report not found' });
+    }
+
+    // Check if user is authorized to view this report
+    const userId = req.user._id.toString();
+    const isReporter = damageReport.reportedBy._id.toString() === userId;
+    const isBorrower = damageReport.borrower._id.toString() === userId;
+    
+    if (!isReporter && !isBorrower) {
+      return res.status(403).json({ message: 'Not authorized to view this damage report' });
+    }
+
+    res.json({
+      success: true,
+      damageReport,
+      userRole: isReporter ? 'reporter' : 'borrower'
+    });
+  } catch (error) {
+    console.error('Get damage report by ID error:', error);
+    res.status(500).json({ message: 'Server error getting damage report' });
   }
 };

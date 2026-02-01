@@ -181,17 +181,17 @@ const GetVerified = () => {
 
       <Benefits>
         <BenefitCard>
-          <BadgeCheck size={24} color="#1a87db" />
+          <BadgeCheck size={24} color="#1a87db" style={{marginLeft: '80px'}}/>
           <BenefitTitle>Verified Badge</BenefitTitle>
           <BenefitText>Blue checkmark on your profile</BenefitText>
         </BenefitCard>
         <BenefitCard>
-          <Zap size={24} color="#f59e0b" />
+          <Zap size={24} color="#f59e0b" style={{marginLeft: '80px'}}/>
           <BenefitTitle>Search Boost</BenefitTitle>
           <BenefitText>Higher visibility in searches</BenefitText>
         </BenefitCard>
         <BenefitCard>
-          <Star size={24} color="#10b981" />
+          <Star size={24} color="#10b981" style={{marginLeft: '80px'}} />
           <BenefitTitle>Priority Queue</BenefitTitle>
           <BenefitText>Priority borrow requests</BenefitText>
         </BenefitCard>

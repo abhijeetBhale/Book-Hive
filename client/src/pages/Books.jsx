@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import styled from 'styled-components';
 import { booksAPI, usersAPI } from '../utils/api';
 import BookCard from '../components/books/BookCard';
-import { Loader, Heart, Clock } from 'lucide-react';
+import { Loader, Heart, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import EnhancedSearchFilters from '../components/books/EnhancedSearchFilters';
 import toast from 'react-hot-toast';
 import { getFullImageUrl, preloadImages } from '../utils/imageHelpers';
@@ -126,6 +126,85 @@ const TabButton = styled.button`
   }
 `;
 
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding: 1rem;
+  flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    gap: 0.5rem;
+    flex-direction: column;
+  }
+`;
+
+const PaginationInfo = styled.span`
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0 1rem;
+  
+  @media (max-width: 768px) {
+    margin: 0.5rem 0;
+    order: 3;
+  }
+`;
+
+const PaginationControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  
+  @media (max-width: 768px) {
+    order: 1;
+  }
+`;
+
+const PaginationButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid #d1d5db;
+  background-color: ${props => props.$active ? '#3b82f6' : 'white'};
+  color: ${props => props.$active ? 'white' : '#374151'};
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  
+  &:hover:not(:disabled) {
+    background-color: ${props => props.$active ? '#2563eb' : '#f3f4f6'};
+    border-color: #9ca3af;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #f9fafb;
+  }
+  
+  &.nav-button {
+    width: auto;
+    padding: 0 0.75rem;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+  }
+`;
+
+const PageNumbers = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  
+  @media (max-width: 480px) {
+    gap: 0.125rem;
+  }
+`;
+
 // --- MAIN COMPONENT ---
 const Books = () => {
     const { user } = useContext(AuthContext);
@@ -154,18 +233,35 @@ const Books = () => {
         sortBy: 'createdAt',
         sortOrder: 'desc',
         useLocation: false,
-        maxDistance: 10
+        maxDistance: 10,
+        page: 1,
+        limit: 20
     });
 
     // Fetch data on component mount and when filters change
     useEffect(() => {
         fetchBooks();
+    }, [filters, activeTab]);
+
+    // Separate useEffect for user-dependent data
+    useEffect(() => {
         if (user) {
             fetchRecommendations();
             fetchRecentlyViewed();
             fetchWishlist();
         }
-    }, [filters, activeTab, user]);
+    }, [user]);
+
+    // Separate useEffect for handling filter changes to prevent infinite loops
+    const handleFiltersChangeCallback = useCallback((newFilters) => {
+        // Reset to page 1 when search/filter criteria change, but preserve page and limit
+        const filtersWithPagination = { 
+            ...newFilters, 
+            page: 1, // Reset to first page when filters change
+            limit: filters.limit || 20 // Preserve limit
+        };
+        setFilters(filtersWithPagination);
+    }, [filters.limit]);
 
     // Add book to recently viewed when user views a book
     const addToRecentlyViewed = async (bookId) => {
@@ -198,62 +294,58 @@ const Books = () => {
                 }
 
                 response = await booksAPI.getAll(searchParams);
-                const fetchedBooks = response.data.books || [];
+                
+                // Handle different response structures
+                const responseData = response.data || response;
+                const fetchedBooks = responseData.books || [];
+                const paginationData = responseData.pagination || {};
                 
                 setBooks(fetchedBooks);
-                setPagination(response.data.pagination || {});
+                setPagination(paginationData);
             }
             
             setError(null);
-            setLoading(false);
-            
-            // Preload book cover images in the background for better performance
-            const imageUrls = books
-              .map(book => getFullImageUrl(book.coverImage))
-              .filter(url => url && !url.includes('placehold.co'));
-            
-            if (imageUrls.length > 0) {
-              setTimeout(() => {
-                preloadImages(imageUrls).catch(() => {
-                  // Image preload completed with some errors (non-critical)
-                });
-              }, 100);
-            }
         } catch (err) {
+            console.error('Error fetching books:', err);
             setError('Failed to load books. Please try again later.');
+            setBooks([]);
+            setPagination({});
+        } finally {
             setLoading(false);
         }
     };
 
     const fetchRecommendations = async () => {
+        if (!user) return;
         try {
             const response = await booksAPI.getRecommendations({ limit: 10 });
             setRecommendations(response.recommendations || []);
         } catch (error) {
             console.error('Error fetching recommendations:', error);
+            setRecommendations([]);
         }
     };
 
     const fetchRecentlyViewed = async () => {
+        if (!user) return;
         try {
             const response = await usersAPI.getRecentlyViewed({ limit: 10 });
             setRecentlyViewed(response.recentlyViewed || []);
         } catch (error) {
             console.error('Error fetching recently viewed:', error);
+            setRecentlyViewed([]);
         }
     };
 
     const fetchWishlist = async () => {
+        if (!user) return;
         try {
             const response = await usersAPI.getWishlist({ limit: 50 });
             setWishlist(response.wishlist || []);
         } catch (error) {
             console.error('Error fetching wishlist:', error);
+            setWishlist([]);
         }
-    };
-
-    const handleFiltersChange = (newFilters) => {
-        setFilters(newFilters);
     };
 
     const clearAllFilters = () => {
@@ -273,8 +365,67 @@ const Books = () => {
             sortBy: 'createdAt',
             sortOrder: 'desc',
             useLocation: false,
-            maxDistance: 10
+            maxDistance: 10,
+            page: 1,
+            limit: 20
         });
+    };
+
+    // Pagination handlers
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= pagination.pages) {
+            setFilters(prev => ({ ...prev, page: newPage }));
+            // Scroll to top when page changes
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    const handlePreviousPage = () => {
+        if (pagination.page > 1) {
+            handlePageChange(pagination.page - 1);
+        }
+    };
+
+    const handleNextPage = () => {
+        if (pagination.page < pagination.pages) {
+            handlePageChange(pagination.page + 1);
+        }
+    };
+
+    // Generate page numbers for pagination
+    const getPageNumbers = () => {
+        const current = pagination.page || 1;
+        const total = pagination.pages || 1;
+        const pages = [];
+        
+        if (total <= 7) {
+            // Show all pages if 7 or fewer
+            for (let i = 1; i <= total; i++) {
+                pages.push(i);
+            }
+        } else {
+            // Show smart pagination with ellipsis
+            if (current <= 4) {
+                // Show first 5 pages + ellipsis + last page
+                for (let i = 1; i <= 5; i++) pages.push(i);
+                pages.push('...');
+                pages.push(total);
+            } else if (current >= total - 3) {
+                // Show first page + ellipsis + last 5 pages
+                pages.push(1);
+                pages.push('...');
+                for (let i = total - 4; i <= total; i++) pages.push(i);
+            } else {
+                // Show first + ellipsis + current-1, current, current+1 + ellipsis + last
+                pages.push(1);
+                pages.push('...');
+                for (let i = current - 1; i <= current + 1; i++) pages.push(i);
+                pages.push('...');
+                pages.push(total);
+            }
+        }
+        
+        return pages;
     };
 
 
@@ -328,7 +479,7 @@ const Books = () => {
                 {activeTab === 'all' && (
                     <div style={{ marginBottom: '2rem' }}>
                         <EnhancedSearchFilters 
-                            onFiltersChange={handleFiltersChange}
+                            onFiltersChange={handleFiltersChangeCallback}
                             initialFilters={filters}
                         />
                     </div>
@@ -471,18 +622,57 @@ const Books = () => {
 
                             {/* Pagination */}
                             {pagination && pagination.pages > 1 && activeTab === 'all' && (
-                                <div style={{ 
-                                    display: 'flex', 
-                                    justifyContent: 'center', 
-                                    alignItems: 'center', 
-                                    gap: '1rem', 
-                                    marginTop: '2rem',
-                                    padding: '1rem'
-                                }}>
-                                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                                <PaginationContainer>
+                                    <PaginationControls>
+                                        {/* Previous Button */}
+                                        <PaginationButton
+                                            className="nav-button"
+                                            onClick={handlePreviousPage}
+                                            disabled={pagination.page <= 1}
+                                        >
+                                            <ChevronLeft size={16} />
+                                            Previous
+                                        </PaginationButton>
+
+                                        {/* Page Numbers */}
+                                        <PageNumbers>
+                                            {getPageNumbers().map((pageNum, index) => (
+                                                pageNum === '...' ? (
+                                                    <span key={`ellipsis-${index}`} style={{ 
+                                                        padding: '0 0.5rem', 
+                                                        color: '#9ca3af',
+                                                        fontSize: '0.875rem'
+                                                    }}>
+                                                        ...
+                                                    </span>
+                                                ) : (
+                                                    <PaginationButton
+                                                        key={pageNum}
+                                                        $active={pageNum === pagination.page}
+                                                        onClick={() => handlePageChange(pageNum)}
+                                                    >
+                                                        {pageNum}
+                                                    </PaginationButton>
+                                                )
+                                            ))}
+                                        </PageNumbers>
+
+                                        {/* Next Button */}
+                                        <PaginationButton
+                                            className="nav-button"
+                                            onClick={handleNextPage}
+                                            disabled={pagination.page >= pagination.pages}
+                                        >
+                                            Next
+                                            <ChevronRight size={16} />
+                                        </PaginationButton>
+                                    </PaginationControls>
+
+                                    {/* Pagination Info */}
+                                    <PaginationInfo>
                                         Page {pagination.page} of {pagination.pages} • {pagination.total} total books
-                                    </span>
-                                </div>
+                                    </PaginationInfo>
+                                </PaginationContainer>
                             )}
                         </>
                     )}

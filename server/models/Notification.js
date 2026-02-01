@@ -26,7 +26,10 @@ const notificationSchema = new mongoose.Schema({
       'event_invitation',
       'event_reminder',
       'due_reminder',
-      'borrower_reminder'
+      'borrower_reminder',
+      'broadcast_created',
+      'broadcast_response',
+      'broadcast_confirmed'
     ],
     required: true
   },

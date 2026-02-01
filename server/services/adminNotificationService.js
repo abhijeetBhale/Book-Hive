@@ -244,34 +244,6 @@ class AdminNotificationService {
   }
 
   /**
-   * Notify admins of new version notification
-   */
-  notifyNewVersionNotification(notification) {
-    this.emitToAdmins('version_notification:new', {
-      notificationId: notification._id,
-      version: notification.version,
-      title: notification.title,
-      type: notification.type,
-      priority: notification.priority,
-      isActive: notification.isActive
-    });
-  }
-
-  /**
-   * Notify admins of version notification update
-   */
-  notifyVersionNotificationUpdate(notification) {
-    this.emitToAdmins('version_notification:update', {
-      notificationId: notification._id,
-      version: notification.version,
-      title: notification.title,
-      type: notification.type,
-      priority: notification.priority,
-      isActive: notification.isActive
-    });
-  }
-
-  /**
    * Notify admins of verification application status change
    */
   notifyVerificationApplicationUpdate(application) {

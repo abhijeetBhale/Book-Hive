@@ -1049,7 +1049,7 @@ const Home = () => {
             ) : (
               <div className="testimonial-cta">
                 <Link to="/login" className="add-testimonial-btn">
-                  Login to Add Your Testimonial
+                  Add Your Testimonial
                 </Link>
                 <p className="testimonial-cta-text">
                   Join BookHive to share your experience with our community!

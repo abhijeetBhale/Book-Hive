@@ -52,7 +52,7 @@ const VerificationNotification = () => {
   };
 
   const handleGetVerified = () => {
-    navigate('/pricing');
+    navigate('/get-verified');
   };
 
   if (isLoading || !shouldShow || user?.isVerified) return null;
@@ -77,7 +77,7 @@ const VerificationNotification = () => {
       </NotificationContent>
 
       <ActionButton onClick={handleGetVerified}>
-        Get Verified for ₹99
+        Get Verified
       </ActionButton>
 
       <SpecialBadge>Recommended</SpecialBadge>

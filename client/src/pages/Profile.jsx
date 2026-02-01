@@ -1787,14 +1787,14 @@ const StyledWrapper = styled.div`
     flex: 1;
     padding: 3rem;
     background-color: #f9fafb;
-    height: calc(100vh - 140px);
-    overflow: hidden;
+    overflow-y: auto;
+    max-height: calc(100vh - 140px);
 
     /* Mobile responsive main content */
     @media (max-width: 768px) {
       padding: 1.5rem 1rem;
-      height: auto;
-      overflow: visible;
+      max-height: none;
+      overflow-y: visible;
     }
     
     /* Report User Styles */
@@ -3003,7 +3003,7 @@ const StyledWrapper = styled.div`
         min-height: 0;
         
         .notifications-scroll-container {
-          max-height: calc(100vh - 400px);
+          max-height: 600px;
           min-height: 300px;
           overflow-y: auto;
           padding-right: 0.5rem;

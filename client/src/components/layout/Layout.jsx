@@ -4,7 +4,6 @@ import { AuthContext } from '../../context/AuthContext';
 import { PlusCircle } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import FloatingVerificationButton from '../ui/FloatingVerificationButton';
-import VersionNotificationManager from '../notifications/VersionNotificationManager';
 
 const Layout = ({ children }) => {
   const { user } = useContext(AuthContext);
@@ -57,9 +56,6 @@ const Layout = ({ children }) => {
       
       {/* Floating Verification Button - Shows for non-verified users */}
       <FloatingVerificationButton />
-      
-      {/* Version Notification Manager - Shows notification bell and popups */}
-      <VersionNotificationManager />
       
       {/* Floating Action Button for Adding Books - Only show on Home and Map pages */}
       {user && allowedPages.includes(location.pathname) && (

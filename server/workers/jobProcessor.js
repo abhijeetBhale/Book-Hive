@@ -92,6 +92,8 @@ const cleanupWorker = new Worker('cleanup', async (job) => {
         return await cleanupJobHandler.cleanupOldNotifications(job.data);
       case JOB_TYPES.CLEANUP_TEMP_FILES:
         return await cleanupJobHandler.cleanupTempFiles(job.data);
+      case JOB_TYPES.AUTO_RESOLVE_DAMAGE_REPORTS:
+        return await cleanupJobHandler.autoResolveDamageReports(job.data);
       default:
         throw new Error(`Unknown cleanup job type: ${job.name}`);
     }

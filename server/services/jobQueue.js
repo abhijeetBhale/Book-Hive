@@ -97,6 +97,9 @@ export const JOB_TYPES = {
   CLEANUP_EXPIRED_TOKENS: 'cleanup-expired-tokens',
   CLEANUP_OLD_NOTIFICATIONS: 'cleanup-old-notifications',
   CLEANUP_TEMP_FILES: 'cleanup-temp-files',
+  
+  // Damage report jobs
+  AUTO_RESOLVE_DAMAGE_REPORTS: 'auto-resolve-damage-reports',
 };
 
 // Job scheduling helpers
