@@ -1,7 +1,6 @@
 import WalletService from '../services/walletService.js';
 import WalletTransaction from '../models/WalletTransaction.js';
 import User from '../models/User.js';
-import AdminNotificationService from '../services/adminNotificationService.js';
 
 // @desc    Get user wallet details
 // @route   GET /api/wallet
@@ -131,9 +130,8 @@ export const requestWithdrawal = async (req, res) => {
 
     // Notify admins of new withdrawal request
     try {
-      const io = req.app.get('io');
-      if (io) {
-        const adminNotificationService = new AdminNotificationService(io);
+      const adminNotificationService = req.app.get('adminNotificationService');
+      if (adminNotificationService) {
         const populatedRequest = await WalletTransaction.findById(withdrawalRequest._id)
           .populate('userId', 'name email');
         adminNotificationService.notifyNewWithdrawalRequest(populatedRequest);
@@ -336,9 +334,8 @@ export const processWithdrawalRequest = async (req, res) => {
 
     // Notify admins of withdrawal request status change
     try {
-      const io = req.app.get('io');
-      if (io) {
-        const adminNotificationService = new AdminNotificationService(io);
+      const adminNotificationService = req.app.get('adminNotificationService');
+      if (adminNotificationService) {
         const populatedRequest = await WalletTransaction.findById(withdrawalRequest._id)
           .populate('userId', 'name email');
         adminNotificationService.notifyWithdrawalRequestUpdate(populatedRequest);

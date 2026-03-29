@@ -31,10 +31,10 @@ class CacheService {
     try {
       const result = await redisClient.get(key);
       if (result) {
-        console.log(`📦 Cache HIT: ${key}`);
+        // console.log(`📦 Cache HIT: ${key}`);
         return result;
       }
-      console.log(`📭 Cache MISS: ${key}`);
+      // console.log(`📭 Cache MISS: ${key}`);
       return null;
     } catch (error) {
       console.error(`Cache GET error for ${key}:`, error.message);
@@ -46,7 +46,7 @@ class CacheService {
     try {
       const success = await redisClient.set(key, data, ttl);
       if (success) {
-        console.log(`💾 Cache SET: ${key} (TTL: ${ttl}s)`);
+        // console.log(`💾 Cache SET: ${key} (TTL: ${ttl}s)`);
       }
       return success;
     } catch (error) {
@@ -59,7 +59,7 @@ class CacheService {
     try {
       const success = await redisClient.del(key);
       if (success) {
-        console.log(`🗑️  Cache DEL: ${key}`);
+        // console.log(`🗑️  Cache DEL: ${key}`);
       }
       return success;
     } catch (error) {

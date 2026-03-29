@@ -117,6 +117,26 @@ export const approveOrganizerApplication = async (req, res) => {
       }
     });
 
+    // Create admin notification for the approval action
+    if (req.app.locals.adminNotificationService) {
+      await req.app.locals.adminNotificationService.createNotification(
+        'organizer_application_updated',
+        'Organizer Application Approved',
+        `${application.organizationName} application approved by ${req.user.name}`,
+        'organizer-applications',
+        {
+          applicationId: application._id,
+          organizationName: application.organizationName,
+          applicantName: user.name,
+          action: 'approved',
+          approvedBy: req.user.name
+        },
+        'medium',
+        'OrganizerApplication',
+        application._id
+      );
+    }
+
     res.json({
       success: true,
       message: 'Application approved successfully',
@@ -169,6 +189,27 @@ export const rejectOrganizerApplication = async (req, res) => {
     application.reviewedAt = new Date();
     application.rejectionReason = reason;
     await application.save();
+
+    // Create admin notification for the rejection action
+    if (req.app.locals.adminNotificationService) {
+      await req.app.locals.adminNotificationService.createNotification(
+        'organizer_application_updated',
+        'Organizer Application Rejected',
+        `${application.organizationName} application rejected by ${req.user.name}`,
+        'organizer-applications',
+        {
+          applicationId: application._id,
+          organizationName: application.organizationName,
+          applicantName: application.user?.name || 'Unknown',
+          action: 'rejected',
+          rejectedBy: req.user.name,
+          reason: reason
+        },
+        'low',
+        'OrganizerApplication',
+        application._id
+      );
+    }
 
     res.json({
       success: true,

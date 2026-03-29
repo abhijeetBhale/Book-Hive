@@ -20,9 +20,7 @@ passport.deserializeUser(async (id, done) => {
 
 // Only initialize Google OAuth if credentials are provided
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-  console.log('🔧 Initializing Google OAuth with:');
-  console.log('   Client ID:', process.env.GOOGLE_CLIENT_ID);
-  console.log('   Callback URL: /api/auth/google/callback');
+  console.log('🔧 Google OAuth initialized');
 
   passport.use(
     new GoogleStrategy(

@@ -7,7 +7,7 @@ export const initializeDefaultAchievements = async () => {
   try {
     const existingCount = await Achievement.countDocuments();
     if (existingCount > 0) {
-      console.log('Achievements already initialized');
+      // console.log('Achievements already initialized');
       return;
     }
 

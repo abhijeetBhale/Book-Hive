@@ -445,6 +445,18 @@ export const applyAsOrganizer = async (req, res) => {
 
     const application = await OrganizerApplication.create(applicationData);
 
+    // Notify admins of new organizer application
+    try {
+      const adminNotificationService = req.app.get('adminNotificationService');
+      if (adminNotificationService) {
+        const populatedApplication = await OrganizerApplication.findById(application._id)
+          .populate('user', 'name email');
+        adminNotificationService.notifyNewOrganizerApplication(populatedApplication);
+      }
+    } catch (adminNotifError) {
+      console.error('Failed to send admin notification for organizer application:', adminNotifError);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Application submitted successfully. We will review it shortly.',

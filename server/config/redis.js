@@ -17,8 +17,8 @@ class RedisClient {
         throw new Error('REDIS_URL environment variable is not set');
       }
 
-      console.log('🔄 Connecting to Redis Cloud...');
-      console.log('Redis URL:', redisUrl.replace(/:[^:@]*@/, ':****@')); // Hide password in logs
+      console.log('🔄 Connecting to Redis...');
+      // console.log('Redis URL:', redisUrl.replace(/:[^:@]*@/, ':****@')); // Hide password in logs
 
       // Redis Cloud configuration
       const redisConfig = {
@@ -41,57 +41,57 @@ class RedisClient {
 
       // Event listeners
       this.client.on('connect', () => {
-        console.log('✅ Redis Cloud connected successfully');
+        console.log('✅ Redis connected');
         this.isConnected = true;
         this.retryAttempts = 0;
       });
 
       this.client.on('ready', () => {
-        console.log('🚀 Redis Cloud is ready to accept commands');
+        // console.log('🚀 Redis Cloud is ready to accept commands');
       });
 
       this.client.on('error', (error) => {
-        console.error('❌ Redis Cloud connection error:', error.message);
+        console.error('❌ Redis error:', error.message);
         this.isConnected = false;
         
         // Implement exponential backoff
         if (this.retryAttempts < this.maxRetries) {
           this.retryAttempts++;
-          const delay = Math.pow(2, this.retryAttempts) * 1000;
-          console.log(`🔄 Retrying Redis Cloud connection in ${delay}ms (attempt ${this.retryAttempts}/${this.maxRetries})`);
+          // const delay = Math.pow(2, this.retryAttempts) * 1000;
+          // console.log(`🔄 Retrying Redis connection in ${delay}ms (attempt ${this.retryAttempts}/${this.maxRetries})`);
         } else {
-          console.error('❌ Max Redis Cloud connection retries exceeded');
+          console.error('❌ Max Redis connection retries exceeded');
         }
       });
 
       this.client.on('close', () => {
-        console.log('🔌 Redis Cloud connection closed');
+        // console.log('🔌 Redis connection closed');
         this.isConnected = false;
       });
 
       this.client.on('reconnecting', (delay) => {
-        console.log(`🔄 Redis Cloud reconnecting in ${delay}ms...`);
+        // console.log(`🔄 Redis reconnecting in ${delay}ms...`);
       });
 
       // Test connection with ping
       await this.client.ping();
-      console.log('🏓 Redis Cloud ping successful');
+      // console.log('🏓 Redis ping successful');
 
       // Test basic operations
       await this.client.set('test:connection', 'success', 'EX', 10);
       const testResult = await this.client.get('test:connection');
       
       if (testResult === 'success') {
-        console.log('✅ Redis Cloud basic operations test passed');
+        // console.log('✅ Redis basic operations test passed');
         await this.client.del('test:connection');
       } else {
-        throw new Error('Redis Cloud basic operations test failed');
+        throw new Error('Redis basic operations test failed');
       }
 
       return this.client;
     } catch (error) {
-      console.error('❌ Failed to connect to Redis Cloud:', error.message);
-      console.log('⚠️  Application will continue without Redis caching');
+      console.error('❌ Failed to connect to Redis:', error.message);
+      // console.log('⚠️  Application will continue without Redis caching');
       this.isConnected = false;
       return null;
     }

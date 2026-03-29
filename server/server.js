@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './config/env.js'; // Load environment variables silently
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -173,13 +173,14 @@ app.use(
 // });
 // app.use('/api/', limiter);
 
-console.log('⚠️ Rate limiting is DISABLED for debugging purposes');
+// Rate limiting - DISABLED for development
+// console.log('⚠️ Rate limiting is DISABLED for debugging purposes');
 
-// Add request logging middleware to debug 429 errors
-app.use((req, res, next) => {
-  console.log(`📝 ${new Date().toISOString()} - ${req.method} ${req.path} from ${req.ip}`);
-  next();
-});
+// Request logging middleware (disabled for cleaner output)
+// app.use((req, res, next) => {
+//   console.log(`📝 ${new Date().toISOString()} - ${req.method} ${req.path} from ${req.ip}`);
+//   next();
+// });
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -563,20 +564,20 @@ const onlineUsers = new Map();
 io.use((socket, next) => {
   try {
     const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(' ')[1];
-    console.log('WebSocket auth attempt:', {
-      hasToken: !!token,
-      authHeader: socket.handshake.auth,
-      headers: socket.handshake.headers?.authorization
-    });
+    // console.log('WebSocket auth attempt:', {
+    //   hasToken: !!token,
+    //   authHeader: socket.handshake.auth,
+    //   headers: socket.handshake.headers?.authorization
+    // });
 
     if (!token) {
-      console.log('WebSocket connection rejected: no token');
+      // console.log('WebSocket connection rejected: no token');
       return next(new Error('Not authorized, no token'));
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     socket.data.userId = decoded.userId;
-    console.log('WebSocket connection authorized for user:', decoded.userId);
+    // console.log('WebSocket connection authorized for user:', decoded.userId);
     return next();
   } catch (err) {
     console.error('WebSocket auth error:', err.message);
@@ -586,7 +587,7 @@ io.use((socket, next) => {
 
 io.on('connection', async (socket) => {
   const userId = socket.data.userId;
-  console.log(`WebSocket user connected: ${userId} (socket: ${socket.id})`);
+  // console.log(`WebSocket user connected: ${userId} (socket: ${socket.id})`);
 
   if (!onlineUsers.has(userId)) onlineUsers.set(userId, new Set());
   onlineUsers.get(userId).add(socket.id);
@@ -601,7 +602,7 @@ io.on('connection', async (socket) => {
       if (user && (user.role === 'admin' || user.role === 'superadmin')) {
         socket.join('admin-room');
         socket.userRole = user.role; // Store role for debugging
-        console.log(`👑 Admin user ${userId} (${user.role}) joined admin-room`);
+        // console.log(`👑 Admin user ${userId} (${user.role}) joined admin-room`);
         
         // Send initial notification counts when admin connects
         try {
@@ -618,7 +619,7 @@ io.on('connection', async (socket) => {
         }
       } else {
         socket.userRole = user?.role || 'user';
-        console.log(`👤 Regular user ${userId} (${socket.userRole}) connected`);
+        // console.log(`👤 Regular user ${userId} (${socket.userRole}) connected`);
       }
     }
   } catch (error) {
@@ -643,11 +644,11 @@ io.on('connection', async (socket) => {
   socket.on('check-admin-room', () => {
     const rooms = Array.from(socket.rooms);
     const isInAdminRoom = rooms.includes('admin-room');
-    console.log(`🔍 Admin room check for user ${userId}:`, {
-      rooms,
-      isInAdminRoom,
-      userRole: socket.userRole
-    });
+    // console.log(`🔍 Admin room check for user ${userId}:`, {
+    //   rooms,
+    //   isInAdminRoom,
+    //   userRole: socket.userRole
+    // });
     socket.emit('admin-room-status', { isInAdminRoom, rooms });
   });
 

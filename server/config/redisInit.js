@@ -13,13 +13,13 @@ class RedisInitializer {
     }
 
     try {
-      console.log('🚀 Initializing Redis connection...');
+      console.log('🚀 Initializing Redis...');
       
-      // Connect to Redis Cloud
+      // Connect to Redis
       const client = await redisClient.connect();
       
       if (client) {
-        console.log('✅ Redis Cloud connected successfully');
+        // console.log('✅ Redis connected successfully');
         
         // Test cache service
         await this.testCacheService();
@@ -35,14 +35,14 @@ class RedisInitializer {
       }
     } catch (error) {
       console.error('❌ Redis initialization failed:', error.message);
-      console.log('⚠️  Application will continue without Redis caching');
+      // console.log('⚠️  Application will continue without Redis caching');
       return false;
     }
   }
 
   async testCacheService() {
     try {
-      console.log('🧪 Testing cache service...');
+      // console.log('🧪 Testing cache service...');
       
       // Test basic cache operations
       const testKey = 'test:init';
@@ -65,12 +65,12 @@ class RedisInitializer {
 
   async warmInitialCache() {
     try {
-      console.log('🔥 Warming initial cache...');
+      // console.log('🔥 Warming initial cache...');
       
       // You can add initial cache warming here
       // For example, cache popular books, community stats, etc.
       
-      console.log('✅ Initial cache warming completed');
+      // console.log('✅ Initial cache warming completed');
     } catch (error) {
       console.error('⚠️  Cache warming failed:', error.message);
       // Don't throw error, cache warming is optional

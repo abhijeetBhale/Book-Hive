@@ -47,22 +47,14 @@ export const applyForVerification = async (req, res) => {
     // Populate user data for the notification
     await application.populate('user', 'name email avatar');
 
-    // Emit real-time notification to admin dashboard
+    // Notify admins of new verification application
     try {
-      const io = req.app.get('io');
-      if (io) {
-        io.to('admin-room').emit('verification_application:new', {
-          application: application,
-          user: {
-            name: user.name,
-            email: user.email
-          },
-          timestamp: new Date()
-        });
-        console.log('✅ Emitted verification_application:new event to admin-room');
+      const adminNotificationService = req.app.get('adminNotificationService');
+      if (adminNotificationService) {
+        adminNotificationService.notifyNewVerificationApplication(application);
       }
-    } catch (socketError) {
-      console.error('Failed to emit socket event:', socketError);
+    } catch (adminNotifError) {
+      console.error('Failed to send admin notification for verification application:', adminNotifError);
     }
 
     res.status(201).json({

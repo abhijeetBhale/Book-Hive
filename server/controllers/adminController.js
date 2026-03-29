@@ -13,7 +13,7 @@ import mongoose from 'mongoose';
 import { catchAsync } from '../utils/catchAsync.js';
 import AppError from '../utils/appError.js';
 
-// @desc    Get admin dashboard overview
+// @desc    Get admin dashboard overview with enhanced notification counts
 // @route   GET /api/admin/dashboard
 // @access  Private (Super Admin only)
 export const getDashboardOverview = catchAsync(async (req, res, next) => {
@@ -45,7 +45,13 @@ export const getDashboardOverview = catchAsync(async (req, res, next) => {
       topCategories,
       recentActivity,
       topBooks,
-      bookSharingActivity
+      bookSharingActivity,
+      newUsersToday,
+      newBooksToday,
+      newBorrowRequestsToday,
+      pendingReports,
+      pendingVerifications,
+      pendingWithdrawals
     ] = await Promise.all([
       User.countDocuments().catch(() => 0),
       Book.countDocuments().catch(() => 0),
@@ -65,7 +71,15 @@ export const getDashboardOverview = catchAsync(async (req, res, next) => {
       getTopCategories().catch(() => []),
       getRecentActivity().catch(() => []),
       getTopBooksData().catch(() => []),
-      getBookSharingActivityData().catch(() => ({ monthly: [], quarterly: [], yearly: [] }))
+      getBookSharingActivityData().catch(() => ({ monthly: [], quarterly: [], yearly: [] })),
+      User.countDocuments({ createdAt: { $gte: startOfDay } }).catch(() => 0),
+      Book.countDocuments({ createdAt: { $gte: startOfDay } }).catch(() => 0),
+      BorrowRequest.countDocuments({ createdAt: { $gte: startOfDay } }).catch(() => 0),
+      Report.countDocuments({ status: 'pending' }).catch(() => 0),
+      // Assuming VerificationApplication model exists
+      mongoose.models.VerificationApplication ? 
+        mongoose.models.VerificationApplication.countDocuments({ status: 'pending' }).catch(() => 0) : 0,
+      WalletTransaction.countDocuments({ type: 'withdrawal', status: 'pending' }).catch(() => 0)
     ]);
 
     // Calculate growth rates
@@ -96,7 +110,19 @@ export const getDashboardOverview = catchAsync(async (req, res, next) => {
           activeBorrowRequests,
           completedBorrowRequests,
           userGrowthRate: Math.round(userGrowthRate * 100) / 100,
-          bookGrowthRate: Math.round(bookGrowthRate * 100) / 100
+          bookGrowthRate: Math.round(bookGrowthRate * 100) / 100,
+          // Enhanced notification counts for badges
+          newUsersToday,
+          newBooksToday,
+          newBorrowRequestsToday,
+          pendingReports,
+          pendingVerifications,
+          pendingWithdrawals,
+          pendingBooks: 0, // Placeholder for books requiring approval
+          newLendingFeesToday: await BorrowRequest.countDocuments({ 
+            lendingFeeStatus: 'paid',
+            paymentCompletedAt: { $gte: startOfDay }
+          }).catch(() => 0)
         },
         recentActivity: {
           recentUsers,
@@ -107,7 +133,22 @@ export const getDashboardOverview = catchAsync(async (req, res, next) => {
         systemStats,
         topCategories,
         topBooks,
-        bookSharingActivity
+        bookSharingActivity,
+        // Notification counts by category for badges
+        notificationCounts: {
+          users: newUsersToday,
+          books: newBooksToday,
+          'books-for-sale': 0,
+          borrows: newBorrowRequestsToday,
+          clubs: 0,
+          'organizer-applications': 0,
+          events: 0,
+          verification: pendingVerifications,
+          reviews: 0,
+          reports: pendingReports,
+          'wallet-management': pendingWithdrawals,
+          'lending-fees': 0
+        }
       }
     });
   } catch (error) {

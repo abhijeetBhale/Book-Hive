@@ -10,7 +10,7 @@ const OrganizerApplicationsTab = () => {
     const [loading, setLoading] = useState(true);
     const [filters, setFilters] = useState({
         search: '',
-        status: 'all'
+        status: 'pending' // Default to pending applications only
     });
     const [selectedApplication, setSelectedApplication] = useState(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -42,6 +42,19 @@ const OrganizerApplicationsTab = () => {
     };
 
     const handleApprove = async (applicationId) => {
+        // Find the application to check its current status
+        const application = applications.find(app => app._id === applicationId);
+        
+        if (!application) {
+            toast.error('Application not found');
+            return;
+        }
+        
+        if (application.status !== 'pending') {
+            toast.error(`Cannot approve application. Current status: ${application.status}`);
+            return;
+        }
+
         if (!confirm('Are you sure you want to approve this organizer application?')) return;
 
         try {
@@ -50,11 +63,28 @@ const OrganizerApplicationsTab = () => {
             fetchApplications();
         } catch (error) {
             console.error('Error approving application:', error);
-            toast.error(error.response?.data?.message || 'Failed to approve application');
+            const errorMessage = error.response?.data?.message || 'Failed to approve application';
+            toast.error(errorMessage);
+            
+            // Refresh applications to get updated status
+            fetchApplications();
         }
     };
 
     const handleReject = async (applicationId) => {
+        // Find the application to check its current status
+        const application = applications.find(app => app._id === applicationId);
+        
+        if (!application) {
+            toast.error('Application not found');
+            return;
+        }
+        
+        if (application.status !== 'pending') {
+            toast.error(`Cannot reject application. Current status: ${application.status}`);
+            return;
+        }
+
         const reason = prompt('Please provide a reason for rejection:');
         if (!reason) return;
 
@@ -64,7 +94,11 @@ const OrganizerApplicationsTab = () => {
             fetchApplications();
         } catch (error) {
             console.error('Error rejecting application:', error);
-            toast.error(error.response?.data?.message || 'Failed to reject application');
+            const errorMessage = error.response?.data?.message || 'Failed to reject application';
+            toast.error(errorMessage);
+            
+            // Refresh applications to get updated status
+            fetchApplications();
         }
     };
 
@@ -196,7 +230,7 @@ const OrganizerApplicationsTab = () => {
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </button>
-                                                {app.status === 'pending' && (
+                                                {app.status === 'pending' ? (
                                                     <>
                                                         <button
                                                             onClick={() => handleApprove(app._id)}
@@ -213,6 +247,10 @@ const OrganizerApplicationsTab = () => {
                                                             <X className="w-4 h-4" />
                                                         </button>
                                                     </>
+                                                ) : (
+                                                    <span className="text-xs text-gray-500 italic">
+                                                        {app.status === 'approved' ? 'Already approved' : 'Already rejected'}
+                                                    </span>
                                                 )}
                                             </div>
                                         </td>

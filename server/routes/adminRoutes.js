@@ -25,6 +25,22 @@ import {
   getUsersWithWallets,
   checkExistingPayments
 } from '../controllers/adminController.js';
+import {
+  getAdminNotifications,
+  markNotificationAsRead,
+  markCategoryAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  getNotificationStats,
+  getNotificationCounts,
+  createTestNotification,
+  bulkNotificationOperations
+} from '../controllers/adminNotificationController.js';
+import { 
+  getVerificationApplications,
+  approveVerificationApplication,
+  rejectVerificationApplication
+} from '../controllers/verificationAdminController.js';
 import { superAdminAuth, auditLogger } from '../middleware/adminAuth.js';
 
 const router = express.Router();
@@ -69,7 +85,6 @@ router.delete('/book-clubs/:id', auditLogger('DELETE_BOOK_CLUB'), deleteBookClub
 router.get('/reports', auditLogger('VIEW_REPORTS'), getReports);
 router.put('/reports/:id', auditLogger('UPDATE_REPORT'), updateReport);
 
-export default router;
 // Wallet management routes
 router.get('/lending-fees-wallet', auditLogger('VIEW_LENDING_FEES_WALLET'), getLendingFeesWithWallet);
 router.get('/users/:id/wallet', auditLogger('VIEW_USER_WALLET'), getUserWalletDetails);
@@ -77,3 +92,49 @@ router.post('/wallet/payout', auditLogger('PROCESS_PAYOUT'), processLenderPayout
 router.get('/wallet/platform-overview', auditLogger('VIEW_PLATFORM_FINANCES'), getPlatformFinancialOverview);
 router.get('/users-with-wallets', auditLogger('VIEW_USERS_WITH_WALLETS'), getUsersWithWallets);
 router.get('/check-payments', auditLogger('CHECK_PAYMENTS'), checkExistingPayments);
+
+// ============================================================================
+// VERIFICATION MANAGEMENT ROUTES
+// ============================================================================
+
+// Get all verification applications
+router.get('/verification/applications', auditLogger('VIEW_VERIFICATION_APPLICATIONS'), getVerificationApplications);
+
+// Approve verification application
+router.put('/verification/applications/:id/approve', auditLogger('APPROVE_VERIFICATION_APPLICATION'), approveVerificationApplication);
+
+// Reject verification application
+router.put('/verification/applications/:id/reject', auditLogger('REJECT_VERIFICATION_APPLICATION'), rejectVerificationApplication);
+
+// ============================================================================
+// ADMIN NOTIFICATION MANAGEMENT ROUTES
+// ============================================================================
+
+// Get all notifications with filtering and pagination
+router.get('/notifications', auditLogger('VIEW_NOTIFICATIONS'), getAdminNotifications);
+
+// Get notification counts by category
+router.get('/notifications/counts', auditLogger('VIEW_NOTIFICATION_COUNTS'), getNotificationCounts);
+
+// Get notification statistics
+router.get('/notifications/stats', auditLogger('VIEW_NOTIFICATION_STATS'), getNotificationStats);
+
+// Mark specific notification as read
+router.put('/notifications/:id/read', auditLogger('MARK_NOTIFICATION_READ'), markNotificationAsRead);
+
+// Mark all notifications in category as read
+router.put('/notifications/category/:category/read', auditLogger('MARK_CATEGORY_READ'), markCategoryAsRead);
+
+// Mark all notifications as read
+router.put('/notifications/read-all', auditLogger('MARK_ALL_NOTIFICATIONS_READ'), markAllNotificationsAsRead);
+
+// Delete specific notification
+router.delete('/notifications/:id', auditLogger('DELETE_NOTIFICATION'), deleteNotification);
+
+// Bulk operations on notifications
+router.post('/notifications/bulk', auditLogger('BULK_NOTIFICATION_OPERATIONS'), bulkNotificationOperations);
+
+// Create test notification (for development/testing)
+router.post('/notifications/test', auditLogger('CREATE_TEST_NOTIFICATION'), createTestNotification);
+
+export default router;

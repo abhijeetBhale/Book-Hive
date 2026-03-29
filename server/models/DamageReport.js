@@ -4,32 +4,27 @@ const damageReportSchema = new mongoose.Schema({
   book: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Book',
-    required: [true, 'Book reference is required'],
-    index: true
+    required: [true, 'Book reference is required']
   },
   borrowRequest: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'BorrowRequest',
-    required: [true, 'Borrow request reference is required'],
-    index: true
+    required: [true, 'Borrow request reference is required']
   },
   reportedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'Reporter is required'],
-    index: true
+    required: [true, 'Reporter is required']
   },
   borrower: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'Borrower reference is required'],
-    index: true
+    required: [true, 'Borrower reference is required']
   },
   severity: {
     type: String,
     enum: ['minor', 'moderate', 'severe'],
-    required: [true, 'Damage severity is required'],
-    index: true
+    required: [true, 'Damage severity is required']
   },
   description: {
     type: String,
@@ -64,8 +59,7 @@ const damageReportSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ['pending', 'accepted', 'disputed', 'resolved', 'cancelled'],
-    default: 'pending',
-    index: true
+    default: 'pending'
   },
   borrowerResponse: {
     message: {
@@ -105,8 +99,7 @@ const damageReportSchema = new mongoose.Schema({
   },
   // Auto-resolution settings
   autoResolveAt: {
-    type: Date,
-    index: true
+    type: Date
   },
   isAutoResolved: {
     type: Boolean,

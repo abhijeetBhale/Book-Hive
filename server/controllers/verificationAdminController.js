@@ -64,7 +64,8 @@ export const getVerificationApplications = async (req, res) => {
  */
 export const approveVerificationApplication = async (req, res) => {
   try {
-    const application = await VerificationApplication.findById(req.params.id);
+    const application = await VerificationApplication.findById(req.params.id)
+      .populate('user', 'name email');
 
     if (!application) {
       return res.status(404).json({ 
@@ -87,7 +88,7 @@ export const approveVerificationApplication = async (req, res) => {
     await application.save();
 
     // Update user to add verification badge and premium features
-    const user = await User.findById(application.user);
+    const user = await User.findById(application.user._id);
     user.isVerified = true;
     user.verificationPurchaseDate = new Date();
     // Enable all premium features
@@ -113,6 +114,31 @@ export const approveVerificationApplication = async (req, res) => {
       });
     } catch (notifError) {
       console.error('Failed to create notification:', notifError);
+    }
+
+    // Create admin notification for verification approval action
+    try {
+      const adminNotificationService = req.app.get('adminNotificationService');
+      if (adminNotificationService) {
+        await adminNotificationService.createNotification(
+          'verification_application_updated',
+          'Verification Application Approved',
+          `${application.user.name}'s verification application has been approved by admin`,
+          'verification',
+          {
+            applicationId: application._id,
+            applicantName: application.user.name,
+            applicantEmail: application.user.email,
+            reviewedBy: req.user.name || req.user.email,
+            action: 'approved'
+          },
+          'medium',
+          'VerificationApplication',
+          application._id
+        );
+      }
+    } catch (adminNotifError) {
+      console.error('Failed to create admin notification:', adminNotifError);
     }
 
     res.json({
@@ -146,7 +172,8 @@ export const rejectVerificationApplication = async (req, res) => {
       });
     }
 
-    const application = await VerificationApplication.findById(req.params.id);
+    const application = await VerificationApplication.findById(req.params.id)
+      .populate('user', 'name email');
 
     if (!application) {
       return res.status(404).json({ 
@@ -172,7 +199,7 @@ export const rejectVerificationApplication = async (req, res) => {
     try {
       const Notification = (await import('../models/Notification.js')).default;
       await Notification.create({
-        user: application.user,
+        user: application.user._id,
         type: 'verification_rejected',
         title: 'Verification Application Update',
         message: `Your verification application has been reviewed. Reason: ${reason}`,
@@ -184,6 +211,32 @@ export const rejectVerificationApplication = async (req, res) => {
       });
     } catch (notifError) {
       console.error('Failed to create notification:', notifError);
+    }
+
+    // Create admin notification for verification rejection action
+    try {
+      const adminNotificationService = req.app.get('adminNotificationService');
+      if (adminNotificationService) {
+        await adminNotificationService.createNotification(
+          'verification_application_updated',
+          'Verification Application Rejected',
+          `${application.user.name}'s verification application has been rejected by admin`,
+          'verification',
+          {
+            applicationId: application._id,
+            applicantName: application.user.name,
+            applicantEmail: application.user.email,
+            reviewedBy: req.user.name || req.user.email,
+            action: 'rejected',
+            reason: reason
+          },
+          'medium',
+          'VerificationApplication',
+          application._id
+        );
+      }
+    } catch (adminNotifError) {
+      console.error('Failed to create admin notification:', adminNotifError);
     }
 
     res.json({

@@ -92,7 +92,7 @@ export const initializeAllUserStats = async () => {
       }
     }
     
-    console.log(`Initialized stats for ${created} users`);
+    // console.log(`Initialized stats for ${created} users`);
     return created;
   } catch (error) {
     console.error('Error initializing user stats:', error);

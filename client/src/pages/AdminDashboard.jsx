@@ -61,6 +61,7 @@ import OrganizerApplicationsTab from '../components/admin/OrganizerApplicationsT
 import EventsTab from '../components/admin/EventsTab';
 import EnhancedWalletManagement from '../components/admin/EnhancedWalletManagement';
 import VerificationApplicationsTab from '../components/admin/VerificationApplicationsTab';
+import AdminNotificationCenter from '../components/admin/AdminNotificationCenter';
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -157,6 +158,10 @@ const AdminDashboard = () => {
   // Track which tabs have been visited to clear badges
   const [visitedTabs, setVisitedTabs] = useState(new Set());
 
+  // Admin Notification Center state
+  const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
+  const [globalNotificationCount, setGlobalNotificationCount] = useState(0);
+
   // Enhanced notification badge with better styling and animation
   const getNotificationBadge = (count, tabName) => {
     // Don't show badge if tab has been visited or count is 0
@@ -164,7 +169,7 @@ const AdminDashboard = () => {
     
     return (
       <span 
-        className="ml-auto flex items-center justify-center min-w-[20px] h-5 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full shadow-lg transform transition-all duration-300 hover:scale-110"
+        className="ml-auto flex items-center justify-center min-w-[22px] h-6 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full shadow-lg transform transition-all duration-300 hover:scale-110 border border-red-400"
         style={{
           animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
           fontSize: '10px',
@@ -184,7 +189,7 @@ const AdminDashboard = () => {
       const response = await adminAPIService.getDashboard();
       const data = response.data.data;
       
-      setNotificationCounts({
+      const counts = {
         users: data.overview?.newUsersToday || 0,
         books: data.overview?.pendingBooks || 0,
         booksForSale: data.overview?.newBooksForSaleToday || 0,
@@ -197,7 +202,13 @@ const AdminDashboard = () => {
         reports: data.overview?.unresolvedReports || 0,
         walletManagement: data.overview?.pendingWithdrawals || 0,
         lendingFees: data.overview?.newLendingFeesToday || 0
-      });
+      };
+      
+      setNotificationCounts(counts);
+      
+      // Calculate total for global notification count
+      const totalCount = Object.values(counts).reduce((sum, count) => sum + count, 0);
+      setGlobalNotificationCount(totalCount);
       
       toast.success('Notification counts refreshed!');
     } catch (error) {
@@ -222,9 +233,15 @@ const AdminDashboard = () => {
       walletManagement: 0,
       lendingFees: 0
     });
+    setGlobalNotificationCount(0);
     setVisitedTabs(new Set(['overview', 'users', 'books', 'books-for-sale', 'borrows', 'clubs', 'organizer-applications', 'events', 'verification', 'reviews', 'reports', 'wallet-management', 'lending-fees']));
     toast.success('All notification badges cleared!');
   };
+  // Function to handle navigation from notification center
+  const handleNavigateFromNotification = (tabName) => {
+    handleTabChange(tabName);
+  };
+
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
     setVisitedTabs(prev => new Set([...prev, tabName]));
@@ -247,7 +264,13 @@ const AdminDashboard = () => {
     
     const countKey = tabKeyMap[tabName];
     if (countKey) {
-      setNotificationCounts(prev => ({ ...prev, [countKey]: 0 }));
+      setNotificationCounts(prev => {
+        const newCounts = { ...prev, [countKey]: 0 };
+        // Update global count
+        const totalCount = Object.values(newCounts).reduce((sum, count) => sum + count, 0);
+        setGlobalNotificationCount(totalCount);
+        return newCounts;
+      });
     }
     
     // Load data for specific tabs
@@ -267,6 +290,17 @@ const AdminDashboard = () => {
     user.email === 'abhijeetbhale7@gmail.com' || // Hardcoded super admin
     user._id === '690a061350f4b9339e16884c' // Hardcoded super admin ID as fallback
   );
+
+  // Auto-refresh notification counts every 30 seconds
+  useEffect(() => {
+    if (!user || !hasAdminAccess) return;
+
+    const interval = setInterval(() => {
+      refreshNotificationCounts();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [user, hasAdminAccess]);
 
   useEffect(() => {
     // Always try to fetch dashboard data if user exists, let server handle auth
@@ -312,8 +346,9 @@ const AdminDashboard = () => {
     });
 
     // Listen for various admin events with enhanced notifications
-    socket.on('borrow_request:new', (data) => {
+    socket.on('borrow_request_new', (data) => {
       setNotificationCounts(prev => ({ ...prev, borrows: prev.borrows + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('borrows');
@@ -322,8 +357,9 @@ const AdminDashboard = () => {
       toast.success('New borrow request received!', { icon: '📖' });
     });
 
-    socket.on('borrow_request:updated', (data) => {
+    socket.on('borrow_request_updated', (data) => {
       setNotificationCounts(prev => ({ ...prev, borrows: prev.borrows + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('borrows');
@@ -332,9 +368,10 @@ const AdminDashboard = () => {
       toast.info('Borrow request updated!', { icon: '📝' });
     });
 
-    socket.on('user:new', (data) => {
-      console.log('🔔 Received user:new event:', data);
+    socket.on('user_new', (data) => {
+      console.log('🔔 Received user_new event:', data);
       setNotificationCounts(prev => ({ ...prev, users: prev.users + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('users');
@@ -343,8 +380,9 @@ const AdminDashboard = () => {
       toast.success('New user registered!', { icon: '👥' });
     });
 
-    socket.on('user:updated', (data) => {
+    socket.on('user_updated', (data) => {
       setNotificationCounts(prev => ({ ...prev, users: prev.users + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('users');
@@ -353,8 +391,9 @@ const AdminDashboard = () => {
       toast.info('User profile updated!', { icon: '✏️' });
     });
 
-    socket.on('book:new', (data) => {
+    socket.on('book_new', (data) => {
       setNotificationCounts(prev => ({ ...prev, books: prev.books + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('books');
@@ -363,8 +402,9 @@ const AdminDashboard = () => {
       toast.success('New book added!', { icon: '📚' });
     });
 
-    socket.on('book_for_sale:new', (data) => {
+    socket.on('book_for_sale_new', (data) => {
       setNotificationCounts(prev => ({ ...prev, booksForSale: prev.booksForSale + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('books-for-sale');
@@ -373,8 +413,9 @@ const AdminDashboard = () => {
       toast.success('New book for sale added!', { icon: '🛒' });
     });
 
-    socket.on('book_club:new', (data) => {
+    socket.on('book_club_new', (data) => {
       setNotificationCounts(prev => ({ ...prev, clubs: prev.clubs + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('clubs');
@@ -383,8 +424,9 @@ const AdminDashboard = () => {
       toast.success('New book club created!', { icon: '👥' });
     });
 
-    socket.on('organizer_application:new', (data) => {
+    socket.on('organizer_application_new', (data) => {
       setNotificationCounts(prev => ({ ...prev, organizerApplications: prev.organizerApplications + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('organizer-applications');
@@ -393,8 +435,9 @@ const AdminDashboard = () => {
       toast.success('New organizer application!', { icon: '📋' });
     });
 
-    socket.on('event:new', (data) => {
+    socket.on('event_new', (data) => {
       setNotificationCounts(prev => ({ ...prev, events: prev.events + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('events');
@@ -403,8 +446,9 @@ const AdminDashboard = () => {
       toast.success('New event created!', { icon: '📅' });
     });
 
-    socket.on('verification_application:new', (data) => {
+    socket.on('verification_application_new', (data) => {
       setNotificationCounts(prev => ({ ...prev, verification: prev.verification + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('verification');
@@ -413,8 +457,20 @@ const AdminDashboard = () => {
       toast.success('New verification application received!', { icon: '✅' });
     });
 
-    socket.on('review:new', (data) => {
+    socket.on('verification_application_updated', (data) => {
+      setNotificationCounts(prev => ({ ...prev, verification: prev.verification + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('verification');
+        return newSet;
+      });
+      toast.info('Verification application updated!', { icon: '✏️' });
+    });
+
+    socket.on('review_new', (data) => {
       setNotificationCounts(prev => ({ ...prev, reviews: prev.reviews + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('reviews');
@@ -423,8 +479,9 @@ const AdminDashboard = () => {
       toast.success('New review posted!', { icon: '⭐' });
     });
 
-    socket.on('report:new', (data) => {
+    socket.on('report_new', (data) => {
       setNotificationCounts(prev => ({ ...prev, reports: prev.reports + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('reports');
@@ -433,9 +490,21 @@ const AdminDashboard = () => {
       toast.success('New report filed!', { icon: '📝' });
     });
 
+    socket.on('damage_report_new', (data) => {
+      setNotificationCounts(prev => ({ ...prev, reports: prev.reports + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('reports');
+        return newSet;
+      });
+      toast.error('New damage report filed!', { icon: '⚠️' });
+    });
+
     // Wallet-related events
-    socket.on('withdrawal_request:new', (data) => {
+    socket.on('withdrawal_request_new', (data) => {
       setNotificationCounts(prev => ({ ...prev, walletManagement: prev.walletManagement + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('wallet-management');
@@ -444,8 +513,20 @@ const AdminDashboard = () => {
       toast.success('New withdrawal request!', { icon: '💰' });
     });
 
-    socket.on('wallet_transaction:new', (data) => {
+    socket.on('withdrawal_request_updated', (data) => {
       setNotificationCounts(prev => ({ ...prev, walletManagement: prev.walletManagement + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
+      setVisitedTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete('wallet-management');
+        return newSet;
+      });
+      toast.info('Withdrawal request updated!', { icon: '💳' });
+    });
+
+    socket.on('wallet_transaction_new', (data) => {
+      setNotificationCounts(prev => ({ ...prev, walletManagement: prev.walletManagement + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('wallet-management');
@@ -454,8 +535,9 @@ const AdminDashboard = () => {
       toast.info('New wallet transaction!', { icon: '💳' });
     });
 
-    socket.on('lending_fee:new', (data) => {
+    socket.on('lending_fee_new', (data) => {
       setNotificationCounts(prev => ({ ...prev, lendingFees: prev.lendingFees + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('lending-fees');
@@ -465,8 +547,9 @@ const AdminDashboard = () => {
     });
 
     // Listen for book deletion/update events
-    socket.on('book:deleted', (data) => {
+    socket.on('book_deleted', (data) => {
       setNotificationCounts(prev => ({ ...prev, books: prev.books + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('books');
@@ -475,8 +558,9 @@ const AdminDashboard = () => {
       toast.info('Book deleted!', { icon: '🗑️' });
     });
 
-    socket.on('book:updated', (data) => {
+    socket.on('book_updated', (data) => {
       setNotificationCounts(prev => ({ ...prev, books: prev.books + 1 }));
+      setGlobalNotificationCount(prev => prev + 1);
       setVisitedTabs(prev => {
         const newSet = new Set(prev);
         newSet.delete('books');
@@ -544,7 +628,7 @@ const AdminDashboard = () => {
       setDashboardData(data);
       
       // Update notification counts based on dashboard data
-      setNotificationCounts({
+      const counts = {
         users: data.overview?.newUsersToday || 0,
         books: data.overview?.pendingBooks || 0,
         booksForSale: data.overview?.newBooksForSaleToday || 0,
@@ -557,7 +641,13 @@ const AdminDashboard = () => {
         reports: data.overview?.unresolvedReports || 0,
         walletManagement: data.overview?.pendingWithdrawals || 0,
         lendingFees: data.overview?.newLendingFeesToday || 0
-      });
+      };
+      
+      setNotificationCounts(counts);
+      
+      // Calculate total for global notification count
+      const totalCount = Object.values(counts).reduce((sum, count) => sum + count, 0);
+      setGlobalNotificationCount(totalCount);
       
       setError(null);
     } catch (error) {
@@ -4050,46 +4140,71 @@ const AdminDashboard = () => {
           {/* Tab Header with Refresh Button */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900 capitalize">{activeTab}</h2>
-            <button
-              onClick={() => {
-                switch (activeTab) {
-                  case 'overview':
-                    fetchDashboardData();
-                    break;
-                  case 'users':
-                    fetchUsers();
-                    break;
-                  case 'books':
-                    fetchBooks();
-                    break;
-                  case 'books-for-sale':
-                    fetchBooksForSale();
-                    break;
-                  case 'borrows':
-                    fetchBorrowRequests();
-                    break;
-                  case 'lending-fees':
-                    fetchLendingFees();
-                    break;
-                  case 'clubs':
-                    fetchBookClubs();
-                    break;
-                  case 'reports':
-                    fetchReports();
-                    break;
-                  case 'analytics':
-                    fetchAnalytics();
-                    break;
-                  default:
-                    break;
-                }
-              }}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              disabled={loading}
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
+            <div className="flex items-center space-x-3">
+              {/* Global Notification Center Button */}
+              <button
+                onClick={() => setNotificationCenterOpen(true)}
+                className="relative flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+                title="Open Notification Center"
+              >
+                <Bell className="w-4 h-4 mr-2 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">Notifications</span>
+                {globalNotificationCount > 0 && (
+                  <span 
+                    className="absolute -top-2 -right-2 flex items-center justify-center min-w-[22px] h-6 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold rounded-full shadow-lg border-2 border-white"
+                    style={{
+                      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                      fontSize: '11px',
+                      lineHeight: '1',
+                      padding: globalNotificationCount > 99 ? '2px 4px' : '2px 6px'
+                    }}
+                  >
+                    {globalNotificationCount > 99 ? '99+' : globalNotificationCount}
+                  </span>
+                )}
+              </button>
+              
+              <button
+                onClick={() => {
+                  switch (activeTab) {
+                    case 'overview':
+                      fetchDashboardData();
+                      break;
+                    case 'users':
+                      fetchUsers();
+                      break;
+                    case 'books':
+                      fetchBooks();
+                      break;
+                    case 'books-for-sale':
+                      fetchBooksForSale();
+                      break;
+                    case 'borrows':
+                      fetchBorrowRequests();
+                      break;
+                    case 'lending-fees':
+                      fetchLendingFees();
+                      break;
+                    case 'clubs':
+                      fetchBookClubs();
+                      break;
+                    case 'reports':
+                      fetchReports();
+                      break;
+                    case 'analytics':
+                      fetchAnalytics();
+                      break;
+                    default:
+                      break;
+                  }
+                }}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                disabled={loading}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
           </div>
             {activeTab === 'overview' && renderOverview()}
             {activeTab === 'users' && renderUsers()}
@@ -4134,6 +4249,14 @@ const AdminDashboard = () => {
         isOpen={detailsModal.isOpen}
         onClose={closeDetailsModal}
         report={detailsModal.report}
+      />
+
+      {/* Admin Notification Center */}
+      <AdminNotificationCenter
+        isOpen={notificationCenterOpen}
+        onClose={() => setNotificationCenterOpen(false)}
+        onNotificationCountChange={setGlobalNotificationCount}
+        onNavigateToTab={handleNavigateFromNotification}
       />
     </div>
   );
