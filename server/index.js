@@ -135,7 +135,8 @@ const connectDB = async () => {
 
   try {
     if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI environment variable is not set');
+      console.warn('⚠️ MONGODB_URI environment variable is not set');
+      return null;
     }
 
     const options = {
@@ -148,12 +149,34 @@ const connectDB = async () => {
       minPoolSize: 0,
     };
 
-    const connection = await mongoose.connect(process.env.MONGODB_URI, options);
-    isConnected = true;
-    console.log('✅ MongoDB Connected for serverless');
+    let connection;
+    try {
+      connection = await mongoose.connect(process.env.MONGODB_URI, options);
+      isConnected = true;
+      console.log('✅ MongoDB Connected');
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          console.log('⚠️ Could not connect to primary MongoDB URI. Attempting in-memory MongoDB server...');
+          const { MongoMemoryServer } = await import('mongodb-memory-server');
+          const mongoServer = await MongoMemoryServer.create();
+          const mongoUri = mongoServer.getUri();
+          connection = await mongoose.connect(mongoUri, options);
+          isConnected = true;
+          console.log(`✅ In-Memory MongoDB Connected at ${mongoUri}`);
+        } catch (memErr) {
+          console.warn('⚠️ Database connection failed. Server is running without active database connection.');
+          console.warn('💡 Set a valid MONGODB_URI in server/.env to enable database operations.');
+          isConnected = false;
+          return null;
+        }
+      } else {
+        throw err;
+      }
+    }
     
-    // Initialize achievements and user stats (only once)
-    if (!isInitialized) {
+    // Initialize achievements and user stats (only once if connected)
+    if (isConnected && mongoose.connection.readyState === 1 && !isInitialized) {
       try {
         await initializeDefaultAchievements();
         await initializeAllUserStats();
@@ -166,9 +189,9 @@ const connectDB = async () => {
     
     return connection;
   } catch (error) {
-    console.error('❌ Database connection error:', error);
+    console.error('⚠️ Database connection error:', error.message);
     isConnected = false;
-    throw error;
+    return null;
   }
 };
 
