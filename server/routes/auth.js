@@ -28,7 +28,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     '/google',
     (req, res, next) => {
       // Store redirect URL in state parameter to pass through OAuth flow
-      const redirectUrl = req.query.redirect || process.env.CLIENT_URL;
+      const redirectUrl = req.query.redirect || process.env.CLIENT_URL || 'http://localhost:5173';
       const state = Buffer.from(redirectUrl).toString('base64');
       
       passport.authenticate('google', {
@@ -72,16 +72,20 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         }
         
         try {
-          const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-            expiresIn: '7d',
+          const jwtSecret = process.env.JWT_SECRET || 'bookhive_default_jwt_secret_key';
+          const token = jwt.sign({ userId: user._id }, jwtSecret, {
+            expiresIn: process.env.JWT_EXPIRES_IN || '7d',
           });
           console.log('✅ Google OAuth Success for user:', user.email);
           
           // Decode redirect URL from state parameter, fallback to CLIENT_URL
-          let redirectUrl = process.env.CLIENT_URL;
+          let redirectUrl = process.env.CLIENT_URL || 'http://localhost:5173';
           if (req.query.state) {
             try {
-              redirectUrl = Buffer.from(req.query.state, 'base64').toString('utf-8');
+              const decoded = Buffer.from(req.query.state, 'base64').toString('utf-8');
+              if (decoded && decoded.startsWith('http')) {
+                redirectUrl = decoded;
+              }
             } catch (e) {
               console.log('⚠️ Failed to decode state, using CLIENT_URL');
             }

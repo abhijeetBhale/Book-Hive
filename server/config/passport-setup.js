@@ -27,15 +27,17 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: '/api/auth/google/callback', // This must exactly match your Google API Console settings
+        callbackURL: process.env.GOOGLE_CALLBACK_URL || '/api/auth/google/callback', // Configurable callback URL
         proxy: true
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
+          const userEmail = profile.emails?.[0]?.value;
+
           console.log('🔍 Google Profile Data:', {
             id: profile.id,
             displayName: profile.displayName,
-            email: profile.emails?.[0]?.value,
+            email: userEmail,
             photos: profile.photos?.map(photo => photo.value)
           });
 
@@ -44,7 +46,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
           // If no Google photo available, generate a default avatar
           if (!avatarUrl) {
-            avatarUrl = getDefaultAvatar(profile.displayName, profile.emails[0].value);
+            avatarUrl = getDefaultAvatar(profile.displayName, userEmail || '');
             console.log('📸 No Google photo found, using default avatar');
           } else {
             console.log('📸 Using Google profile photo:', avatarUrl);
@@ -54,11 +56,11 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
               const response = await fetch(avatarUrl, { method: 'HEAD' });
               if (!response.ok) {
                 console.log('📸 Google avatar not accessible, using default');
-                avatarUrl = getDefaultAvatar(profile.displayName, profile.emails[0].value);
+                avatarUrl = getDefaultAvatar(profile.displayName, userEmail || '');
               }
             } catch (error) {
               console.log('📸 Error validating Google avatar, using default');
-              avatarUrl = getDefaultAvatar(profile.displayName, profile.emails[0].value);
+              avatarUrl = getDefaultAvatar(profile.displayName, userEmail || '');
             }
           }
 
@@ -94,7 +96,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             return done(null, user);
           } else {
             // If no user found by Google ID, check if a user exists with this email
-            const existingEmailUser = await User.findOne({ email: profile.emails[0].value });
+            const existingEmailUser = userEmail ? await User.findOne({ email: userEmail }) : null;
 
             if (existingEmailUser) {
               console.log('🔗 Found existing user with same email, linking Google account...');
@@ -116,7 +118,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
               const newUser = new User({
                 googleId: profile.id,
                 name: profile.displayName,
-                email: profile.emails[0].value,
+                email: userEmail || `${profile.id}@googleuser.com`,
                 avatar: avatarUrl,
                 location: {
                   type: 'Point',

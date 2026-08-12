@@ -91,10 +91,14 @@ const initializeApp = async () => {
       app.set('jobQueuesEnabled', false);
     }
     
-    console.log('🔄 Initializing achievements and user stats...');
-    await initializeDefaultAchievements();
-    await initializeAllUserStats();
-    console.log('✅ App initialization completed');
+    if (mongoose.connection.readyState === 1) {
+      console.log('🔄 Initializing achievements and user stats...');
+      await initializeDefaultAchievements();
+      await initializeAllUserStats();
+      console.log('✅ App initialization completed');
+    } else {
+      console.log('⚠️ Database not connected. Skipping achievements and user stats initialization.');
+    }
   } catch (error) {
     console.error('❌ App initialization failed:', error);
   }
