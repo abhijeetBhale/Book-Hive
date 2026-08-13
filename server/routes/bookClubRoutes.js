@@ -32,8 +32,11 @@ import {
   getEventAttendees
 } from '../controllers/clubEventController.js';
 import { protect, optionalAuth } from '../middleware/auth.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 
 const router = express.Router();
+
+router.use(rateLimiter.generalLimiter());
 
 // Club routes
 router.route('/')

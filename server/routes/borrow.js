@@ -19,8 +19,11 @@ import {
 } from '../controllers/borrowController.js';
 import { protect } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 
 const router = express.Router();
+
+router.use(rateLimiter.generalLimiter());
 
 router.post('/request/:bookId', protect, requestBook);
 router.get('/received-requests', protect, getReceivedRequests);

@@ -19,6 +19,7 @@ import {
 } from '../controllers/bookController.js';
 import { protect } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 const router = express.Router();
 
 /**
@@ -132,7 +133,7 @@ const router = express.Router();
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.route('/').get(getAllBooks).post(protect, upload.single('coverImage'), createBook);
+router.route('/').get(getAllBooks).post(protect, rateLimiter.uploadLimiter(), upload.single('coverImage'), createBook);
 
 // Search and filter routes
 router.get('/search/isbn/:isbn', searchByISBN);
@@ -177,6 +178,6 @@ router.get('/my-books', protect, getMyBooks);
 router.get('/user/:userId', getUserBooks);
 
 // Individual book routes
-router.route('/:id').get(getBookById).put(protect, upload.single('coverImage'), updateBook).delete(protect, deleteBook);
+router.route('/:id').get(getBookById).put(protect, rateLimiter.uploadLimiter(), upload.single('coverImage'), updateBook).delete(protect, deleteBook);
 
 export default router;

@@ -1,5 +1,6 @@
 import express from 'express';
 import { protect } from '../middleware/auth.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 import {
   createBookInquiry,
   listBookInquiries,
@@ -18,6 +19,8 @@ import {
 } from '../controllers/notificationController.js';
 
 const router = express.Router();
+
+router.use(rateLimiter.generalLimiter());
 
 // Create a book inquiry notification (profile -> send message)
 router.post('/book-inquiry', protect, createBookInquiry);

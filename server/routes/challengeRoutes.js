@@ -11,8 +11,11 @@ import {
   getChallengeLeaderboard
 } from '../controllers/challengeController.js';
 import { protect, optionalAuth } from '../middleware/auth.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 
 const router = express.Router();
+
+router.use(rateLimiter.generalLimiter());
 
 // Protected routes that need to come first (to avoid conflicts with /:id)
 router.get('/my-challenges', protect, getMyChallenges);

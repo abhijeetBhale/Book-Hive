@@ -9,6 +9,11 @@ class RateLimiter {
       upload: { requests: 10, window: 3600 }, // 10 uploads per hour
       message: { requests: 50, window: 3600 }, // 50 messages per hour
       general: { requests: 1000, window: 3600 }, // 1000 general requests per hour
+      contact: { requests: 3, window: 3600 }, // 3 contact form submissions per hour
+      review: { requests: 10, window: 3600 }, // 10 reviews per hour
+      social: { requests: 20, window: 3600 }, // 20 social actions per hour
+      testimonial: { requests: 5, window: 86400 }, // 5 testimonials per day
+      payment: { requests: 10, window: 3600 }, // 10 payment requests per hour
     };
   }
 
@@ -125,6 +130,26 @@ class RateLimiter {
 
   generalLimiter() {
     return this.createMiddleware('general');
+  }
+
+  contactLimiter() {
+    return this.createMiddleware('contact', (req) => req.ip);
+  }
+
+  reviewLimiter() {
+    return this.createMiddleware('review');
+  }
+
+  socialLimiter() {
+    return this.createMiddleware('social');
+  }
+
+  testimonialLimiter() {
+    return this.createMiddleware('testimonial');
+  }
+
+  paymentLimiter() {
+    return this.createMiddleware('payment');
   }
 
   // Admin method to reset rate limits

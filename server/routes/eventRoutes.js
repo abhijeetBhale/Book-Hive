@@ -10,8 +10,11 @@ import {
   getAllEventsAdmin
 } from '../controllers/eventController.js';
 import { protect, optionalAuth, admin } from '../middleware/auth.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 
 const router = express.Router();
+
+router.use(rateLimiter.generalLimiter());
 
 // Public routes (with optional auth for personalization)
 router.get('/', optionalAuth, getPublicEvents);

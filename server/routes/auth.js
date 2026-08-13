@@ -19,6 +19,7 @@ import {
 } from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -173,7 +174,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
  *       400:
  *         $ref: '#/components/responses/ValidationError'
  */
-router.post('/register', registerUser);
+router.post('/register', rateLimiter.authLimiter(), registerUser);
 
 /**
  * @swagger
@@ -220,7 +221,7 @@ router.post('/register', registerUser);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.post('/login', loginUser);
+router.post('/login', rateLimiter.authLimiter(), loginUser);
 
 /**
  * @swagger
