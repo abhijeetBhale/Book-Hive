@@ -1,5 +1,6 @@
 import express from 'express';
 import { protect, admin } from '../middleware/auth.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 import { 
   createReview, 
   listUserReviews, 
@@ -15,7 +16,7 @@ import {
 const router = express.Router();
 
 // Public and user routes
-router.post('/', protect, createReview);
+router.post('/', protect, rateLimiter.reviewLimiter(), createReview);
 router.get('/user/:userId', listUserReviews); // public list of reviews for a user
 router.get('/user/:userId/summary', getRatingsSummary);
 router.post('/:reviewId/like', protect, likeReview);

@@ -7,6 +7,7 @@ import {
   deleteUserTestimonial
 } from '../controllers/testimonialController.js';
 import { protect } from '../middleware/auth.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
@@ -14,9 +15,9 @@ const router = express.Router();
 router.get('/', getPublishedTestimonials);
 
 // Protected routes
-router.post('/', protect, createTestimonial);
+router.post('/', protect, rateLimiter.testimonialLimiter(), createTestimonial);
 router.get('/my-testimonial', protect, getUserTestimonial);
-router.put('/my-testimonial', protect, updateUserTestimonial);
+router.put('/my-testimonial', protect, rateLimiter.testimonialLimiter(), updateUserTestimonial);
 router.delete('/my-testimonial', protect, deleteUserTestimonial);
 
 export default router;

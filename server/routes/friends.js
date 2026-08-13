@@ -1,5 +1,6 @@
 import express from 'express';
 import { protect } from '../middleware/auth.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 import { 
   sendFriendRequest, 
   respondToFriendRequest, 
@@ -11,7 +12,7 @@ import {
 const router = express.Router();
 
 router.get('/', protect, getFriendsAndRequests);
-router.post('/request/:userId', protect, sendFriendRequest);
+router.post('/request/:userId', protect, rateLimiter.socialLimiter(), sendFriendRequest);
 router.put('/request/:requestId', protect, respondToFriendRequest);
 router.delete('/:friendshipId', protect, removeFriend);
 router.delete('/request/:requestId', protect, cancelFriendRequest);

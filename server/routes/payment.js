@@ -9,8 +9,11 @@ import {
   verifyLendingFeePayment
 } from '../controllers/paymentController.js';
 import { protect } from '../middleware/auth.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 
 const router = express.Router();
+
+router.use(rateLimiter.paymentLimiter());
 
 // Verification Badge Payment Routes
 router.post('/create-verification-order', protect, createVerificationOrder);

@@ -45,8 +45,8 @@ import { superAdminAuth, auditLogger } from '../middleware/adminAuth.js';
 
 const router = express.Router();
 
-// Test route (no auth required for testing)
-router.get('/test', (req, res) => {
+// Test route (protected)
+router.get('/test', superAdminAuth, (req, res) => {
   res.json({ message: 'Admin routes are working!' });
 });
 

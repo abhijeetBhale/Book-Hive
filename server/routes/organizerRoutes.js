@@ -17,8 +17,11 @@ import {
   rejectOrganizerApplication
 } from '../controllers/organizerAdminController.js';
 import { protect, requireOrganizer, admin } from '../middleware/auth.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 
 const router = express.Router();
+
+router.use(rateLimiter.generalLimiter());
 
 // Application route (any authenticated user can apply)
 router.post('/apply', protect, applyAsOrganizer);

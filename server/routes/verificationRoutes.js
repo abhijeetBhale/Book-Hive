@@ -9,8 +9,11 @@ import {
   rejectVerificationApplication
 } from '../controllers/verificationAdminController.js';
 import { protect, admin } from '../middleware/auth.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 
 const router = express.Router();
+
+router.use(rateLimiter.generalLimiter());
 
 // User routes
 router.post('/apply', protect, applyForVerification);

@@ -14,8 +14,11 @@ import {
 } from '../controllers/messageController.js';
 import { protect } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 
 const router = express.Router();
+
+router.use(rateLimiter.messageLimiter());
 
 // This route gets all conversations for the logged-in user
 router.get('/conversations', protect, getConversations);

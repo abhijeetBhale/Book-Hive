@@ -183,6 +183,21 @@ api.interceptors.response.use(
       return api(originalRequest);
     }
     
+    // Handle rate limiting (429 errors)
+    if (error.response?.status === 429) {
+      const retryAfter = error.response.headers['retry-after'] || 60;
+      const message = error.response.data?.message || `Too many requests. Please wait ${retryAfter} seconds.`;
+      
+      // Show user-friendly notification
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('rateLimitExceeded', {
+          detail: { message, retryAfter }
+        }));
+      }
+      
+      console.warn(`Rate limit exceeded. Retry after ${retryAfter} seconds.`);
+    }
+    
     if (error.response?.status === 401) {
       // Only redirect to login if we're not already on login/register pages
       const currentPath = window.location.pathname;

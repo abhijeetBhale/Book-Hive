@@ -13,8 +13,11 @@ import {
   getWalletAnalytics
 } from '../controllers/walletController.js';
 import { protect, admin } from '../middleware/auth.js';
+import rateLimiter from '../middleware/rateLimiter.js';
 
 const router = express.Router();
+
+router.use(rateLimiter.paymentLimiter());
 
 // User wallet routes
 router.get('/', protect, getWalletDetails);

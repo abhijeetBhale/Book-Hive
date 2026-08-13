@@ -6,6 +6,8 @@ import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 import cron from 'node-cron';
 import hpp from 'hpp';
+import mongoSanitize from 'express-mongo-sanitize';
+import xss from 'xss-clean';
 import passport from 'passport';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
@@ -48,6 +50,7 @@ import User from './models/User.js';
 // New imports for added features
 import { swaggerSpec, swaggerUi, swaggerUiOptions } from './config/swagger.js';
 import { getUserPermissions } from './middleware/rbac.js';
+import { protect } from './middleware/auth.js';
 import { initializeQueues, getAllQueueStats, getQueuesHealth } from './services/jobQueue.js';
 
 
@@ -136,6 +139,12 @@ app.use(compression({
   level: 6 // Compression level (0-9, 6 is default)
 }));
 
+// Data sanitization against NoSQL injection
+app.use(mongoSanitize());
+
+// Data sanitization against XSS
+app.use(xss());
+
 app.use(
   cors({
     origin: [
@@ -157,28 +166,21 @@ app.use(
   })
 );
 
-// Rate limiting - TEMPORARILY DISABLED for debugging 429 errors
-// const limiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutes
-//   max: 2000, // Very high limit for production
-//   message: {
-//     error: 'Too many requests from this IP, please try again later.',
-//   },
-//   standardHeaders: true,
-//   legacyHeaders: false,
-//   skip: (req) => {
-//     // Skip rate limiting for critical endpoints
-//     return req.path === '/api/health' || 
-//            req.path === '/api/cors-test' ||
-//            req.path.startsWith('/api/auth/') ||
-//            req.path.startsWith('/api/users/') ||
-//            req.path.startsWith('/api/testimonials');
-//   },
-// });
-// app.use('/api/', limiter);
-
-// Rate limiting - DISABLED for development
-// console.log('⚠️ Rate limiting is DISABLED for debugging purposes');
+// Global rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // 200 requests per 15 minutes
+  message: {
+    error: 'Too many requests from this IP, please try again later.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health checks
+    return req.path === '/api/health';
+  },
+});
+app.use('/api/', limiter);
 
 // Request logging middleware (disabled for cleaner output)
 // app.use((req, res, next) => {
@@ -196,12 +198,39 @@ app.use(passport.initialize());
 // Add user permissions middleware for all routes
 app.use(getUserPermissions);
 
-// API Documentation (Swagger)
-if (process.env.SWAGGER_ENABLED === 'true') {
+// API Documentation (Swagger with Password Protection)
+if (process.env.SWAGGER_ENABLED === 'true' || process.env.NODE_ENV === 'development') {
   const docsPath = process.env.API_DOCS_PATH || '/api-docs';
   
-  // Disable CSP for Swagger UI to allow it to make API calls
-  app.use(docsPath, (req, res, next) => {
+  // Basic Auth Middleware for Swagger UI (Admin Password Protection)
+  const swaggerAuth = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      res.setHeader('WWW-Authenticate', 'Basic realm="BookHive Admin API Documentation"');
+      return res.status(401).send('Authentication required to access Swagger API Documentation');
+    }
+    
+    try {
+      const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+      const user = auth[0];
+      const pass = auth[1];
+      
+      const expectedUser = process.env.SWAGGER_USER || 'admin';
+      const expectedPass = process.env.SWAGGER_PASSWORD || 'admin123';
+      
+      if (user === expectedUser && pass === expectedPass) {
+        return next();
+      }
+    } catch (e) {
+      // Fallthrough to 401
+    }
+    
+    res.setHeader('WWW-Authenticate', 'Basic realm="BookHive Admin API Documentation"');
+    return res.status(401).send('Invalid admin credentials for Swagger API Documentation');
+  };
+  
+  // Disable CSP for Swagger UI and enforce Basic Auth
+  app.use(docsPath, swaggerAuth, (req, res, next) => {
     res.removeHeader('Content-Security-Policy');
     res.removeHeader('X-Content-Security-Policy');
     res.removeHeader('X-WebKit-CSP');
@@ -209,7 +238,7 @@ if (process.env.SWAGGER_ENABLED === 'true') {
   });
   
   app.use(docsPath, swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerUiOptions));
-  console.log(`📚 API Documentation available at: ${docsPath}`);
+  console.log(`📚 Password-protected API Documentation available at: ${docsPath}`);
 }
 
 /**
@@ -432,7 +461,7 @@ app.get('/api/test', (req, res) => {
  *                   format: date-time
  */
 // Job queue status endpoint
-app.get('/api/jobs/status', async (req, res) => {
+app.get('/api/jobs/status', protect, async (req, res) => {
   try {
     if (!app.get('jobQueuesEnabled')) {
       return res.json({

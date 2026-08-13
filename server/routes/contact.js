@@ -1,9 +1,10 @@
 import express from 'express';
+import rateLimiter from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
 // POST /api/contact - Submit contact form
-router.post('/', async (req, res) => {
+router.post('/', rateLimiter.contactLimiter(), async (req, res) => {
   try {
     const { name, email, phone, message } = req.body;
 
