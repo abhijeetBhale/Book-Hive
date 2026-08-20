@@ -25,8 +25,25 @@ const router = express.Router();
 
 // --- Google OAuth Routes (only if credentials are configured) ---
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  // Express 5 makes req.query a getter-only property. passport-google-oauth20
+  // tries to set it internally, so we need to make it writable.
+  const makeQueryWritable = (req, _res, next) => {
+    const incomingMsgProto = Object.getPrototypeOf(req);
+    const descriptor = Object.getOwnPropertyDescriptor(incomingMsgProto, 'query');
+    if (descriptor && !descriptor.set) {
+      Object.defineProperty(incomingMsgProto, 'query', {
+        configurable: true,
+        enumerable: true,
+        get: descriptor.get,
+        set(val) { this._query = val; },
+      });
+    }
+    next();
+  };
+
   router.get(
     '/google',
+    makeQueryWritable,
     (req, res, next) => {
       // Store redirect URL in state parameter to pass through OAuth flow
       const redirectUrl = req.query.redirect || process.env.CLIENT_URL || 'http://localhost:5173';
@@ -42,6 +59,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
   router.get(
     '/google/callback',
+    makeQueryWritable,
     (req, res, next) => {
       console.log('🔍 Google OAuth callback received');
       console.log('   Query params:', req.query);
