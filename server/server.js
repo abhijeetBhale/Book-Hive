@@ -109,6 +109,20 @@ const initializeApp = async () => {
 
 initializeApp();
 
+// Express 5 makes req.query a getter-only property on IncomingMessage / express.request.
+// Packages like xss-clean and passport-oauth2 reassign req.query (req.query = ...), which throws in Express 5.
+// Patch req.query at the instance level to allow writes globally across all routes and middleware.
+app.use((req, res, next) => {
+  let query = req.query;
+  Object.defineProperty(req, 'query', {
+    configurable: true,
+    enumerable: true,
+    get() { return query; },
+    set(val) { query = val; },
+  });
+  next();
+});
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
