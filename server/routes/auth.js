@@ -25,19 +25,18 @@ const router = express.Router();
 
 // --- Google OAuth Routes (only if credentials are configured) ---
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-  // Express 5 makes req.query a getter-only property. passport-google-oauth20
-  // tries to set it internally, so we need to make it writable.
+  // Express 5 makes req.query a getter-only property on IncomingMessage.
+  // passport-google-oauth20 (via passport-oauth2) internally does
+  //   req.query = req.query || {};
+  // which throws in Express 5. Patch at the instance level to allow writes.
   const makeQueryWritable = (req, _res, next) => {
-    const incomingMsgProto = Object.getPrototypeOf(req);
-    const descriptor = Object.getOwnPropertyDescriptor(incomingMsgProto, 'query');
-    if (descriptor && !descriptor.set) {
-      Object.defineProperty(incomingMsgProto, 'query', {
-        configurable: true,
-        enumerable: true,
-        get: descriptor.get,
-        set(val) { this._query = val; },
-      });
-    }
+    const currentQuery = req.query;
+    Object.defineProperty(req, 'query', {
+      configurable: true,
+      enumerable: true,
+      get() { return this._query !== undefined ? this._query : currentQuery; },
+      set(val) { this._query = val; },
+    });
     next();
   };
 
