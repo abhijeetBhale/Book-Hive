@@ -1,7 +1,28 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import { processGoogleAvatar, getDefaultAvatar } from '../utils/avatarHelpers.js';
+
+// Helper: wait until the mongoose connection is ready (readyState === 1).
+// Needed because initializeApp() runs without being awaited, so an early
+// OAuth callback can arrive before connectDatabase() has finished.
+const waitForConnection = (timeoutMs = 15000) => {
+  return new Promise((resolve, reject) => {
+    if (mongoose.connection.readyState === 1) return resolve();
+    const timeout = setTimeout(() => {
+      reject(new Error('Database connection timeout – please try again'));
+    }, timeoutMs);
+    mongoose.connection.once('connected', () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+    mongoose.connection.once('error', (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
+  });
+};
 
 // Serialize user for session
 passport.serializeUser((user, done) => {
@@ -32,6 +53,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
+          // Ensure DB is ready before querying (initializeApp may still be connecting)
+          await waitForConnection();
+
           const userEmail = profile.emails?.[0]?.value;
 
           console.log('🔍 Google Profile Data:', {
