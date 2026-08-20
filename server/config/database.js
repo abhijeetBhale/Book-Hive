@@ -7,9 +7,7 @@ const connectDatabase = async () => {
       return null;
     }
 
-    // Serverless-friendly configuration
     const options = {
-      bufferCommands: false,
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,

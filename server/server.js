@@ -510,45 +510,6 @@ app.use('/api/payment', (req, res, next) => {
   next();
 });
 
-// Database readiness middleware – ensures MongoDB is connected before
-// processing any API request.  initializeApp() is fire-and-forget (not
-// awaited), so early requests can arrive before connectDatabase() finishes.
-// With bufferCommands: false Mongoose throws immediately instead of queuing,
-// so we gate all /api routes (except /api/health) here.
-app.use('/api', (req, res, next) => {
-  // Let health-check through regardless of DB state
-  if (req.path === '/health') return next();
-
-  if (mongoose.connection.readyState === 1) return next();
-
-  // DB not ready yet – wait up to 15 s for the 'connected' event
-  const timeout = setTimeout(() => {
-    cleanup();
-    res.status(503).json({
-      success: false,
-      message: 'Service starting up, please try again in a few seconds',
-    });
-  }, 15000);
-
-  const onConnected = () => { cleanup(); next(); };
-  const onError = (err) => {
-    cleanup();
-    res.status(503).json({
-      success: false,
-      message: 'Database connection error, please try again later',
-    });
-  };
-
-  const cleanup = () => {
-    clearTimeout(timeout);
-    mongoose.connection.removeListener('connected', onConnected);
-    mongoose.connection.removeListener('error', onError);
-  };
-
-  mongoose.connection.once('connected', onConnected);
-  mongoose.connection.once('error', onError);
-});
-
 // Mount routers
 app.use('/api/auth', authRoutes);
 app.use('/api/books', bookRoutes);
