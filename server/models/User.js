@@ -7,6 +7,16 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Name is required'],
     trim: true,
   },
+  username: {
+    type: String,
+    unique: true,
+    sparse: true, // Google OAuth users may not have a username yet
+    lowercase: true,
+    trim: true,
+    minlength: [3, 'Username must be at least 3 characters long'],
+    maxlength: [20, 'Username cannot exceed 20 characters'],
+    match: [/^[a-z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'],
+  },
   email: {
     type: String,
     required: [true, 'Email is required'],

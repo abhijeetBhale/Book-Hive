@@ -223,6 +223,8 @@ api.interceptors.response.use(
 export const authAPI = {
   login: (credentials) => api.post("/auth/login", credentials),
   register: (userData) => api.post("/auth/register", userData),
+  checkUsername: (username, config) => api.get("/auth/check-username", { params: { username }, ...config }),
+  checkDisplayName: (name, config) => api.get("/auth/check-name", { params: { name }, ...config }),
   getProfile: () => api.get("/auth/profile"),
   updateProfile: (data) =>
     api.put("/auth/profile", data, {
