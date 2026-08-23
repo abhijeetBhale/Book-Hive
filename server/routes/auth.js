@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import {
   registerUser,
+  checkUsernameAvailability,
+  checkDisplayName,
   loginUser,
   getProfile,
   updateProfile,
@@ -192,6 +194,14 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
  *         $ref: '#/components/responses/ValidationError'
  */
 router.post('/register', rateLimiter.authLimiter(), registerUser);
+
+// @route   GET /api/auth/check-username?username=xyz
+// @desc    Check if a username (@handle) is available - public, used for live validation
+router.get('/check-username', rateLimiter.generalLimiter(), checkUsernameAvailability);
+
+// @route   GET /api/auth/check-name?name=xyz
+// @desc    Validate display name against NSFW/community-standards filter - public, live validation
+router.get('/check-name', rateLimiter.generalLimiter(), checkDisplayName);
 
 /**
  * @swagger

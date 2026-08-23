@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import { validateEmail, validatePassword, validateUsername } from '../utils/validation.js';
+import { validateEmail, validatePassword, validateUsername, validateUsernameHandle, normalizeUsernameHandle } from '../utils/validation.js';
 import { uploadFileToCloudinary } from '../config/cloudinary.js';
 import { getConsistentPrivacyOffset } from '../utils/locationPrivacy.js';
 import { isProfileComplete } from '../utils/profileCompletionChecker.js';
@@ -11,22 +11,44 @@ const generateToken = (userId) => {
   });
 };
 
+// Build a separator-tolerant regex from a normalized handle so that
+// e.g. handle "abhijeetbhale" also matches stored names like "Abhijeet Bhale"
+const buildNameCollisionRegex = (handle) => {
+  const escaped = handle.replace(/_/g, '').split('').map((ch) => ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`^${escaped.join('[\\s_-]*')}$`, 'i');
+};
+
 // @desc    Register user
 // @route   POST /api/auth/register
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, username, email, password } = req.body;
 
-    if (!name || !email || !password) {
+    if (!name || !username || !email || !password) {
       return res.status(400).json({
-        message: 'Please provide name, email, and password'
+        message: 'Please provide name, username, email, and password'
       });
     }
 
-    // Validate username (name field)
-    const usernameError = validateUsername(name);
+    // Normalize the @handle (strip leading @, lowercase)
+    const normalizedUsername = normalizeUsernameHandle(username);
+
+    // Validate handle format
+    const handleFormatError = validateUsernameHandle(normalizedUsername);
+    if (handleFormatError) {
+      return res.status(400).json({ message: handleFormatError });
+    }
+
+    // Run profanity/banned-word check on the handle as well
+    const usernameError = validateUsername(normalizedUsername);
     if (usernameError) {
-      return res.status(400).json({ message: usernameError });
+      return res.status(400).json({ message: `Username: ${usernameError}` });
+    }
+
+    // Validate username (name field)
+    const nameError = validateUsername(name);
+    if (nameError) {
+      return res.status(400).json({ message: nameError });
     }
 
     const emailError = validateEmail(email);
@@ -44,7 +66,19 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    const user = await User.create({ name, email, password });
+    // Check username uniqueness — including handles matching any existing
+    // member's display name (pre-registration users have no username stored)
+    const usernameTaken = await User.findOne({
+      $or: [
+        { username: normalizedUsername },
+        { name: buildNameCollisionRegex(normalizedUsername) }
+      ]
+    });
+    if (usernameTaken) {
+      return res.status(409).json({ message: `"@${normalizedUsername}" is already taken. Please choose another.` });
+    }
+
+    const user = await User.create({ name, username: normalizedUsername, email, password });
     
     // Generate email verification token
     const verificationToken = jwt.sign(
@@ -94,7 +128,94 @@ export const registerUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Register user error:', error);
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0];
+      if (field === 'username') {
+        return res.status(409).json({ message: 'That username has just been taken. Please choose another.' });
+      }
+      if (field === 'email') {
+        return res.status(400).json({ message: 'User already exists' });
+      }
+    }
     res.status(500).json({ message: 'Server error registering user' });
+  }
+};
+
+// @desc    Check username availability
+// @route   GET /api/auth/check-username?username=xyz
+export const checkUsernameAvailability = async (req, res) => {
+  try {
+    const normalizedUsername = normalizeUsernameHandle(req.query.username || '');
+
+    if (!normalizedUsername) {
+      return res.status(200).json({ available: false, reason: 'required', message: 'Username is required' });
+    }
+
+    const formatError = validateUsernameHandle(normalizedUsername);
+    if (formatError) {
+      return res.status(200).json({ available: false, reason: 'invalid', message: formatError });
+    }
+
+    // Profanity/banned-word check on the handle
+    const profanityError = validateUsername(normalizedUsername);
+    if (profanityError) {
+      return res.status(200).json({ available: false, reason: 'inappropriate', message: 'This username is not allowed' });
+    }
+
+    const existingUser = await User.findOne({
+      $or: [
+        { username: normalizedUsername },
+        // Reserve handles that collide with any existing member's display name
+        // (pre-registration users have no username stored yet)
+        { name: buildNameCollisionRegex(normalizedUsername) }
+      ]
+    }).select('_id').lean();
+
+    if (existingUser) {
+      return res.status(200).json({
+        available: false,
+        reason: 'taken',
+        username: normalizedUsername,
+        message: `"@${normalizedUsername}" is already taken`
+      });
+    }
+
+    return res.status(200).json({
+      available: true,
+      username: normalizedUsername,
+      message: `"@${normalizedUsername}" is available!`
+    });
+  } catch (error) {
+    console.error('Check username availability error:', error);
+    res.status(500).json({ available: false, reason: 'error', message: 'Error checking username availability' });
+  }
+};
+
+// @desc    Validate display name (community standards / NSFW filter)
+// @route   GET /api/auth/check-name?name=xyz
+export const checkDisplayName = async (req, res) => {
+  try {
+    const rawName = typeof req.query.name === 'string' ? req.query.name.trim() : '';
+
+    // Empty is not an error here - the form's `required` attribute handles it
+    if (!rawName) {
+      return res.status(200).json({ valid: true, message: '' });
+    }
+
+    const nameError = validateUsername(rawName);
+    if (nameError) {
+      return res.status(200).json({
+        valid: false,
+        reason: 'inappropriate',
+        name: rawName,
+        message: nameError
+      });
+    }
+
+    return res.status(200).json({ valid: true, name: rawName, message: 'Name looks good' });
+  } catch (error) {
+    console.error('Check display name error:', error);
+    res.status(500).json({ valid: false, reason: 'error', message: 'Error validating name' });
   }
 };
 

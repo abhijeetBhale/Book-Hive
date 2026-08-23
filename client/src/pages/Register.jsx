@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import styled from 'styled-components';
-import { Loader, User, AtSign, Eye, EyeOff, CheckSquare, Square, KeyRound } from 'lucide-react';
+import { Loader, User, AtSign, Eye, EyeOff, CheckSquare, Square, KeyRound, Check, XCircle } from 'lucide-react';
 import { authAPI } from '../utils/api';
 import SEO from '../components/SEO';
 import { PAGE_SEO } from '../utils/seo';
+
+const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
+const normalizeHandle = (value) => value.trim().replace(/^@+/, '').toLowerCase();
 const GoogleIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M22.56 12.25C22.56 11.45 22.49 10.68 22.36 9.92H12V14.45H18.02C17.72 15.93 16.92 17.21 15.61 18.06V20.69H19.5C21.49 18.88 22.56 15.89 22.56 12.25Z" fill="#4285F4" />
@@ -26,11 +29,107 @@ const Register = () => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [usernameCheck, setUsernameCheck] = useState({ status: 'idle', message: '' });
+  const [nameCheck, setNameCheck] = useState({ status: 'idle', message: '' });
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    // The handle input is intentionally named "handle" (not "username") so
+    // browsers don't treat this signup form as a login/credentials form
+    if (name === 'handle') {
+      setFormData({ ...formData, username: normalizeHandle(value).replace(/\s+/g, '_') });
+      return;
+    }
+    setFormData({ ...formData, [name]: value });
   };
+
+  // Debounced live username availability check
+  useEffect(() => {
+    const handle = normalizeHandle(formData.username);
+
+    if (!handle) {
+      setUsernameCheck({ status: 'idle', message: '' });
+      return undefined;
+    }
+
+    if (!USERNAME_REGEX.test(handle)) {
+      setUsernameCheck({
+        status: 'invalid',
+        message: handle.length < 3
+          ? 'Username must be at least 3 characters'
+          : handle.length > 20
+            ? 'Username cannot exceed 20 characters'
+            : 'Only letters, numbers, and underscores allowed',
+      });
+      return undefined;
+    }
+
+    setUsernameCheck({ status: 'checking', message: 'Checking availability...' });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(async () => {
+      try {
+        const { data } = await authAPI.checkUsername(handle, { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        if (data.available) {
+          setUsernameCheck({ status: 'available', message: data.message });
+        } else {
+          setUsernameCheck({ status: data.reason === 'invalid' ? 'invalid' : 'taken', message: data.message || 'This username is not available' });
+        }
+      } catch (err) {
+        if (err.code === 'ERR_CANCELED' || err.name === 'CanceledError') return;
+        setUsernameCheck({ status: 'error', message: 'Could not verify username. Try again.' });
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [formData.username]);
+
+  // Debounced live display-name (Full Name) community-standards check
+  useEffect(() => {
+    const fullName = formData.fullName.trim();
+
+    if (!fullName) {
+      setNameCheck({ status: 'idle', message: '' });
+      return undefined;
+    }
+
+    if (fullName.length < 2 || fullName.length > 50) {
+      setNameCheck({
+        status: 'invalid',
+        message: fullName.length < 2 ? 'Name must be at least 2 characters' : 'Name must not exceed 50 characters',
+      });
+      return undefined;
+    }
+
+    setNameCheck({ status: 'checking', message: '' });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(async () => {
+      try {
+        const { data } = await authAPI.checkDisplayName(fullName, { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        if (data.valid) {
+          setNameCheck({ status: 'valid', message: data.message || 'Name looks good' });
+        } else {
+          setNameCheck({ status: 'invalid', message: data.message || 'This name is not allowed' });
+        }
+      } catch (err) {
+        if (err.code === 'ERR_CANCELED' || err.name === 'CanceledError') return;
+        // Silent fail - server re-validates on submit anyway
+        setNameCheck({ status: 'idle', message: '' });
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [formData.fullName]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,11 +137,27 @@ const Register = () => {
       toast.error("You must agree to the Privacy Policy and Terms of Service.");
       return;
     }
+    if (nameCheck.status === 'checking') {
+      toast.error('Still validating your name. Please wait a moment.');
+      return;
+    }
+    if (nameCheck.status === 'invalid') {
+      toast.error(nameCheck.message || 'Please use a different name.');
+      return;
+    }
+    if (usernameCheck.status === 'checking') {
+      toast.error('Still checking username availability. Please wait a moment.');
+      return;
+    }
+    if (usernameCheck.status !== 'available') {
+      toast.error(usernameCheck.message || 'Please choose an available username.');
+      return;
+    }
     setLoading(true);
 
     try {
       const { fullName, username, email, password } = formData;
-      await authAPI.register({ name: fullName, username, email, password });
+      await authAPI.register({ name: fullName, username: normalizeHandle(username), email, password });
       toast.success('Registration successful! Please log in.');
       navigate('/login');
     } catch (error) {
@@ -93,15 +208,71 @@ const Register = () => {
                   <label htmlFor="fullName">Full Name</label>
                   <div className="input-wrapper">
                     <User size={18} className="input-icon" />
-                    <input id="fullName" name="fullName" type="text" placeholder="Your full name" value={formData.fullName} onChange={handleChange} required />
+                    <input
+                      id="fullName"
+                      name="fullName"
+                      type="text"
+                      placeholder="Your full name"
+                      value={formData.fullName}
+                      onChange={handleChange}
+                      required
+                      autoComplete="name"
+                      spellCheck={false}
+                      data-1p-ignore
+                      data-lpignore="true"
+                      data-form-type="other"
+                      className={
+                        nameCheck.status === 'valid' ? 'input-valid'
+                          : nameCheck.status === 'invalid' ? 'input-error'
+                          : ''
+                      }
+                    />
+                    {nameCheck.status === 'checking' && <Loader size={16} className="username-spinner animate-spin" />}
+                    {nameCheck.status === 'valid' && <Check size={18} className="status-icon success" />}
+                    {nameCheck.status === 'invalid' && <XCircle size={18} className="status-icon error" />}
                   </div>
+                  {nameCheck.status === 'invalid' && nameCheck.message && (
+                    <p className={`username-status ${nameCheck.status}`}>
+                      {nameCheck.message}
+                    </p>
+                  )}
                 </div>
                 <div className="input-field">
-                  <label htmlFor="username">Username</label>
+                  <label htmlFor="handle">Username</label>
                   <div className="input-wrapper">
                     <AtSign size={18} className="input-icon" />
-                    <input id="username" name="username" type="text" placeholder="@yourusername" value={formData.username} onChange={handleChange} required />
+                    {/* Named "handle" + autofill opt-outs so password managers
+                        don't offer to "manage your password" on this field */}
+                    <input
+                      id="handle"
+                      name="handle"
+                      type="text"
+                      placeholder="Username"
+                      value={formData.username}
+                      onChange={handleChange}
+                      required
+                      autoComplete="off"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      data-1p-ignore
+                      data-lpignore="true"
+                      data-form-type="other"
+                      className={
+                        usernameCheck.status === 'available' ? 'input-valid'
+                          : (usernameCheck.status === 'taken' || usernameCheck.status === 'invalid') ? 'input-error'
+                          : ''
+                      }
+                    />
+                    {usernameCheck.status === 'checking' && <Loader size={16} className="username-spinner animate-spin" />}
+                    {usernameCheck.status === 'available' && <Check size={18} className="status-icon success" />}
+                    {(usernameCheck.status === 'taken' || usernameCheck.status === 'invalid') && <XCircle size={18} className="status-icon error" />}
                   </div>
+                  {usernameCheck.message && (
+                    <p className={`username-status ${usernameCheck.status}`}>
+                      {usernameCheck.message}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -109,7 +280,7 @@ const Register = () => {
                 <label htmlFor="email">Email Address</label>
                 <div className="input-wrapper">
                   <AtSign size={18} className="input-icon" />
-                  <input id="email" name="email" type="email" placeholder="you@example.com" value={formData.email} onChange={handleChange} required />
+                    <input id="email" name="email" type="email" placeholder="you@example.com" value={formData.email} onChange={handleChange} required autoComplete="email" />
                 </div>
               </div>
 
@@ -117,7 +288,7 @@ const Register = () => {
                 <label htmlFor="password">Password</label>
                 <div className="input-wrapper">
                   <KeyRound size={18} className="input-icon" />
-                  <input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder="At least 8 characters" value={formData.password} onChange={handleChange} required minLength="8" />
+                  <input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder="At least 8 characters" value={formData.password} onChange={handleChange} required minLength="8" autoComplete="new-password" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="password-toggle-btn">
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -299,6 +470,47 @@ const StyledWrapper = styled.div`
 
   .input-wrapper input {
     padding-left: 2.75rem;
+  }
+
+  .input-wrapper input.input-valid {
+    border-color: #059669;
+    &:focus {
+      border-color: #059669;
+      box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+    }
+  }
+
+  .input-wrapper input.input-error {
+    border-color: #dc2626;
+    &:focus {
+      border-color: #dc2626;
+      box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+    }
+  }
+
+  .username-spinner {
+    position: absolute;
+    right: 0.75rem;
+    color: #6b7280;
+    pointer-events: none;
+  }
+
+  .status-icon {
+    position: absolute;
+    right: 0.75rem;
+    pointer-events: none;
+
+    &.success { color: #059669; }
+    &.error { color: #dc2626; }
+  }
+
+  .username-status {
+    margin: 0;
+    font-size: 0.8rem;
+
+    &.checking, &.error { color: #6b7280; }
+    &.available { color: #059669; }
+    &.taken, &.invalid { color: #dc2626; }
   }
   
   #password {
