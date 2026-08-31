@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import MapView from '../components/map/MapView';
 import { Loader, MapPin, Search, Calendar, UserCheck, Sliders, ChevronLeft, ChevronRight, Star, PartyPopper } from 'lucide-react';
 import SEO from '../components/SEO';
-import { PAGE_SEO } from '../utils/seo';
+import { PAGE_SEO, generateStructuredData } from '../utils/seo';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
 
 
@@ -208,6 +208,11 @@ const Map = () => {
         description={PAGE_SEO.map.description}
         keywords={PAGE_SEO.map.keywords}
         url={PAGE_SEO.map.url}
+        type="website"
+        structuredData={generateStructuredData('LocalBusiness', {
+          name: 'BookHive',
+          description: PAGE_SEO.map.description,
+        })}
       />
       <StyledWrapper>
         <div className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
