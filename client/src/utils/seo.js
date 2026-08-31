@@ -47,6 +47,7 @@ export const PAGE_SEO = {
     description: 'Discover, share, and borrow books from readers in your community. Join BookHive to build your digital library, connect with book lovers, and explore new literary adventures.',
     keywords: 'book sharing platform, borrow books online, book community, local book exchange, reading community, share books nearby',
     url: BASE_URL,
+    image: 'https://book-hive-frontend.onrender.com/og-image.webp'
   },
   
   books: {
@@ -54,6 +55,7 @@ export const PAGE_SEO = {
     description: 'Explore thousands of books available for borrowing in your area. Find your next read from our community of book lovers.',
     keywords: 'browse books, available books, borrow books, book catalog, find books nearby',
     url: `${BASE_URL}/books`,
+    image: 'https://book-hive-frontend.onrender.com/og-book-collection.webp'
   },
   
   users: {
@@ -66,7 +68,15 @@ export const PAGE_SEO = {
   map: {
     title: 'Book Map | Find Books Near You | BookHive',
     description: 'Discover available books on an interactive map. Find books to borrow from readers in your neighborhood.',
-    keywords: 'book map, books nearby, local books, find books location, book sharing map',
+    keywords: 'book map, books nearby, local books, find books location, book sharing map, community reading',
+    url: `${BASE_URL}/map`,
+    image: 'https://book-hive-frontend.onrender.com/og-map.webp'
+  },
+
+  local: {
+    title: 'BookHive Local | Community Books Near You',
+    description: 'Find and share books with readers in your local area. Join the BookHive community for local book lending and discovery.',
+    keywords: 'local books, book sharing community, neighborhood reading, community library, books near me',
     url: `${BASE_URL}/map`,
   },
   
@@ -219,6 +229,30 @@ export const generateStructuredData = (type, data = {}) => {
           bestRating: '5',
         },
         reviewBody: data.comment,
+      };
+
+    case 'LocalBusiness':
+      return {
+        ...structuredData,
+        '@type': 'LocalBusiness',
+        name: 'BookHive',
+        description: DEFAULT_SEO.description,
+        url: BASE_URL,
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: 'BookHive HQ',
+          addressLocality: 'Indore',
+          addressRegion: 'Madhya Pradesh',
+          postalCode: '452001',
+          addressCountry: 'IN',
+        },
+        geo: {
+          '@type': 'GeoCoordinates',
+          latitude: '22.7196',
+          longitude: '75.8577',
+        },
+        openingHours: ['Mo-Su 09:00-21:00'],
+        priceRange: '$'
       };
 
     case 'BreadcrumbList':

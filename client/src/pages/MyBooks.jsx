@@ -9,6 +9,8 @@ import { booksAPI } from '../utils/api';
 import BookSearchModal from '../components/books/BookSearchModal';
 import AnimatedButton from '../components/ui/AnimatedButton';
 
+import SEO from '../components/SEO';
+import { PAGE_SEO } from '../utils/seo';
 // --- UI Components ---
 
 const StyledConfirmationModal = styled.div`
