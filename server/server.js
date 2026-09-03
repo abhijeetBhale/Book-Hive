@@ -259,7 +259,8 @@ if (process.env.SWAGGER_ENABLED === 'true' || process.env.NODE_ENV === 'developm
  * @swagger
  * /api/health:
  *   get:
- *     summary: Health check endpoint
+ *     summary: Lightweight health check endpoint
+ *     description: Simple health check for keep-alive pings. Returns server status without checking Redis or job queues.
  *     tags: [System]
  *     responses:
  *       200:
@@ -284,100 +285,17 @@ if (process.env.SWAGGER_ENABLED === 'true' || process.env.NODE_ENV === 'developm
  *                 version:
  *                   type: string
  *                   example: "2.0.0"
- *                 features:
- *                   type: object
- *                   properties:
- *                     redis:
- *                       type: object
- *                       properties:
- *                         enabled:
- *                           type: boolean
- *                         connected:
- *                           type: boolean
- *                     jobQueues:
- *                       type: object
- *                       properties:
- *                         enabled:
- *                           type: boolean
- *                         healthy:
- *                           type: boolean
- *                     database:
- *                       type: string
- *                       example: "connected"
- *                     swagger:
- *                       type: boolean
- *                       example: true
- *                     rbac:
- *                       type: boolean
- *                       example: true
- *       500:
- *         description: Server health check failed
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: "error"
- *                 message:
- *                   type: string
- *                   example: "Health check failed"
- *                 error:
- *                   type: string
- *                 timestamp:
- *                   type: string
- *                   format: date-time
  */
-// Health check endpoint (before other routes)
-app.get('/api/health', async (req, res) => {
-  try {
-    // Check Redis status if enabled
-    let redisStatus = { enabled: false };
-    if (app.get('redisEnabled')) {
-      try {
-        const redisInit = await import('./config/redisInit.js');
-        redisStatus = await redisInit.default.getStatus();
-        redisStatus.enabled = true;
-      } catch (redisError) {
-        redisStatus = { enabled: true, connected: false, error: redisError.message };
-      }
-    }
-
-    // Check job queues status
-    let jobQueuesStatus = { enabled: false };
-    if (app.get('jobQueuesEnabled')) {
-      try {
-        jobQueuesStatus = await getQueuesHealth();
-        jobQueuesStatus.enabled = true;
-      } catch (jobError) {
-        jobQueuesStatus = { enabled: false, error: jobError.message };
-      }
-    }
-
-    res.status(200).json({ 
-      status: 'ok', 
-      message: 'Server is running',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      version: '2.0.0',
-      features: {
-        redis: redisStatus,
-        jobQueues: jobQueuesStatus,
-        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-        swagger: process.env.SWAGGER_ENABLED === 'true',
-        rbac: true,
-        testing: process.env.NODE_ENV === 'test'
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: 'Health check failed',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
+// Simplified Health check endpoint - lightweight for keep-alive pings
+// This runs fast without requiring Redis or job queues to be initialized
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: '2.0.0'
+  });
 });
 
 /**

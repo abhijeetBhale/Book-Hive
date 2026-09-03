@@ -4,5 +4,8 @@
 /manifest.json /manifest.json 200
 /google*.html /google*.html 200
 
+# Health check endpoint - served directly by backend, not SPA routing
+/api/health   /api/health   200
+
 # Redirect all other requests to index.html for SPA routing
 /*    /index.html   200

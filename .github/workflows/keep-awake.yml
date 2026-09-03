@@ -1,0 +1,23 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # Every 10 minutes
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+
+jobs:
+  keep-awake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping BookHive Health Endpoint
+        run: |
+          echo "Pinging BookHive at $(date -u)"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 \
+            https://book-hive-frontend.onrender.com/api/health)
+          echo "Response code: $RESPONSE"
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "Warning: Health endpoint returned $RESPONSE"
+            exit 1
+          fi
+          echo "BookHive is awake!"
+        timeout-minutes: 2
