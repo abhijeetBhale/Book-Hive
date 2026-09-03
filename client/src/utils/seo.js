@@ -43,32 +43,28 @@ export const generateSEO = (config = {}) => {
  */
 export const PAGE_SEO = {
   home: {
-    title: 'BookHive - Share Your Thoughts | Connect with Book Lovers',
-    description: 'Discover, share, and borrow books from readers in your community. Join BookHive to build your digital library, connect with book lovers, and explore new literary adventures.',
-    keywords: 'book sharing platform, borrow books online, book community, local book exchange, reading community, share books nearby',
+    title: 'BookHive - Share & Discover Books | Community Reading',
+    description: 'Join BookHive, the free platform to borrow, share, and discover books with readers in your community. Build your digital library today!',
     url: BASE_URL,
-    image: 'https://book-hive-frontend.onrender.com/og-image.webp'
+    image: 'https://book-hive-frontend.onrender.com/og-home.webp'
   },
   
   books: {
-    title: 'Browse Books | BookHive',
+    title: 'Browse & Borrow Books | BookHive',
     description: 'Explore thousands of books available for borrowing in your area. Find your next read from our community of book lovers.',
-    keywords: 'browse books, available books, borrow books, book catalog, find books nearby',
     url: `${BASE_URL}/books`,
-    image: 'https://book-hive-frontend.onrender.com/og-book-collection.webp'
+    image: 'https://book-hive-frontend.onrender.com/og-books.webp'
   },
   
   users: {
     title: 'Connect with Readers | BookHive Community',
     description: 'Meet fellow book enthusiasts, follow readers with similar tastes, and build your literary network on BookHive.',
-    keywords: 'book community, connect readers, book lovers, reading friends, literary network',
     url: `${BASE_URL}/users`,
   },
   
   map: {
     title: 'Book Map | Find Books Near You | BookHive',
     description: 'Discover available books on an interactive map. Find books to borrow from readers in your neighborhood.',
-    keywords: 'book map, books nearby, local books, find books location, book sharing map, community reading',
     url: `${BASE_URL}/map`,
     image: 'https://book-hive-frontend.onrender.com/og-map.webp'
   },
@@ -76,78 +72,62 @@ export const PAGE_SEO = {
   local: {
     title: 'BookHive Local | Community Books Near You',
     description: 'Find and share books with readers in your local area. Join the BookHive community for local book lending and discovery.',
-    keywords: 'local books, book sharing community, neighborhood reading, community library, books near me',
     url: `${BASE_URL}/map`,
   },
   
   login: {
     title: 'Login | BookHive',
     description: 'Sign in to your BookHive account to access your library, messages, and connect with the reading community.',
-    keywords: 'login, sign in, book sharing login, bookhive account',
     url: `${BASE_URL}/login`,
   },
   
   register: {
     title: 'Join BookHive | Create Your Account',
     description: 'Create your free BookHive account and start sharing books with readers in your community. Build your digital library today.',
-    keywords: 'sign up, register, create account, join bookhive, book sharing signup',
     url: `${BASE_URL}/register`,
   },
   
   contact: {
     title: 'Contact Us | BookHive Support',
     description: 'Get in touch with the BookHive team. We\'re here to help with questions, feedback, or support.',
-    keywords: 'contact bookhive, customer support, help, feedback, book sharing support',
     url: `${BASE_URL}/contact`,
   },
   
   terms: {
     title: 'Terms of Service | BookHive',
     description: 'Read BookHive\'s terms of service and user agreement. Learn about our policies for book sharing and community guidelines.',
-    keywords: 'terms of service, user agreement, bookhive terms, policies',
     url: `${BASE_URL}/terms`,
   },
   
   privacy: {
     title: 'Privacy Policy | BookHive',
     description: 'Learn how BookHive protects your privacy and handles your data. Read our comprehensive privacy policy.',
-    keywords: 'privacy policy, data protection, user privacy, bookhive privacy',
     url: `${BASE_URL}/privacy`,
   },
   
   myBooks: {
     title: 'My Books | BookHive',
     description: 'Manage your personal book collection, track borrowed books, and organize your digital library.',
-    keywords: 'my books, book collection, manage books, digital library',
-    url: `${BASE_URL}/my-books`,
   },
   
   profile: {
     title: 'My Profile | BookHive',
     description: 'View and edit your BookHive profile, manage your settings, and track your reading activity.',
-    keywords: 'user profile, account settings, bookhive profile',
-    url: `${BASE_URL}/profile`,
   },
   
-  messages: {
+messages: {
     title: 'Messages | BookHive',
     description: 'Chat with other readers, coordinate book exchanges, and stay connected with your reading community.',
-    keywords: 'messages, chat, book exchange communication',
-    url: `${BASE_URL}/messages`,
   },
   
-  friends: {
+friends: {
     title: 'Friends | BookHive',
     description: 'Connect with your reading friends, see their activity, and discover new books through your network.',
-    keywords: 'friends, reading network, book connections',
-    url: `${BASE_URL}/friends`,
   },
   
-  calendar: {
+calendar: {
     title: 'Reading Calendar | BookHive',
     description: 'Track your reading schedule, manage book due dates, and plan your literary journey.',
-    keywords: 'reading calendar, book schedule, due dates, reading planner',
-    url: `${BASE_URL}/calendar`,
   },
 };
 
@@ -205,10 +185,15 @@ export const generateStructuredData = (type, data = {}) => {
           name: data.author,
         },
         isbn: data.isbn,
-        bookFormat: 'Paperback',
+        bookFormat: data.bookFormat || 'Paperback',
         description: data.description,
         image: data.image,
         genre: data.genre,
+        datePublished: data.datePublished,
+        dateModified: data.dateModified,
+        publisher: data.publisher,
+        numberOfPages: data.numberOfPages,
+        inLanguage: 'en-US',
       };
 
     case 'Review':
@@ -238,18 +223,10 @@ export const generateStructuredData = (type, data = {}) => {
         name: 'BookHive',
         description: DEFAULT_SEO.description,
         url: BASE_URL,
-        address: {
-          '@type': 'PostalAddress',
-          streetAddress: 'BookHive HQ',
-          addressLocality: 'Indore',
-          addressRegion: 'Madhya Pradesh',
-          postalCode: '452001',
-          addressCountry: 'IN',
-        },
         geo: {
           '@type': 'GeoCoordinates',
-          latitude: '22.7196',
-          longitude: '75.8577',
+          latitude: '0',
+          longitude: '0',
         },
         openingHours: ['Mo-Su 09:00-21:00'],
         priceRange: '$'

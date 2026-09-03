@@ -253,7 +253,6 @@ const BookDetails = () => {
   const bookSEO = {
     title: `${book.title} by ${book.author} | BookHive`,
     description: book.description || `Borrow ${book.title} by ${book.author} on BookHive. Connect with book lovers and discover your next read.`,
-    keywords: `${book.title}, ${book.author}, ${book.genre || 'book'}, borrow book, book sharing`,
     image: getFullImageUrl(book.coverImage),
     url: `${BASE_URL}/books/${book._id}`,
     type: 'book'
@@ -274,7 +273,6 @@ const BookDetails = () => {
       <SEO 
         title={bookSEO.title}
         description={bookSEO.description}
-        keywords={bookSEO.keywords}
         image={bookSEO.image}
         url={bookSEO.url}
         type={bookSEO.type}
