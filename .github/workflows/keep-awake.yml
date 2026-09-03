@@ -9,15 +9,15 @@ jobs:
   keep-awake:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping BookHive Health Endpoint
+      - name: Ping BookHive Backend Health Endpoint
         run: |
-          echo "Pinging BookHive at $(date -u)"
+          echo "Pinging BookHive backend at $(date -u)"
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 \
-            https://book-hive-frontend.onrender.com/api/health)
+            https://book-hive-backend-ftbb.onrender.com/api/health)
           echo "Response code: $RESPONSE"
           if [ "$RESPONSE" -ne 200 ]; then
             echo "Warning: Health endpoint returned $RESPONSE"
             exit 1
           fi
-          echo "BookHive is awake!"
+          echo "BookHive backend is awake!"
         timeout-minutes: 2
