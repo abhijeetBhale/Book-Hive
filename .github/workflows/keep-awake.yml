@@ -12,12 +12,22 @@ jobs:
       - name: Ping BookHive Backend Health Endpoint
         run: |
           echo "Pinging BookHive backend at $(date -u)"
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 \
-            https://book-hive-backend-ftbb.onrender.com/api/health)
-          echo "Response code: $RESPONSE"
-          if [ "$RESPONSE" -ne 200 ]; then
-            echo "Warning: Health endpoint returned $RESPONSE"
-            exit 1
-          fi
-          echo "BookHive backend is awake!"
-        timeout-minutes: 2
+          MAX_RETRIES=3
+          RETRY_DELAY=20
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i of $MAX_RETRIES..."
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 \
+              https://book-hive-backend-ftbb.onrender.com/api/health)
+            echo "Response code: $RESPONSE"
+            if [ "$RESPONSE" -eq 200 ]; then
+              echo "BookHive backend is awake!"
+              exit 0
+            fi
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "Waiting ${RETRY_DELAY}s before retry..."
+              sleep $RETRY_DELAY
+            fi
+          done
+          echo "Warning: Health endpoint did not return 200 after $MAX_RETRIES attempts"
+          exit 1
+        timeout-minutes: 5
