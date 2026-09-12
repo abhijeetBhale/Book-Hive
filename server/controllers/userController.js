@@ -850,3 +850,67 @@ export const getUserStatistics = async (req, res) => {
     res.status(500).json({ message: 'Server error getting user statistics' });
   }
 };
+
+// @desc    Get mock online users with locations for globe visualization
+// @route   GET /api/users/mock-online-locations
+export const getMockOnlineLocations = async (req, res) => {
+  try {
+    const mockOnlineUsers = [
+      { _id: 'mock1', name: 'Sarah Chen', avatar: null, location: { coordinates: [-122.44, 37.78] }, isVerified: true }, // San Francisco
+      { _id: 'mock2', name: 'Alex Rivera', avatar: null, location: { coordinates: [-74.01, 40.71] }, isVerified: false }, // New York
+      { _id: 'mock3', name: 'Emma Thompson', avatar: null, location: { coordinates: [-0.13, 51.51] }, isVerified: true }, // London
+      { _id: 'mock4', name: 'Kenji Tanaka', avatar: null, location: { coordinates: [139.69, 35.69] }, isVerified: true }, // Tokyo
+      { _id: 'mock5', name: 'Priya Sharma', avatar: null, location: { coordinates: [72.88, 19.08] }, isVerified: true }, // Mumbai
+      { _id: 'mock6', name: 'Lucas Silva', avatar: null, location: { coordinates: [-46.63, -23.55] }, isVerified: false }, // São Paulo
+      { _id: 'mock7', name: 'Fatima Al-Rashid', avatar: null, location: { coordinates: [55.27, 25.20] }, isVerified: true }, // Dubai
+      { _id: 'mock8', name: 'Mei Chen', avatar: null, location: { coordinates: [103.82, 1.35] }, isVerified: true }, // Singapore
+      { _id: 'mock9', name: 'Oliver Brown', avatar: null, location: { coordinates: [151.21, -33.87] }, isVerified: false }, // Sydney
+      { _id: 'mock10', name: 'Amara Okonkwo', avatar: null, location: { coordinates: [3.38, 6.52] }, isVerified: true }, // Lagos
+      { _id: 'mock11', name: 'Carlos Mendoza', avatar: null, location: { coordinates: [-99.13, 19.43] }, isVerified: false }, // Mexico City
+      { _id: 'mock12', name: 'Sophie Martin', avatar: null, location: { coordinates: [2.35, 48.86] }, isVerified: true }, // Paris
+      { _id: 'mock13', name: 'Hans Mueller', avatar: null, location: { coordinates: [13.40, 52.52] }, isVerified: false }, // Berlin
+      { _id: 'mock14', name: 'Isabella Rossi', avatar: null, location: { coordinates: [12.49, 41.90] }, isVerified: true }, // Rome
+      { _id: 'mock15', name: 'Raj Patel', avatar: null, location: { coordinates: [77.21, 28.61] }, isVerified: true }, // Delhi
+      { _id: 'mock16', name: 'Aisha Khan', avatar: null, location: { coordinates: [77.59, 12.97] }, isVerified: false }, // Bangalore
+      { _id: 'mock17', name: 'Diego Torres', avatar: null, location: { coordinates: [-58.38, -34.60] }, isVerified: true }, // Buenos Aires
+      { _id: 'mock18', name: 'Yuki Sato', avatar: null, location: { coordinates: [139.77, 35.68] }, isVerified: true }, // Tokyo (Shibuya)
+      { _id: 'mock19', name: 'Maria Santos', avatar: null, location: { coordinates: [-9.14, 38.72] }, isVerified: false }, // Lisbon
+      { _id: 'mock20', name: 'Ahmed Hassan', avatar: null, location: { coordinates: [31.24, 30.04] }, isVerified: true }, // Cairo
+      { _id: 'mock21', name: 'Nina Kowalski', avatar: null, location: { coordinates: [21.01, 52.23] }, isVerified: false }, // Warsaw
+      { _id: 'mock22', name: 'Thiago Costa', avatar: null, location: { coordinates: [-43.17, -22.91] }, isVerified: true }, // Rio de Janeiro
+      { _id: 'mock23', name: 'Sofia Andersson', avatar: null, location: { coordinates: [18.07, 59.33] }, isVerified: true }, // Stockholm
+      { _id: 'mock24', name: 'Mateo Garcia', avatar: null, location: { coordinates: [-3.70, 40.42] }, isVerified: false }, // Madrid
+      { _id: 'mock25', name: 'Lena Mueller', avatar: null, location: { coordinates: [8.54, 47.37] }, isVerified: true }, // Zurich
+      { _id: 'mock26', name: 'Hiroshi Yamamoto', avatar: null, location: { coordinates: [135.50, 34.69] }, isVerified: false }, // Osaka
+      { _id: 'mock27', name: 'Camila Rodriguez', avatar: null, location: { coordinates: [-70.67, -33.45] }, isVerified: true }, // Santiago
+      { _id: 'mock28', name: 'Erik Johansson', avatar: null, location: { coordinates: [11.97, 57.71] }, isVerified: false }, // Gothenburg
+      { _id: 'mock29', name: 'Ana Popescu', avatar: null, location: { coordinates: [26.10, 44.43] }, isVerified: true }, // Bucharest
+      { _id: 'mock30', name: 'Vikram Singh', avatar: null, location: { coordinates: [88.36, 22.57] }, isVerified: false }, // Kolkata
+      { _id: 'mock31', name: 'Chloe Dubois', avatar: null, location: { coordinates: [4.35, 50.85] }, isVerified: true }, // Brussels
+      { _id: 'mock32', name: 'Omar Aziz', avatar: null, location: { coordinates: [44.37, 24.71] }, isVerified: false }, // Riyadh
+      { _id: 'mock33', name: 'Jae Park', avatar: null, location: { coordinates: [126.98, 37.57] }, isVerified: true }, // Seoul
+      { _id: 'mock34', name: 'Sara Jensen', avatar: null, location: { coordinates: [12.57, 55.68] }, isVerified: true }, // Copenhagen
+      { _id: 'mock35', name: 'Marco Bianchi', avatar: null, location: { coordinates: [9.19, 45.46] }, isVerified: false }, // Milan
+      { _id: 'mock36', name: 'Layla Ahmed', avatar: null, location: { coordinates: [30.01, 31.20] }, isVerified: true }, // Alexandria
+      { _id: 'mock37', name: 'Pedro Alves', avatar: null, location: { coordinates: [-8.63, 41.15] }, isVerified: false }, // Porto
+      { _id: 'mock38', name: 'Maja Nilsson', avatar: null, location: { coordinates: [12.99, 55.61] }, isVerified: true }, // Malmo
+      { _id: 'mock39', name: 'Ravi Krishnan', avatar: null, location: { coordinates: [80.27, 13.08] }, isVerified: false }, // Chennai
+      { _id: 'mock40', name: 'Elena Volkova', avatar: null, location: { coordinates: [37.62, 55.76] }, isVerified: true }, // Moscow
+      { _id: 'mock41', name: 'Thomas Weber', avatar: null, location: { coordinates: [9.99, 53.55] }, isVerified: false }, // Hamburg
+      { _id: 'mock42', name: 'Ingrid Olsen', avatar: null, location: { coordinates: [10.75, 59.91] }, isVerified: true }, // Oslo
+      { _id: 'mock43', name: 'Felipe Rocha', avatar: null, location: { coordinates: [-47.93, -15.79] }, isVerified: false }, // Brasilia
+      { _id: 'mock44', name: 'Nora O\'Connor', avatar: null, location: { coordinates: [-6.26, 53.35] }, isVerified: true }, // Dublin
+      { _id: 'mock45', name: 'Andrei Popov', avatar: null, location: { coordinates: [30.52, 50.45] }, isVerified: false }, // Kyiv
+      { _id: 'mock46', name: 'Siti Rahman', avatar: null, location: { coordinates: [106.85, -6.21] }, isVerified: true }, // Jakarta
+      { _id: 'mock47', name: 'Kwame Asante', avatar: null, location: { coordinates: [-0.19, 5.60] }, isVerified: false }, // Accra
+      { _id: 'mock48', name: 'Zara Novak', avatar: null, location: { coordinates: [14.44, 46.06] }, isVerified: true }, // Ljubljana
+      { _id: 'mock49', name: 'Diego Flores', avatar: null, location: { coordinates: [-75.58, 6.25] }, isVerified: false }, // Medellin
+      { _id: 'mock50', name: 'Hana Kim', avatar: null, location: { coordinates: [127.03, 37.53] }, isVerified: true }, // Suwon
+    ];
+
+    res.status(200).json({ users: mockOnlineUsers });
+  } catch (error) {
+    console.error('Get mock online locations error:', error);
+    res.status(500).json({ message: 'Server error getting mock online locations' });
+  }
+};

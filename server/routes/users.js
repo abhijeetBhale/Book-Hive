@@ -15,7 +15,8 @@ import {
   updateReadingPreferences,
   getReadingPreferences,
   getUserStatistics,
-  addToRecentlyViewed
+  addToRecentlyViewed,
+  getMockOnlineLocations
 } from "../controllers/userController.js";
 import {
   deleteAccount,
@@ -31,6 +32,7 @@ router.get("/search", protect, searchUsers);
 router.get("/with-books", cacheMiddleware(30000), getUsersWithBooks); // Cache for 30 seconds
 router.get("/:userId/location", cacheMiddleware(60000), getUserLocation); // Cache for 1 minute
 router.get("/:userId/profile", cacheMiddleware(30000), getUserProfile); // Cache for 30 seconds
+router.get("/mock-online-locations", cacheMiddleware(300000), getMockOnlineLocations); // Cache for 5 minutes
 router.get("/notifications/unread-count", protect, getUnreadNotificationCount);
 router.put("/notifications/mark-read", protect, markRelevantNotificationsRead);
 router.put("/public-key", protect, updatePublicKey);

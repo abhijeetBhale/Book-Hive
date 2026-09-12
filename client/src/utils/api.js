@@ -309,6 +309,8 @@ export const usersAPI = {
   // Account deletion endpoints
   getDeletionPreview: () => api.get("/users/account/deletion-preview"),
   deleteAccount: (data) => api.delete("/users/account", { data }),
+  // Mock online locations for globe
+  getMockOnlineLocations: () => api.get("/users/mock-online-locations").then(res => res.data),
 };
 
 export const friendsAPI = {
