@@ -44,6 +44,7 @@ const TiltedCard = lazy(() => import('../components/ui/TiltedCard'));
 const InfiniteMovingCards = lazy(() => import('../components/ui/infinite-moving-cards').then(module => ({ default: module.InfiniteMovingCards })));
 const DomeGallery = lazy(() => import('../components/ui/DomeGallery'));
 const GlobeComponent = lazy(() => import('../components/ui/Globe').then(module => ({ default: module.Globe })).catch(() => ({ default: () => null })));
+const InteractiveGlobe = lazy(() => import('../components/ui/InteractiveGlobe').then(module => ({ default: module.InteractiveGlobe })).catch(() => ({ default: () => null })));
 
 // Lazy load only the less critical icons
 const Facebook = lazy(() => import('lucide-react').then(module => ({ default: module.Facebook })));
@@ -117,6 +118,8 @@ const Home = () => {
   const [platformBooks, setPlatformBooks] = useState([]);
   const [booksLoaded, setBooksLoaded] = useState(false);
   const [heroLoaded, setHeroLoaded] = useState(false);
+  const [mockOnlineUsers, setMockOnlineUsers] = useState([]);
+  const [mockUsersLoaded, setMockUsersLoaded] = useState(false);
 
   const quotes = [
     { text: 'Community-Driven Book Sharing', icon: <BookOpen className="badge-icon" /> },
@@ -295,6 +298,28 @@ const Home = () => {
     // Delay books loading to prioritize hero
     setTimeout(loadPlatformBooks, 300);
   }, [booksLoaded, heroLoaded]);
+
+  // Load mock online users for globe (deferred)
+  useEffect(() => {
+    if (!heroLoaded || mockUsersLoaded) return;
+
+    const loadMockOnlineUsers = async () => {
+      try {
+        const response = await usersAPI.getMockOnlineLocations();
+        if (response?.users) {
+          setMockOnlineUsers(response.users);
+        }
+        setMockUsersLoaded(true);
+      } catch (error) {
+        console.error('Failed to load mock online users:', error);
+        setMockOnlineUsers([]);
+        setMockUsersLoaded(true);
+      }
+    };
+
+    // Delay to prioritize hero
+    setTimeout(loadMockOnlineUsers, 400);
+  }, [mockUsersLoaded, heroLoaded]);
 
 
 
@@ -802,37 +827,51 @@ const Home = () => {
           </div>
         </section>
 
-        {/* Community Stats Section */}
-        <section className="stats-section" ref={statsRef}>
-          <div className="globe-background-stats">
-            <Suspense fallback={<div style={{ opacity: 0.1 }}>Loading...</div>}>
-              <GlobeComponent />
-            </Suspense>
-          </div>
+        {/* Community Stats & Live Globe Section */}
+        <section className="stats-globe-section" ref={statsRef}>
           <div className="content-container">
-            <div className="section-header">
-              <h2 className="section-title">Our Community By The Numbers</h2>
-              <p className="section-subtitle">
-                BookHive is more than an app; it's a growing movement of readers connecting and sharing in neighborhoods just like yours.
-              </p>
-            </div>
-            <div className="stats-grid">
-              {communityStats.map((stat, index) => (
-                <div key={index} className="stat-item">
-                  <span className="stat-number">
-                    {isStatsVisible && (
-                      <CountUp
-                        start={0}
-                        end={parseInt(stat.number.replace(/,/g, ''))}
-                        duration={2.5}
-                        separator=","
-                        suffix={stat.number.includes('+') ? '+' : ''}
-                      />
-                    )}
-                  </span>
-                  <span className="stat-label">{stat.label}</span>
+            <div className="stats-globe-grid">
+              {/* LEFT: Stats */}
+              <div className="stats-column">
+                <div className="section-header">
+                  <h2 className="section-title">Our Community By The Numbers</h2>
+                  <p className="section-subtitle">
+                    BookHive is more than an app; it's a growing movement of readers connecting and sharing in neighborhoods just like yours.
+                  </p>
                 </div>
-              ))}
+                <div className="stats-grid">
+                  {communityStats.map((stat, index) => (
+                    <div key={index} className="stat-item">
+                      <span className="stat-number">
+                        {isStatsVisible && (
+                          <CountUp
+                            start={0}
+                            end={parseInt(stat.number.replace(/,/g, ''))}
+                            duration={2.5}
+                            separator=","
+                            suffix={stat.number.includes('+') ? '+' : ''}
+                          />
+                        )}
+                      </span>
+                      <span className="stat-label">{stat.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* RIGHT: Interactive Globe */}
+              <div className="globe-column">
+                <div className="globe-header">
+                  <h3 className="globe-title">Live Watching</h3>
+                  <div className="globe-legend">
+                    <span className="pulse-dot" />
+                    <span>Active readers worldwide</span>
+                  </div>
+                </div>
+                <Suspense fallback={<div className="globe-skeleton" />}>
+                  <InteractiveGlobe mockUsers={mockOnlineUsers} />
+                </Suspense>
+              </div>
             </div>
           </div>
         </section>
@@ -2320,14 +2359,144 @@ const StyledWrapper = styled.div`
     }
   }
 
-  /* Stats Section */
-  .stats-section {
-  position: relative;
-  background-color: white; 
-  padding: 6rem 0;
-  overflow: hidden;
+  /* Stats & Globe Section */
+  .stats-globe-section {
+    position: relative;
+    background-color: white;
+    padding: 6rem 0;
+    overflow: hidden;
+  }
 
-  .globe-background-stats {
+  .stats-globe-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    align-items: start;
+
+    @media (min-width: 1024px) {
+      grid-template-columns: 1fr 500px;
+    }
+  }
+
+  .stats-column {
+    @media (min-width: 1024px) {
+      position: sticky;
+      top: 120px;
+    }
+  }
+
+  .stats-column .section-header {
+    text-align: left;
+    margin-bottom: 3rem;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .stats-column .section-title {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: #111827;
+    margin-bottom: 1rem;
+  }
+
+  .stats-column .section-subtitle {
+    font-size: 1.125rem;
+    color: #4b5563;
+    font-weight: 500;
+    line-height: 1.6;
+  }
+
+  .stats-column .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1.5rem;
+
+    @media (min-width: 640px) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .globe-column {
+    position: relative;
+  }
+
+  @media (min-width: 1024px) {
+    .globe-column {
+      position: sticky;
+      top: 120px;
+      height: fit-content;
+    }
+  }
+
+  .globe-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .globe-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .globe-legend {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+  }
+
+  .globe-wrapper {
+    aspect-ratio: 1 / 1;
+    max-width: 500px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .globe-skeleton {
+    aspect-ratio: 1 / 1;
+    max-width: 500px;
+    width: 100%;
+    margin: 0 auto;
+    background: linear-gradient(135deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 50%;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Keep old stats-section for any other references */
+  .stats-section {
+    position: relative;
+    background-color: white;
+    padding: 6rem 0;
+    overflow: hidden;
+  }
+
+  .stats-section .globe-background-stats {
     position: absolute;
     top: 40%;
     left: 50%;
@@ -2340,48 +2509,48 @@ const StyledWrapper = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-    
+
     @media (max-width: 768px) {
       opacity: 0.08;
       top: 45%;
     }
   }
 
-  .content-container {
+  .stats-section .content-container {
     position: relative;
     z-index: 1;
   }
 
-  .section-header {
+  .stats-section .section-header {
     text-align: center;
-    margin-bottom: 4rem; 
+    margin-bottom: 4rem;
     max-width: 48rem;
     margin-left: auto;
     margin-right: auto;
   }
-  
-  .section-title {
+
+  .stats-section .section-title {
     font-size: 3rem;
     font-weight: 900;
     color: #111827;
     margin-bottom: 1.5rem;
   }
-  .section-subtitle {
+
+  .stats-section .section-subtitle {
     font-size: 1.25rem;
     color: #374151;
     font-weight: 500;
   }
 
-  .stats-grid {
+  .stats-section .stats-grid {
     display: grid;
     grid-template-columns: repeat(1, 1fr);
     gap: 2rem;
 
     @media (min-width: 768px) {
-      grid-template-columns: repeat(3, 1fr); 
+      grid-template-columns: repeat(3, 1fr);
     }
   }
-}
 
 .stat-item {
   // background-color: #f9fafb; 
@@ -2415,6 +2584,16 @@ const StyledWrapper = styled.div`
   color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* Globe Marker Labels - CSS Anchor Positioning */
+.marker-label {
+  position: absolute;
+  bottom: anchor(top);
+  left: anchor(center);
+  translate: -50% -8px;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 /* Map Feature Section */
